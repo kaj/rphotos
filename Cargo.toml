@@ -1,0 +1,8 @@
+[package]
+name = "rphotos"
+version = "0.1.0"
+authors = ["Rasmus Kaj <kaj@kth.se>"]
+
+[dependencies]
+nickel = "*"
+env_logger = "*"
