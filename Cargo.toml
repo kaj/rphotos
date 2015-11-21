@@ -6,3 +6,7 @@ authors = ["Rasmus Kaj <kaj@kth.se>"]
 [dependencies]
 nickel = "*"
 env_logger = "*"
+log = "*"
+rustorm = "*"
+chrono = "*"
+rustc-serialize = "*"
