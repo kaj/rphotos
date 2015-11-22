@@ -7,7 +7,7 @@
     <h1>Photo index</h1>
     <p>How nice is this?</p>
     {{#photos}}
-    <p><a href="/icon/{{id}}">{{path}}</a></p>
+    <p><a href="/details/{{id}}"><img src="/icon/{{id}}"></a></p>
     {{/photos}}
   </body>
 </html>
