@@ -9,36 +9,26 @@ extern crate image;
 extern crate hyper;
 extern crate time;
 
-use time::Duration;
-use hyper::header::{Expires, HttpDate};
-use std::collections::HashMap;
-use nickel::{Nickel, Request, Response, Middleware, Continue, MiddlewareResult};
-use rustorm::pool::{ManagedPool,Platform};
-use rustorm::database::Database;
-use rustorm::table::IsTable;
-use rustorm::dao::{IsDao, ToValue};
-use std::env::var;
-use std::process::exit;
-use typemap::Key;
-use plugin::{Pluggable, Extensible};
-use image::open as image_open;
-use image::{FilterType, GenericImage, ImageFormat};
-use nickel::mimes::MediaType;
-
 mod models;
-use models::{Photo, query_for};
+use hyper::header::{Expires, HttpDate};
+use image::open as image_open;
+use image::{FilterType, ImageFormat};
+use models::{Photo, Tag, query_for};
+use nickel::mimes::MediaType;
+use nickel::{Nickel, Request, Response, Middleware, Continue, MiddlewareResult};
+use plugin::{Pluggable, Extensible};
+use rustc_serialize::Encodable;
+use rustorm::dao::{IsDao, ToValue};
+use rustorm::database::Database;
+use rustorm::pool::{ManagedPool,Platform};
+use rustorm::query::Query;
+use rustorm::table::IsTable;
+use std::collections::HashMap;
+use time::Duration;
+use typemap::Key;
 
-fn dburl() -> String {
-    let db_var = "RPHOTOS_DB";
-    match var(db_var) {
-        Ok(result) => result,
-        Err(error) => {
-            println!("A database url needs to be given in env {}: {}",
-                     db_var, error);
-            exit(1);
-        }
-    }
-}
+mod env;
+use env::dburl;
 
 struct RustormMiddleware {
     pool: ManagedPool
@@ -65,6 +55,8 @@ impl<D> Middleware<D> for RustormMiddleware {
 pub trait RustormRequestExtensions {
     fn db_conn(&self) -> &Database;
     fn orm_get<T: IsTable + IsDao>(&self, key: &str, val: &ToValue) -> T;
+    fn orm_get_related<T2: IsTable + IsDao>
+        (&self, related_to: &Photo) -> Vec<T2>;
 }
 
 impl<'a, 'b, D> RustormRequestExtensions for Request<'a, 'b, D> {
@@ -75,6 +67,21 @@ impl<'a, 'b, D> RustormRequestExtensions for Request<'a, 'b, D> {
         query_for::<T>().filter_eq(key, val)
             .collect_one(self.db_conn()).unwrap()
     }
+    fn orm_get_related<T2: IsTable + IsDao>
+        (&self, related_to: &Photo) -> Vec<T2>
+    {
+        let mut q = Query::select();
+        q.only_from(&T2::table());
+        q.left_join_table("photo_tag", "tag.id", "photo_tag.tag")
+            .filter_eq("photo_tag.photo", &related_to.id)
+            .collect(self.db_conn()).unwrap()
+    }
+}
+
+#[derive(Debug, Clone, RustcEncodable)]
+struct DetailsData {
+    photo: Photo,
+    tags: Vec<Tag>
 }
 
 fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
@@ -100,7 +107,7 @@ fn main() {
 
     server.utilize(router! {
         get "/" => |req, res| {
-            let photos: Vec<Photo> = query_for::<Photo>()
+            let photos: Vec<Photo> = query_for::<Photo>().limit(16)
                 .collect(req.db_conn()).unwrap();
             info!("Got some photos: {:?}", photos);
             let mut data = HashMap::new();
@@ -109,27 +116,32 @@ fn main() {
             return res.render("templates/index.tpl", &data);
         }
         get "/details/:id" => |req, res| {
-            let id = req.param("id").unwrap().parse::<i32>().unwrap();
-            let photo = req.orm_get::<Photo>("id", &id);
-            let mut data = HashMap::new();
-            data.insert("photo", &photo);
-            return res.render("templates/details.tpl", &data);
+            if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
+                let photo = req.orm_get::<Photo>("id", &id);
+                let tags : Vec<Tag> = req.orm_get_related(&photo);
+                return res.render("templates/details.tpl", &DetailsData {
+                    photo: photo,
+                    tags: tags
+                });
+            }
         }
         get "/icon/:id" => |req, mut res| {
-            let id = req.param("id").unwrap().parse::<i32>().unwrap();
-            let photo = req.orm_get::<Photo>("id", &id);
-            let buf = get_scaled_image(photo, 200, 180);
-            res.set(MediaType::Jpeg);
-            res.set(Expires(HttpDate(time::now() + Duration::days(14))));
-            return res.send(buf);
+            if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
+                let photo = req.orm_get::<Photo>("id", &id);
+                let buf = get_scaled_image(photo, 200, 180);
+                res.set(MediaType::Jpeg);
+                res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                return res.send(buf);
+            }
         }
         get "/view/:id" => |req, mut res| {
-            let id = req.param("id").unwrap().parse::<i32>().unwrap();
-            let photo = req.orm_get::<Photo>("id", &id);
-            let buf = get_scaled_image(photo, 800, 600);
-            res.set(MediaType::Jpeg);
-            res.set(Expires(HttpDate(time::now() + Duration::days(14))));
-            return res.send(buf);
+            if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
+                let photo = req.orm_get::<Photo>("id", &id);
+                let buf = get_scaled_image(photo, 800, 600);
+                res.set(MediaType::Jpeg);
+                res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                return res.send(buf);
+            }
         }
     });
 
