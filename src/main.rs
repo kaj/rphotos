@@ -15,7 +15,8 @@ use image::open as image_open;
 use image::{FilterType, ImageFormat};
 use models::{Photo, Tag, query_for};
 use nickel::mimes::MediaType;
-use nickel::{Nickel, Request, Response, Middleware, Continue, MiddlewareResult};
+use nickel::{Nickel, Request, Response, Middleware, Continue,
+             MiddlewareResult, StaticFilesHandler};
 use plugin::{Pluggable, Extensible};
 use rustc_serialize::Encodable;
 use rustorm::dao::{IsDao, ToValue};
@@ -99,11 +100,12 @@ fn main() {
     info!("Initalized pool");
 
     let mut server = Nickel::new();
+    server.utilize(StaticFilesHandler::new("static/"));
     server.utilize(RustormMiddleware::new(&dburl()));
 
     server.utilize(router! {
         get "/" => |req, res| {
-            let photos: Vec<Photo> = query_for::<Photo>().limit(16)
+            let photos: Vec<Photo> = query_for::<Photo>().limit(25)
                 .collect(req.db_conn()).unwrap();
             info!("Got some photos: {:?}", photos);
             let mut data = HashMap::new();

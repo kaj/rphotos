@@ -3,6 +3,7 @@
   <head>
     <title>Photos tagged {{tag.tag}}</title>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" href="/static/photos.css" type="text/css"/>
   </head>
   <body>
     <h1>{{tag.tag}}</h1>
