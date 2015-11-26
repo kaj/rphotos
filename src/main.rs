@@ -130,6 +130,13 @@ fn main() {
                 }
             }
         }
+        get "/tag/" => |req, res| {
+            let tags: Vec<Tag> = query_for::<Tag>().asc("tag")
+                .collect(req.db_conn()).unwrap();
+            let mut data = HashMap::new();
+            data.insert("tags", &tags);
+            return res.render("templates/tags.tpl", &data);
+        }
         get "/tag/:tag" => |req, res| {
             let slug = req.param("tag").unwrap();
             if let Ok(tag) = req.orm_get::<Tag>("slug", &slug) {
