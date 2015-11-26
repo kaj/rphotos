@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>Photo details</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
   </head>
   <body>
     <h1>Photo details</h1>

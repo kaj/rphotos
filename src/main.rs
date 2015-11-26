@@ -19,7 +19,7 @@ use nickel::{Nickel, Request, Response, Middleware, Continue, MiddlewareResult};
 use plugin::{Pluggable, Extensible};
 use rustc_serialize::Encodable;
 use rustorm::dao::{IsDao, ToValue};
-use rustorm::database::Database;
+use rustorm::database::{Database, DbError};
 use rustorm::pool::{ManagedPool,Platform};
 use rustorm::query::Query;
 use rustorm::table::IsTable;
@@ -54,27 +54,17 @@ impl<D> Middleware<D> for RustormMiddleware {
 
 pub trait RustormRequestExtensions {
     fn db_conn(&self) -> &Database;
-    fn orm_get<T: IsTable + IsDao>(&self, key: &str, val: &ToValue) -> T;
-    fn orm_get_related<T2: IsTable + IsDao>
-        (&self, related_to: &Photo) -> Vec<T2>;
+    fn orm_get<T: IsTable + IsDao>(&self, key: &str, val: &ToValue)
+                                   -> Result<T, DbError>;
 }
 
 impl<'a, 'b, D> RustormRequestExtensions for Request<'a, 'b, D> {
     fn db_conn(&self) -> &Database {
         self.extensions().get::<RustormMiddleware>().unwrap().as_ref()
     }
-    fn orm_get<T: IsTable + IsDao>(&self, key: &str, val: &ToValue) -> T {
-        query_for::<T>().filter_eq(key, val)
-            .collect_one(self.db_conn()).unwrap()
-    }
-    fn orm_get_related<T2: IsTable + IsDao>
-        (&self, related_to: &Photo) -> Vec<T2>
-    {
-        let mut q = Query::select();
-        q.only_from(&T2::table());
-        q.left_join_table("photo_tag", "tag.id", "photo_tag.tag")
-            .filter_eq("photo_tag.photo", &related_to.id)
-            .collect(self.db_conn()).unwrap()
+    fn orm_get<T: IsTable + IsDao>(&self, key: &str, val: &ToValue)
+                                   -> Result<T, DbError> {
+        query_for::<T>().filter_eq(key, val).collect_one(self.db_conn())
     }
 }
 
@@ -82,6 +72,12 @@ impl<'a, 'b, D> RustormRequestExtensions for Request<'a, 'b, D> {
 struct DetailsData {
     photo: Photo,
     tags: Vec<Tag>
+}
+
+#[derive(Debug, Clone, RustcEncodable)]
+struct TagData {
+    tag: Tag,
+    photos: Vec<Photo>
 }
 
 fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
@@ -117,30 +113,54 @@ fn main() {
         }
         get "/details/:id" => |req, res| {
             if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
-                let photo = req.orm_get::<Photo>("id", &id);
-                let tags : Vec<Tag> = req.orm_get_related(&photo);
-                return res.render("templates/details.tpl", &DetailsData {
-                    photo: photo,
-                    tags: tags
+                if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
+
+                    let mut q = Query::select();
+                    q.only_from(&Tag::table());
+                    q.left_join_table("photo_tag", "tag.id", "photo_tag.tag")
+                        .filter_eq("photo_tag.photo", &photo.id);
+                    let tags = q.collect(req.db_conn()).unwrap();
+
+                    return res.render("templates/details.tpl", &DetailsData {
+                        photo: photo,
+                        tags: tags
+                    });
+                }
+            }
+        }
+        get "/tag/:tag" => |req, res| {
+            let slug = req.param("tag").unwrap();
+            if let Ok(tag) = req.orm_get::<Tag>("slug", &slug) {
+
+                let mut q = Query::select();
+                q.only_from(&Photo::table());
+                q.left_join_table("photo_tag", "photo.id", "photo_tag.photo")
+                    .filter_eq("photo_tag.tag", &tag.id);
+                let photos : Vec<Photo> = q.collect(req.db_conn()).unwrap();
+                return res.render("templates/tag.tpl", &TagData {
+                    tag: tag,
+                    photos: photos
                 });
             }
         }
         get "/icon/:id" => |req, mut res| {
             if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
-                let photo = req.orm_get::<Photo>("id", &id);
-                let buf = get_scaled_image(photo, 200, 180);
-                res.set(MediaType::Jpeg);
-                res.set(Expires(HttpDate(time::now() + Duration::days(14))));
-                return res.send(buf);
+                if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
+                    let buf = get_scaled_image(photo, 200, 180);
+                    res.set(MediaType::Jpeg);
+                    res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                    return res.send(buf);
+                }
             }
         }
         get "/view/:id" => |req, mut res| {
             if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
-                let photo = req.orm_get::<Photo>("id", &id);
-                let buf = get_scaled_image(photo, 800, 600);
-                res.set(MediaType::Jpeg);
-                res.set(Expires(HttpDate(time::now() + Duration::days(14))));
-                return res.send(buf);
+                if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
+                    let buf = get_scaled_image(photo, 800, 600);
+                    res.set(MediaType::Jpeg);
+                    res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                    return res.send(buf);
+                }
             }
         }
     });

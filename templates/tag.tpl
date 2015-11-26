@@ -1,12 +1,11 @@
 <!doctype html>
 <html>
   <head>
-    <title>Photo index</title>
+    <title>Photos tagged {{tag.tag}}</title>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
   </head>
   <body>
-    <h1>Photo index</h1>
-    <p>How nice is this?</p>
+    <h1>{{tag.tag}}</h1>
 
     <div class="photos">
     {{#photos}}
