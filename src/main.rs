@@ -117,8 +117,7 @@ fn main() {
                 if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
                     let buf = get_scaled_image(photo, 200, 180);
                     res.set(MediaType::Jpeg);
-                    // FIXME https://github.com/nickel-org/nickel.rs/issues/303
-                    // res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                    res.set(Expires(HttpDate(time::now() + Duration::days(14))));
                     return res.send(buf);
                 }
             }
@@ -128,9 +127,7 @@ fn main() {
                 if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
                     let buf = get_scaled_image(photo, 800, 600);
                     res.set(MediaType::Jpeg);
-                    // FIXME https://github.com/nickel-org/nickel.rs/issues/303
-                    let expires = Expires(HttpDate(time::now() + Duration::days(14)));
-                    // res.set(expires);
+                    res.set(Expires(HttpDate(time::now() + Duration::days(14))));
                     return res.send(buf);
                 }
             }
