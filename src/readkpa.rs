@@ -1,3 +1,4 @@
+#[macro_use] extern crate log;
 extern crate xml;
 extern crate rustorm;
 extern crate rustc_serialize;
@@ -11,7 +12,7 @@ use xml::reader::EventReader;
 use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
 
 mod models;
-use models::{Photo, Tag, get_or_create, get_or_create_t};
+use models::{Photo, Tag, get_or_create, get_or_create_default};
 
 mod env;
 use env::dburl;
@@ -39,16 +40,18 @@ fn slugify(val: String) -> String {
 
 fn tag_photo(db: &Database, photo: &Photo, tag: String) {
     let v2 : String = tag.clone();
-    let tag : Tag = get_or_create_t(db, "tag", &tag, || { slugify(v2) });
-    println!("  tag {:?}", tag);
+
+    let tag: Tag = get_or_create_default(db, "tag", &tag,
+                                         &[("slug", &slugify(v2))]);
+    info!("  tag {:?}", tag);
     let mut q = Query::select();
     q.from_table("public.photo_tag");
     q.filter_eq("photo", &photo.id);
     q.filter_eq("tag", &tag.id);
     if let Ok(Some(result)) = q.retrieve_one(db) {
-        println!("  match {:?}", result)
+        debug!("  match {:?}", result)
     } else {
-        println!("  new tag!");
+        info!("  new tag {:?} on {:?}!", tag, photo);
         let mut q = Query::insert();
         q.into_table("public.photo_tag");
         q.set("photo", &photo.id);
@@ -58,9 +61,8 @@ fn tag_photo(db: &Database, photo: &Photo, tag: String) {
 }
 
 fn main() {
-    println!("Hello");
-    let mut pool = ManagedPool::init(&dburl(), 1).unwrap();
-    let mut db = pool.connect().unwrap();
+    let pool = ManagedPool::init(&dburl(), 1).unwrap();
+    let db = pool.connect().unwrap();
     let file = File::open("/home/kaj/Bilder/foto/index.xml").unwrap();
     let mut xml = EventReader::new(file);
     let mut option : Option<String> = None;
@@ -68,7 +70,7 @@ fn main() {
     while let Ok(event) = xml.next() {
         match event {
             XmlEvent::EndDocument => {
-                println!("End of xml");
+                debug!("End of xml");
                 break;
             },
             XmlEvent::StartElement{ref name, ref attributes, ref namespace} => {
@@ -76,7 +78,7 @@ fn main() {
                     "image" => {
                         if let Some(file) = find_attr("file", attributes) {
                             let img = get_or_create::<Photo>(db.as_ref(), "path", &file);
-                            println!("Found image {:?}", img);
+                            debug!("Found image {:?}", img);
                             photo = Some(img);
                         }
                     }
@@ -92,7 +94,7 @@ fn main() {
                                             tag_photo(db.as_ref(), &photo, v);
                                         }
                                     },
-                                    o => { println!("  {} = {}", o, v); }
+                                    o => { debug!("  {} = {}", o, v); }
                                 }
                                 
                             }
@@ -111,5 +113,4 @@ fn main() {
             }
         }
     }
-    println!("Bye");
 }

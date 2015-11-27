@@ -154,18 +154,21 @@ pub fn get_or_create<T: IsTable + IsDao>(db: &Database, key: &str, val: &ToValue
     }
 }
 
-pub fn get_or_create_t<'a, T: IsTable + IsDao, F>
-    (db: &Database, key: &str, val: &ToValue, get_slug: F) -> T
-    where F: FnOnce() -> String
+pub fn get_or_create_default<'a, T: IsTable + IsDao>
+    (db: &Database, key: &str, val: &ToValue, defaults: &[(&str, &ToValue)]) -> T
 {
     if let Ok(result) = query_for::<T>().filter_eq(key, val).collect_one(db) {
         result
     } else {
         let table = T::table();
-        Query::insert().into_(&table)
-            .set(key, val)
-            .set("slug", &get_slug())
-            .returns(table.columns.iter().map(|c| &*c.name).collect())
+        let mut q = Query::insert();
+        q.into_(&table);
+        q.set(key, val);
+        for p in defaults {
+            let &(key, f) = p;
+            q.set(key, f);
+        }
+        q.returns(table.columns.iter().map(|c| &*c.name).collect())
             .collect_one(db).unwrap()
     }
 }
