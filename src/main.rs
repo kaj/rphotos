@@ -14,9 +14,8 @@ use hyper::header::{Expires, HttpDate};
 use image::open as image_open;
 use image::{FilterType, ImageFormat};
 use models::{Photo, Tag, query_for};
-use nickel::mimes::MediaType;
-use nickel::{Nickel, Request, Response, Middleware, Continue,
-             MiddlewareResult, StaticFilesHandler};
+use nickel::{Continue, MediaType, Middleware, MiddlewareResult, Nickel,
+             Request, Response, StaticFilesHandler};
 use plugin::{Pluggable, Extensible};
 use rustc_serialize::Encodable;
 use rustorm::dao::{IsDao, ToValue};
@@ -157,7 +156,8 @@ fn main() {
                 if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
                     let buf = get_scaled_image(photo, 200, 180);
                     res.set(MediaType::Jpeg);
-                    res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                    // FIXME https://github.com/nickel-org/nickel.rs/issues/303
+                    // res.set(Expires(HttpDate(time::now() + Duration::days(14))));
                     return res.send(buf);
                 }
             }
@@ -167,7 +167,9 @@ fn main() {
                 if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
                     let buf = get_scaled_image(photo, 800, 600);
                     res.set(MediaType::Jpeg);
-                    res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                    // FIXME https://github.com/nickel-org/nickel.rs/issues/303
+                    let expires = Expires(HttpDate(time::now() + Duration::days(14)));
+                    // res.set(expires);
                     return res.send(buf);
                 }
             }
