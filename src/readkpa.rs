@@ -12,7 +12,7 @@ use xml::reader::EventReader;
 use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
 
 mod models;
-use models::{Photo, Tag, get_or_create, get_or_create_default};
+use models::{Photo, Tag, Person, get_or_create, get_or_create_default};
 
 mod env;
 use env::dburl;
@@ -60,6 +60,27 @@ fn tag_photo(db: &Database, photo: &Photo, tag: String) {
     }
 }
 
+fn person_photo(db: &Database, photo: &Photo, name: String) {
+    let v2: String = name.clone();
+    let person: Person = get_or_create_default(db, "name", &name,
+                                            &[("slug", &slugify(v2))]);
+    info!("  person {:?}", person);
+    let mut q = Query::select();
+    q.from_table("public.photo_person");
+    q.filter_eq("photo", &photo.id);
+    q.filter_eq("person", &person.id);
+    if let Ok(Some(result)) = q.retrieve_one(db) {
+        debug!("  match {:?}", result)
+    } else {
+        println!("  new person {:?} on {:?}!", person, photo);
+        let mut q = Query::insert();
+        q.into_table("public.photo_person");
+        q.set("photo", &photo.id);
+        q.set("person", &person.id);
+        q.execute(db);
+    }
+}
+
 fn main() {
     let pool = ManagedPool::init(&dburl(), 1).unwrap();
     let db = pool.connect().unwrap();
@@ -92,6 +113,11 @@ fn main() {
                                     "Nyckelord" => {
                                         if let Some(ref photo) = photo {
                                             tag_photo(db.as_ref(), &photo, v);
+                                        }
+                                    },
+                                    "Personer" => {
+                                        if let Some(ref photo) = photo {
+                                            person_photo(db.as_ref(), &photo, v);
                                         }
                                     },
                                     o => { debug!("  {} = {}", o, v); }

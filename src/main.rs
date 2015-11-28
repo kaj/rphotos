@@ -13,7 +13,7 @@ mod models;
 use hyper::header::{Expires, HttpDate};
 use image::open as image_open;
 use image::{FilterType, ImageFormat};
-use models::{Photo, Tag, query_for};
+use models::{Photo, Tag, Person, query_for};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
@@ -32,12 +32,19 @@ use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
 #[derive(Debug, Clone, RustcEncodable)]
 struct DetailsData {
     photo: Photo,
+    people: Vec<Person>,
     tags: Vec<Tag>
 }
 
 #[derive(Debug, Clone, RustcEncodable)]
 struct TagData {
     tag: Tag,
+    photos: Vec<Photo>
+}
+
+#[derive(Debug, Clone, RustcEncodable)]
+struct PersonData {
+    person: Person,
     photos: Vec<Photo>
 }
 
@@ -83,8 +90,16 @@ fn main() {
                         .filter_eq("photo_tag.photo", &photo.id);
                     let tags = q.collect(req.db_conn()).unwrap();
 
+                    let mut q = Query::select();
+                    q.only_from(&Person::table());
+                    q.left_join_table("photo_person",
+                                      "person.id", "photo_person.person")
+                        .filter_eq("photo_person.photo", &photo.id);
+                    let people = q.collect(req.db_conn()).unwrap();
+
                     return res.render("templates/details.tpl", &DetailsData {
                         photo: photo,
+                        people: people,
                         tags: tags
                     });
                 }
@@ -108,6 +123,28 @@ fn main() {
                 let photos : Vec<Photo> = q.collect(req.db_conn()).unwrap();
                 return res.render("templates/tag.tpl", &TagData {
                     tag: tag,
+                    photos: photos
+                });
+            }
+        }
+        get "/person/" => |req, res| {
+            let people: Vec<Person> = query_for::<Person>().asc("name")
+                .collect(req.db_conn()).unwrap();
+            let mut data = HashMap::new();
+            data.insert("people", &people);
+            return res.render("templates/people.tpl", &data);
+        }
+        get "/person/:slug" => |req, res| {
+            let slug = req.param("slug").unwrap();
+            if let Ok(person) = req.orm_get::<Person>("slug", &slug) {
+
+                let mut q = Query::select();
+                q.only_from(&Photo::table());
+                q.left_join_table("photo_person", "photo.id", "photo_person.photo")
+                    .filter_eq("photo_person.person", &person.id);
+                let photos : Vec<Photo> = q.collect(req.db_conn()).unwrap();
+                return res.render("templates/person.tpl", &PersonData {
+                    person: person,
                     photos: photos
                 });
             }

@@ -15,7 +15,7 @@ div.photos p {
     text-align: center;
 }
 
-ul.alltags {
+ul.alltags, ul.allpeople {
     -moz-column-width: 13em;
     column-width: 13em;
 }

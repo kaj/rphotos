@@ -9,6 +9,7 @@
     <h1>Photo details</h1>
     <p>{{photo.path}}</p>
     <p><img src="/view/{{photo.id}}"></p>
+    <p>People: {{#people}}<a href="/person/{{slug}}">{{name}}</a>, {{/people}}</p>
     <p>Tags: {{#tags}}<a href="/tag/{{slug}}">{{tag}}</a>, {{/tags}}</p>
   </body>
 </html>

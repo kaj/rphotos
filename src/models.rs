@@ -124,6 +124,73 @@ impl IsTable for Tag {
     }
 }
 
+#[derive(Debug, Clone, RustcEncodable)]
+pub struct Person {
+    pub id: i32,
+    pub name: String,
+    pub slug: String,
+}
+
+impl IsDao for Person {
+    fn from_dao(dao: &Dao) -> Self {
+        Person {
+            id: dao.get("id"),
+            name: dao.get("name"),
+            slug: dao.get("slug"),
+        }
+    }
+    fn to_dao(&self) -> Dao {
+        let mut dao = Dao::new();
+        dao.set("id", &self.id);
+        dao.set("name", &self.name);
+        dao.set("slug", &self.slug);
+        dao
+    }
+}
+
+impl IsTable for Person {
+    fn table() -> Table {
+        table("person", vec![
+            Column {
+                name: "id".to_string(),
+                data_type: "i32".to_string(),
+                db_data_type: "serial".to_string(),
+                is_primary: true,
+                is_unique: true,
+                default: None,
+                comment: None,
+                not_null: true,
+                foreign: None,
+                is_inherited: false
+            },
+            Column {
+                name: "name".to_string(),
+                data_type: "String".to_string(),
+                db_data_type: "varchar(100)".to_string(),
+                is_primary: false,
+                is_unique: true,
+                default: None,
+                comment: None,
+                not_null: true,
+                foreign: None,
+                is_inherited: false
+            },
+            Column {
+                name: "slug".to_string(),
+                data_type: "String".to_string(),
+                db_data_type: "varchar(100)".to_string(),
+                is_primary: false,
+                is_unique: true,
+                default: None,
+                comment: None,
+                not_null: true,
+                foreign: None,
+                is_inherited: false
+            }
+            ])
+    }
+}
+
 fn table(name: &str, columns: Vec<Column>) -> Table {
     Table {
         schema: "public".to_owned(),
