@@ -2,6 +2,7 @@
 extern crate xml;
 extern crate rustorm;
 extern crate rustc_serialize;
+extern crate env_logger;
 
 use rustorm::database::Database;
 use rustorm::pool::ManagedPool;
@@ -12,7 +13,7 @@ use xml::reader::EventReader;
 use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
 
 mod models;
-use models::{Photo, Tag, Person, get_or_create, get_or_create_default};
+use models::{Photo, Tag, Person, get_or_create_default};
 
 mod env;
 use env::dburl;
@@ -56,7 +57,7 @@ fn tag_photo(db: &Database, photo: &Photo, tag: String) {
         q.into_table("public.photo_tag");
         q.set("photo", &photo.id);
         q.set("tag", &tag.id);
-        q.execute(db);
+        q.execute(db).unwrap();
     }
 }
 
@@ -77,14 +78,16 @@ fn person_photo(db: &Database, photo: &Photo, name: String) {
         q.into_table("public.photo_person");
         q.set("photo", &photo.id);
         q.set("person", &person.id);
-        q.execute(db);
+        q.execute(db).unwrap();
     }
 }
 
 fn main() {
+    env_logger::init().unwrap();
     let pool = ManagedPool::init(&dburl(), 1).unwrap();
     let db = pool.connect().unwrap();
     let file = File::open("/home/kaj/Bilder/foto/index.xml").unwrap();
+    info!("Reading kphotoalbum data");
     let mut xml = EventReader::new(file);
     let mut option : Option<String> = None;
     let mut photo : Option<Photo> = None;
@@ -98,7 +101,9 @@ fn main() {
                 match &*name.local_name {
                     "image" => {
                         if let Some(file) = find_attr("file", attributes) {
-                            let img = get_or_create::<Photo>(db.as_ref(), "path", &file);
+                            let img = get_or_create_default::<Photo>
+                                (db.as_ref(), "path", &file,
+                                 &[("rotation", &find_attr("angle", attributes).unwrap_or("0".to_string()).parse::<i16>().unwrap())]);
                             debug!("Found image {:?}", img);
                             photo = Some(img);
                         }

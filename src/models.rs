@@ -13,6 +13,7 @@ pub trait Entity : IsTable + IsDao {
 pub struct Photo {
     pub id: i32,
     pub path: String,
+    pub rotation: i16
 }
 
 impl Entity for Photo {
@@ -25,12 +26,14 @@ impl IsDao for Photo {
         Photo {
             id: dao.get("id"),
             path: dao.get("path"),
+            rotation: dao.get("rotation")
         }
     }
     fn to_dao(&self) -> Dao {
         let mut dao = Dao::new();
         dao.set("id", &self.id);
         dao.set("path", &self.path);
+        dao.set("rotation", &self.rotation);
         dao
     }
 }
@@ -55,6 +58,18 @@ impl IsTable for Photo {
                 db_data_type: "varchar(100)".to_string(),
                 is_primary: false,
                 is_unique: true,
+                default: None,
+                comment: None,
+                not_null: true,
+                foreign: None,
+                is_inherited: false
+            },
+            Column {
+                name: "rotation".to_string(),
+                data_type: "i16".to_string(),
+                db_data_type: "smallint".to_string(),
+                is_primary: false,
+                is_unique: false,
                 default: None,
                 comment: None,
                 not_null: true,

@@ -51,6 +51,16 @@ fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
     info!("Should open {}", path);
     let img = image_open(path).unwrap();
     let scaled = img.resize(width, height, FilterType::Nearest);
+    let scaled = match photo.rotation {
+        0 => scaled,
+        90 => scaled.rotate90(),
+        180 => scaled.rotate180(),
+        270 => scaled.rotate270(),
+        x => {
+            warn!("Should rotate photo {} deg, which is unsupported", x);
+            scaled
+        }
+    };
     // TODO Put the icon in some kind of cache!
     let mut buf : Vec<u8> = Vec::new();
     scaled.save(&mut buf, ImageFormat::JPEG).unwrap();
