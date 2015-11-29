@@ -1,12 +1,13 @@
-use rustorm::pool::{ManagedPool,Platform};
-use rustorm::database::{Database, DbError};
-use rustorm::table::IsTable;
-use rustorm::dao::{IsDao, ToValue};
-use typemap::Key;
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use plugin::{Pluggable, Extensible};
+use rustorm::dao::{IsDao, ToValue};
+use rustorm::database::{Database, DbError};
+use rustorm::pool::{ManagedPool,Platform};
+use rustorm::query::Query;
+use rustorm::table::IsTable;
+use typemap::Key;
 
-use models::query_for;
+use models::{query_for, Entity};
 
 pub struct RustormMiddleware {
     pool: ManagedPool
@@ -34,6 +35,8 @@ pub trait RustormRequestExtensions {
     fn db_conn(&self) -> &Database;
     fn orm_get<T: IsTable + IsDao>(&self, key: &str, val: &ToValue)
                                    -> Result<T, DbError>;
+    fn orm_get_related<T: Entity, Src: Entity>(&self, src: &Src, rel_table: &str)
+                                               -> Result<Vec<T>, DbError>;
 }
 
 impl<'a, 'b, D> RustormRequestExtensions for Request<'a, 'b, D> {
@@ -43,5 +46,15 @@ impl<'a, 'b, D> RustormRequestExtensions for Request<'a, 'b, D> {
     fn orm_get<T: IsTable + IsDao>(&self, key: &str, val: &ToValue)
                                    -> Result<T, DbError> {
         query_for::<T>().filter_eq(key, val).collect_one(self.db_conn())
+    }
+    fn orm_get_related<T: Entity, Src: Entity>(&self, src: &Src, rel_table: &str)
+                                               -> Result<Vec<T>, DbError>
+    {
+        let mut q = Query::select();
+        q.only_from(&T::table());
+        q.left_join_table(rel_table, &format!("{}.id", T::table().name),
+                          &format!("{}.{}", rel_table, T::table().name))
+            .filter_eq(&format!("{}.{}", rel_table, Src::table().name), src.id());
+        q.collect(self.db_conn())
     }
 }

@@ -18,8 +18,6 @@ use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
 use rustorm::database::{Database};
-use rustorm::query::Query;
-use rustorm::table::IsTable;
 use std::collections::HashMap;
 use time::Duration;
 
@@ -77,26 +75,14 @@ fn main() {
             info!("Got some photos: {:?}", photos);
             let mut data = HashMap::new();
             data.insert("photos", &photos);
-            // data.insert("name", "Self".into());
             return res.render("templates/index.tpl", &data);
         }
         get "/details/:id" => |req, res| {
             if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
                 if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
 
-                    let mut q = Query::select();
-                    q.only_from(&Tag::table());
-                    q.left_join_table("photo_tag", "tag.id", "photo_tag.tag")
-                        .filter_eq("photo_tag.photo", &photo.id);
-                    let tags = q.collect(req.db_conn()).unwrap();
-
-                    let mut q = Query::select();
-                    q.only_from(&Person::table());
-                    q.left_join_table("photo_person",
-                                      "person.id", "photo_person.person")
-                        .filter_eq("photo_person.photo", &photo.id);
-                    let people = q.collect(req.db_conn()).unwrap();
-
+                    let tags = req.orm_get_related(&photo, "photo_tag").unwrap();
+                    let people = req.orm_get_related(&photo, "photo_person").unwrap();
                     return res.render("templates/details.tpl", &DetailsData {
                         photo: photo,
                         people: people,
@@ -115,12 +101,7 @@ fn main() {
         get "/tag/:tag" => |req, res| {
             let slug = req.param("tag").unwrap();
             if let Ok(tag) = req.orm_get::<Tag>("slug", &slug) {
-
-                let mut q = Query::select();
-                q.only_from(&Photo::table());
-                q.left_join_table("photo_tag", "photo.id", "photo_tag.photo")
-                    .filter_eq("photo_tag.tag", &tag.id);
-                let photos : Vec<Photo> = q.collect(req.db_conn()).unwrap();
+                let photos = req.orm_get_related(&tag, "photo_tag").unwrap();
                 return res.render("templates/tag.tpl", &TagData {
                     tag: tag,
                     photos: photos
@@ -137,12 +118,7 @@ fn main() {
         get "/person/:slug" => |req, res| {
             let slug = req.param("slug").unwrap();
             if let Ok(person) = req.orm_get::<Person>("slug", &slug) {
-
-                let mut q = Query::select();
-                q.only_from(&Photo::table());
-                q.left_join_table("photo_person", "photo.id", "photo_person.photo")
-                    .filter_eq("photo_person.person", &person.id);
-                let photos : Vec<Photo> = q.collect(req.db_conn()).unwrap();
+                let photos = req.orm_get_related(&person, "photo_person").unwrap();
                 return res.render("templates/person.tpl", &PersonData {
                     person: person,
                     photos: photos

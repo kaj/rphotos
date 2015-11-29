@@ -5,12 +5,21 @@ use rustorm::dao::{Dao, IsDao, ToValue};
 use rustorm::table::{IsTable, Table, Column};
 use rustorm::database::Database;
 
+pub trait Entity : IsTable + IsDao {
+    fn id(&self) -> &ToValue;
+}
+
 #[derive(Debug, Clone, RustcEncodable)]
 pub struct Photo {
     pub id: i32,
     pub path: String,
 }
 
+impl Entity for Photo {
+    fn id(&self) -> &ToValue {
+        &self.id
+    }
+}
 impl IsDao for Photo {
     fn from_dao(dao:&Dao) -> Self {
         Photo {
@@ -25,7 +34,6 @@ impl IsDao for Photo {
         dao
     }
 }
-
 impl IsTable for Photo {
     fn table() -> Table {
         table("photo", vec![
@@ -64,6 +72,11 @@ pub struct Tag {
     pub slug: String,
 }
 
+impl Entity for Tag {
+    fn id(&self) -> &ToValue {
+        &self.id
+    }
+}
 impl IsDao for Tag {
     fn from_dao(dao: &Dao) -> Self {
         Tag {
@@ -131,6 +144,11 @@ pub struct Person {
     pub slug: String,
 }
 
+impl Entity for Person {
+    fn id(&self) -> &ToValue {
+        &self.id
+    }
+}
 impl IsDao for Person {
     fn from_dao(dao: &Dao) -> Self {
         Person {
