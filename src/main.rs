@@ -13,7 +13,7 @@ mod models;
 use hyper::header::{Expires, HttpDate};
 use image::open as image_open;
 use image::{FilterType, ImageFormat, GenericImage};
-use models::{Photo, Tag, Person, query_for};
+use models::{Photo, Tag, Person, Place, query_for};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
@@ -31,6 +31,7 @@ use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
 struct DetailsData {
     photo: Photo,
     people: Vec<Person>,
+    places: Vec<Place>,
     tags: Vec<Tag>
 }
 
@@ -46,6 +47,12 @@ struct PersonData {
     photos: Vec<Photo>
 }
 
+#[derive(Debug, Clone, RustcEncodable)]
+struct PlaceData {
+    place: Place,
+    photos: Vec<Photo>
+}
+
 fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
     let path = format!("/home/kaj/Bilder/foto/{}", photo.path);
     info!("Should open {}", path);
@@ -57,10 +64,11 @@ fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
             img
         };
     let img = match photo.rotation {
-        0 => img,
-        90 => img.rotate90(),
-        180 => img.rotate180(),
-        270 => img.rotate270(),
+        _x @ 0...44 => img,
+        _x @ 45...134 => img.rotate90(),
+        _x @ 135...224 => img.rotate180(),
+        _x @ 225...314 => img.rotate270(),
+        _x @ 315...360 => img,
         x => {
             warn!("Should rotate photo {} deg, which is unsupported", x);
             img
@@ -97,11 +105,13 @@ fn main() {
             if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
                 if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
 
-                    let tags = req.orm_get_related(&photo, "photo_tag").unwrap();
                     let people = req.orm_get_related(&photo, "photo_person").unwrap();
+                    let places = req.orm_get_related(&photo, "photo_place").unwrap();
+                    let tags = req.orm_get_related(&photo, "photo_tag").unwrap();
                     return res.render("templates/details.tpl", &DetailsData {
                         photo: photo,
                         people: people,
+                        places: places,
                         tags: tags
                     });
                 }
@@ -137,6 +147,23 @@ fn main() {
                 let photos = req.orm_get_related(&person, "photo_person").unwrap();
                 return res.render("templates/person.tpl", &PersonData {
                     person: person,
+                    photos: photos
+                });
+            }
+        }
+        get "/place/" => |req, res| {
+            let places: Vec<Place> = query_for::<Place>().asc("place")
+                .collect(req.db_conn()).unwrap();
+            let mut data = HashMap::new();
+            data.insert("places", &places);
+            return res.render("templates/places.tpl", &data);
+        }
+        get "/place/:slug" => |req, res| {
+            let slug = req.param("slug").unwrap();
+            if let Ok(place) = req.orm_get::<Place>("slug", &slug) {
+                let photos = req.orm_get_related(&place, "photo_place").unwrap();
+                return res.render("templates/place.tpl", &PlaceData {
+                    place: place,
                     photos: photos
                 });
             }

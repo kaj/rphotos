@@ -24,3 +24,13 @@ create table public.photo_person (
   photo  integer not null references public.photo  (id),
   person integer not null references public.person (id)
 );
+
+create table public.place (
+  id    serial primary key,
+  place varchar(100) unique not null,
+  slug  varchar(100) unique not null
+);
+create table public.photo_place (
+  photo  integer not null references public.photo (id),
+  place  integer not null references public.place (id)
+);

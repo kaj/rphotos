@@ -14,7 +14,7 @@ use xml::reader::EventReader;
 use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
 
 mod models;
-use models::{Photo, Tag, Person, get_or_create_default};
+use models::{Photo, Tag, Person, Place, get_or_create_default};
 
 mod env;
 use env::dburl;
@@ -45,7 +45,7 @@ fn tag_photo(db: &Database, photo: &Photo, tag: String) {
 
     let tag: Tag = get_or_create_default(db, "tag", &tag,
                                          &[("slug", &slugify(v2))]);
-    info!("  tag {:?}", tag);
+    debug!("  tag {:?}", tag);
     let mut q = Query::select();
     q.from_table("public.photo_tag");
     q.filter_eq("photo", &photo.id);
@@ -53,7 +53,7 @@ fn tag_photo(db: &Database, photo: &Photo, tag: String) {
     if let Ok(Some(result)) = q.retrieve_one(db) {
         debug!("  match {:?}", result)
     } else {
-        info!("  new tag {:?} on {:?}!", tag, photo);
+        debug!("  new tag {:?} on {:?}!", tag, photo);
         let mut q = Query::insert();
         q.into_table("public.photo_tag");
         q.set("photo", &photo.id);
@@ -66,7 +66,7 @@ fn person_photo(db: &Database, photo: &Photo, name: String) {
     let v2: String = name.clone();
     let person: Person = get_or_create_default(db, "name", &name,
                                             &[("slug", &slugify(v2))]);
-    info!("  person {:?}", person);
+    debug!("  person {:?}", person);
     let mut q = Query::select();
     q.from_table("public.photo_person");
     q.filter_eq("photo", &photo.id);
@@ -83,8 +83,29 @@ fn person_photo(db: &Database, photo: &Photo, name: String) {
     }
 }
 
+fn place_photo(db: &Database, photo: &Photo, name: String) {
+    let v2: String = name.clone();
+    let place: Place = get_or_create_default(db, "place", &name,
+                                            &[("slug", &slugify(v2))]);
+    debug!("  place {:?}", place);
+    let mut q = Query::select();
+    q.from_table("public.photo_place");
+    q.filter_eq("photo", &photo.id);
+    q.filter_eq("place", &place.id);
+    if let Ok(Some(result)) = q.retrieve_one(db) {
+        debug!("  match {:?}", result)
+    } else {
+        println!("  new place {:?} on {:?}!", place, photo);
+        let mut q = Query::insert();
+        q.into_table("public.photo_place");
+        q.set("photo", &photo.id);
+        q.set("place", &place.id);
+        q.execute(db).unwrap();
+    }
+}
+
 fn grade_photo(db: &Database, photo: &mut Photo, name: String) {
-    info!("Should set  grade {:?} on {:?}", name, photo);
+    debug!("Should set  grade {:?} on {:?}", name, photo);
     let grade = match &*name {
         "Usel" => 0,
         "Ok" => 3,
@@ -96,9 +117,8 @@ fn grade_photo(db: &Database, photo: &mut Photo, name: String) {
     q.from(&Photo::table());
     q.filter_eq("id", &photo.id);
     q.set("grade", &grade);
-    info!("SQL: {}", q.build(db));
     let n = q.execute(db).unwrap();
-    info!("Graded {} photo", n);
+    debug!("Graded {} photo", n);
 }
 
 fn main() {
@@ -144,12 +164,17 @@ fn main() {
                                             person_photo(db.as_ref(), &photo, v);
                                         }
                                     },
+                                    "Platser" => {
+                                        if let Some(ref photo) = photo {
+                                            place_photo(db.as_ref(), &photo, v);
+                                        }
+                                    },
                                     "Betyg" => {
                                         if let Some(ref mut photo) = photo {
                                             grade_photo(db.as_ref(), photo, v);
                                         }
                                     }
-                                    o => { debug!("  {} = {}", o, v); }
+                                    o => { warn!("Unsupported metadata {} = {}", o, v); }
                                 }
                                 
                             }

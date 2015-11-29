@@ -11,6 +11,7 @@
     <p><img src="/view/{{photo.id}}"></p>
     {{#photo.grade}}<p>Betyg: {{.}}</p>{{/photo.grade}}
     <p>People: {{#people}}<a href="/person/{{slug}}">{{name}}</a>, {{/people}}</p>
+    <p>Places: {{#places}}<a href="/place/{{slug}}">{{place}}</a>, {{/places}}</p>
     <p>Tags: {{#tags}}<a href="/tag/{{slug}}">{{tag}}</a>, {{/tags}}</p>
   </body>
 </html>

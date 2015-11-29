@@ -243,6 +243,78 @@ impl IsTable for Person {
     }
 }
 
+#[derive(Debug, Clone, RustcEncodable)]
+pub struct Place {
+    pub id: i32,
+    pub place: String,
+    pub slug: String,
+}
+
+impl Entity for Place {
+    fn id(&self) -> &ToValue {
+        &self.id
+    }
+}
+impl IsDao for Place {
+    fn from_dao(dao: &Dao) -> Self {
+        Place {
+            id: dao.get("id"),
+            place: dao.get("place"),
+            slug: dao.get("slug"),
+        }
+    }
+    fn to_dao(&self) -> Dao {
+        let mut dao = Dao::new();
+        dao.set("id", &self.id);
+        dao.set("place", &self.place);
+        dao.set("slug", &self.slug);
+        dao
+    }
+}
+
+impl IsTable for Place {
+    fn table() -> Table {
+        table("place", vec![
+            Column {
+                name: "id".to_string(),
+                data_type: "i32".to_string(),
+                db_data_type: "serial".to_string(),
+                is_primary: true,
+                is_unique: true,
+                default: None,
+                comment: None,
+                not_null: true,
+                foreign: None,
+                is_inherited: false
+            },
+            Column {
+                name: "place".to_string(),
+                data_type: "String".to_string(),
+                db_data_type: "varchar(100)".to_string(),
+                is_primary: false,
+                is_unique: true,
+                default: None,
+                comment: None,
+                not_null: true,
+                foreign: None,
+                is_inherited: false
+            },
+            Column {
+                name: "slug".to_string(),
+                data_type: "String".to_string(),
+                db_data_type: "varchar(100)".to_string(),
+                is_primary: false,
+                is_unique: true,
+                default: None,
+                comment: None,
+                not_null: true,
+                foreign: None,
+                is_inherited: false
+            }
+            ])
+    }
+}
+
 fn table(name: &str, columns: Vec<Column>) -> Table {
     Table {
         schema: "public".to_owned(),
