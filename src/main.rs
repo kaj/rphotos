@@ -12,7 +12,7 @@ extern crate time;
 mod models;
 use hyper::header::{Expires, HttpDate};
 use image::open as image_open;
-use image::{FilterType, ImageFormat};
+use image::{FilterType, ImageFormat, GenericImage};
 use models::{Photo, Tag, Person, query_for};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
@@ -50,20 +50,25 @@ fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
     let path = format!("/home/kaj/Bilder/foto/{}", photo.path);
     info!("Should open {}", path);
     let img = image_open(path).unwrap();
-    let scaled = img.resize(width, height, FilterType::Nearest);
-    let scaled = match photo.rotation {
-        0 => scaled,
-        90 => scaled.rotate90(),
-        180 => scaled.rotate180(),
-        270 => scaled.rotate270(),
+    let img =
+        if width < img.width() || height < img.height() {
+            img.resize(width, height, FilterType::Nearest)
+        } else {
+            img
+        };
+    let img = match photo.rotation {
+        0 => img,
+        90 => img.rotate90(),
+        180 => img.rotate180(),
+        270 => img.rotate270(),
         x => {
             warn!("Should rotate photo {} deg, which is unsupported", x);
-            scaled
+            img
         }
     };
     // TODO Put the icon in some kind of cache!
     let mut buf : Vec<u8> = Vec::new();
-    scaled.save(&mut buf, ImageFormat::JPEG).unwrap();
+    img.save(&mut buf, ImageFormat::JPEG).unwrap();
     buf
 }
 
@@ -80,7 +85,7 @@ fn main() {
 
     server.utilize(router! {
         get "/" => |req, res| {
-            let photos: Vec<Photo> = query_for::<Photo>().limit(25)
+            let photos: Vec<Photo> = query_for::<Photo>().limit(24)
                 .collect(req.db_conn()).unwrap();
             info!("Got some photos: {:?}", photos);
             let mut data = HashMap::new();
