@@ -7,6 +7,7 @@ extern crate env_logger;
 use rustorm::database::Database;
 use rustorm::pool::ManagedPool;
 use rustorm::query::Query;
+use rustorm::table::IsTable;
 use std::fs::File;
 use xml::attribute::OwnedAttribute;
 use xml::reader::EventReader;
@@ -82,6 +83,24 @@ fn person_photo(db: &Database, photo: &Photo, name: String) {
     }
 }
 
+fn grade_photo(db: &Database, photo: &mut Photo, name: String) {
+    info!("Should set  grade {:?} on {:?}", name, photo);
+    let grade = match &*name {
+        "Usel" => 0,
+        "Ok" => 3,
+        "utvald" => 5,
+        x => panic!("Unknown grade {:?} on {:?}", name, photo)
+    };
+    photo.grade = Some(grade);
+    let mut q = Query::update();
+    q.from(&Photo::table());
+    q.filter_eq("id", &photo.id);
+    q.set("grade", &grade);
+    info!("SQL: {}", q.build(db));
+    let n = q.execute(db).unwrap();
+    info!("Graded {} photo", n);
+}
+
 fn main() {
     env_logger::init().unwrap();
     let pool = ManagedPool::init(&dburl(), 1).unwrap();
@@ -125,6 +144,11 @@ fn main() {
                                             person_photo(db.as_ref(), &photo, v);
                                         }
                                     },
+                                    "Betyg" => {
+                                        if let Some(ref mut photo) = photo {
+                                            grade_photo(db.as_ref(), photo, v);
+                                        }
+                                    }
                                     o => { debug!("  {} = {}", o, v); }
                                 }
                                 

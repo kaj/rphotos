@@ -1,7 +1,8 @@
 create table public.photo (
    id       serial primary key,
    path     varchar(100) unique not null,
-   rotation smallint
+   grade    smallint,
+   rotation smallint not null
 );
 
 create table public.tag (

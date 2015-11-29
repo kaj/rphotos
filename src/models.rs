@@ -13,6 +13,7 @@ pub trait Entity : IsTable + IsDao {
 pub struct Photo {
     pub id: i32,
     pub path: String,
+    pub grade: Option<i16>,
     pub rotation: i16
 }
 
@@ -26,6 +27,7 @@ impl IsDao for Photo {
         Photo {
             id: dao.get("id"),
             path: dao.get("path"),
+            grade: dao.get_opt("grade"),
             rotation: dao.get("rotation")
         }
     }
@@ -33,6 +35,11 @@ impl IsDao for Photo {
         let mut dao = Dao::new();
         dao.set("id", &self.id);
         dao.set("path", &self.path);
+        if let Some(grade) = self.grade { // NOTE dao.set_opt would be nice?
+            dao.set("grade", &grade);
+        } else {
+            dao.set_null("grade");
+        }
         dao.set("rotation", &self.rotation);
         dao
     }
@@ -61,6 +68,18 @@ impl IsTable for Photo {
                 default: None,
                 comment: None,
                 not_null: true,
+                foreign: None,
+                is_inherited: false
+            },
+            Column {
+                name: "grade".to_string(),
+                data_type: "i16".to_string(),
+                db_data_type: "smallint".to_string(),
+                is_primary: false,
+                is_unique: false,
+                default: None,
+                comment: None,
+                not_null: false,
                 foreign: None,
                 is_inherited: false
             },

@@ -85,9 +85,10 @@ fn main() {
 
     server.utilize(router! {
         get "/" => |req, res| {
-            let photos: Vec<Photo> = query_for::<Photo>().limit(24)
+            let photos: Vec<Photo> = query_for::<Photo>()
+                .filter_gte("grade", &4_i16)
+                .limit(24)
                 .collect(req.db_conn()).unwrap();
-            info!("Got some photos: {:?}", photos);
             let mut data = HashMap::new();
             data.insert("photos", &photos);
             return res.render("templates/index.tpl", &data);
