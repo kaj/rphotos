@@ -27,6 +27,9 @@ use env::dburl;
 mod rustormmiddleware;
 use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
 
+mod requestloggermiddleware;
+use requestloggermiddleware::RequestLoggerMiddleware;
+
 #[derive(Debug, Clone, RustcEncodable)]
 struct DetailsData {
     photo: Photo,
@@ -88,9 +91,9 @@ fn main() {
     info!("Initalized pool");
 
     let mut server = Nickel::new();
+    server.utilize(RequestLoggerMiddleware);
     server.utilize(StaticFilesHandler::new("static/"));
     server.utilize(RustormMiddleware::new(&dburl()));
-
     server.utilize(router! {
         get "/" => |req, res| {
             let photos: Vec<Photo> = query_for::<Photo>()
@@ -99,6 +102,7 @@ fn main() {
                 .collect(req.db_conn()).unwrap();
             let mut data = HashMap::new();
             data.insert("photos", &photos);
+            info!("About to render for /");
             return res.render("templates/index.tpl", &data);
         }
         get "/details/:id" => |req, res| {

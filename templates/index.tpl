@@ -7,7 +7,10 @@
   </head>
   <body>
     <h1>Photo index</h1>
-    <p>How nice is this?</p>
+
+    <p><a href="/tag/">Taggar</a>
+      · <a href="/person/">Personer</a>
+      · <a href="/place/">Platser</a></p>
 
     <div class="photos">
     {{#photos}}
