@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="/static/photos.css" type="text/css"/>
   </head>
   <body>
+    {{> head}}
     <h1>{{place.place}}</h1>
 
     <div class="photos">

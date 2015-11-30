@@ -6,11 +6,8 @@
     <link rel="stylesheet" href="/static/photos.css" type="text/css"/>
   </head>
   <body>
+    {{> head}}
     <h1>Photo index</h1>
-
-    <p><a href="/tag/">Taggar</a>
-      · <a href="/person/">Personer</a>
-      · <a href="/place/">Platser</a></p>
 
     <div class="photos">
     {{#photos}}

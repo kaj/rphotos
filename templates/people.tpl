@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="/static/photos.css" type="text/css"/>
   </head>
   <body>
+    {{> head}}
     <h1>Photo people</h1>
 
     <ul class="allpeople">{{#people}}

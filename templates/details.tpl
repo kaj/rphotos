@@ -6,7 +6,9 @@
     <link rel="stylesheet" href="/static/photos.css" type="text/css"/>
   </head>
   <body>
+    {{> head}}
     <h1>Photo details</h1>
+
     <p>{{photo.path}}</p>
     <p><img src="/view/{{photo.id}}"></p>
     {{#photo.grade}}<p>Betyg: {{.}}</p>{{/photo.grade}}
