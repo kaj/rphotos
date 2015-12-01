@@ -2,7 +2,7 @@ use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use nickel::status::StatusCode;
 use plugin::{Extensible};
 use typemap::Key;
-use time::{Timespec,get_time};
+use time::{Duration, Timespec, get_time};
 use std::sync::{Arc, Mutex};
 
 pub struct RequestLoggerMiddleware;
@@ -27,7 +27,23 @@ impl RequestLogger {
 impl Drop for RequestLogger {
     fn drop(&mut self) {
         let status = self.status.lock().unwrap();
-        info!("{} {} after {}", self.mu, *status, get_time() - self.start);
+        info!("{} {} after {}", self.mu, *status, fmt_elapsed(get_time() - self.start));
+    }
+}
+
+fn fmt_elapsed(t: Duration) -> String {
+    let ms = t.num_milliseconds();
+    if ms > 1000 {
+        format!("{:.2} s", ms as f32 * 1e-3)
+    } else {
+        let ns = t.num_nanoseconds().unwrap();
+        if ns > 1e6 as i64 {
+            format!("{} ms", ns / 1e6 as i64)
+        } else if ns > 1000 {
+            format!("{} us", ns / 1000)
+        } else {
+            format!("{} ns", ns)
+        }
     }
 }
 
