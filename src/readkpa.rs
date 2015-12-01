@@ -14,7 +14,7 @@ use xml::reader::EventReader;
 use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
 
 mod models;
-use models::{Photo, Tag, Person, Place, get_or_create_default};
+use models::{Photo, Tag, Person, Place, get_or_create};
 
 mod env;
 use env::dburl;
@@ -43,8 +43,7 @@ fn slugify(val: String) -> String {
 fn tag_photo(db: &Database, photo: &Photo, tag: String) {
     let v2 : String = tag.clone();
 
-    let tag: Tag = get_or_create_default(db, "tag", &tag,
-                                         &[("slug", &slugify(v2))]);
+    let tag: Tag = get_or_create(db, "tag", &tag, &[("slug", &slugify(v2))]);
     debug!("  tag {:?}", tag);
     let mut q = Query::select();
     q.from_table("public.photo_tag");
@@ -64,8 +63,8 @@ fn tag_photo(db: &Database, photo: &Photo, tag: String) {
 
 fn person_photo(db: &Database, photo: &Photo, name: String) {
     let v2: String = name.clone();
-    let person: Person = get_or_create_default(db, "name", &name,
-                                            &[("slug", &slugify(v2))]);
+    let person: Person = get_or_create(db, "name", &name,
+                                       &[("slug", &slugify(v2))]);
     debug!("  person {:?}", person);
     let mut q = Query::select();
     q.from_table("public.photo_person");
@@ -85,8 +84,8 @@ fn person_photo(db: &Database, photo: &Photo, name: String) {
 
 fn place_photo(db: &Database, photo: &Photo, name: String) {
     let v2: String = name.clone();
-    let place: Place = get_or_create_default(db, "place", &name,
-                                            &[("slug", &slugify(v2))]);
+    let place: Place = get_or_create(db, "place", &name,
+                                     &[("slug", &slugify(v2))]);
     debug!("  place {:?}", place);
     let mut q = Query::select();
     q.from_table("public.photo_place");
@@ -140,7 +139,7 @@ fn main() {
                 match &*name.local_name {
                     "image" => {
                         if let Some(file) = find_attr("file", attributes) {
-                            let img = get_or_create_default::<Photo>
+                            let img: Photo = get_or_create
                                 (db.as_ref(), "path", &file,
                                  &[("rotation", &find_attr("angle", attributes).unwrap_or("0".to_string()).parse::<i16>().unwrap())]);
                             debug!("Found image {:?}", img);

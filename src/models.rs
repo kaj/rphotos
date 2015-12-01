@@ -334,18 +334,7 @@ pub fn query_for<T: IsTable>() -> Query {
     q
 }
 
-pub fn get_or_create<T: IsTable + IsDao>(db: &Database, key: &str, val: &ToValue) -> T {
-    if let Ok(result) = query_for::<T>().filter_eq(key, val).collect_one(db) {
-        result
-    } else {
-        let table = T::table();
-        Query::insert().into_(&table).set(key, val)
-            .returns(table.columns.iter().map(|c| &*c.name).collect())
-            .collect_one(db).unwrap()
-    }
-}
-
-pub fn get_or_create_default<'a, T: IsTable + IsDao>
+pub fn get_or_create<'a, T: IsTable + IsDao>
     (db: &Database, key: &str, val: &ToValue, defaults: &[(&str, &ToValue)]) -> T
 {
     if let Ok(result) = query_for::<T>().filter_eq(key, val).collect_one(db) {
