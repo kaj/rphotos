@@ -11,7 +11,7 @@
 
     <div class="photos">
     {{#photos}}
-    <p><a href="/details/{{id}}"><img src="/icon/{{id}}"></a></p>
+    <p><a href="/details/{{id}}"><img src="/img/{{id}}/s"></a></p>
     {{/photos}}
     </div>
   </body>

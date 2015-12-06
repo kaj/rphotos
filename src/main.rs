@@ -172,23 +172,20 @@ fn main() {
                 });
             }
         }
-        get "/icon/:id" => |req, mut res| {
+        get "/img/:id/:size" => |req, mut res| {
             if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
                 if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
-                    let buf = get_scaled_image(photo, 200, 180);
-                    res.set(MediaType::Jpeg);
-                    res.set(Expires(HttpDate(time::now() + Duration::days(14))));
-                    return res.send(buf);
-                }
-            }
-        }
-        get "/view/:id" => |req, mut res| {
-            if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
-                if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
-                    let buf = get_scaled_image(photo, 800, 600);
-                    res.set(MediaType::Jpeg);
-                    res.set(Expires(HttpDate(time::now() + Duration::days(14))));
-                    return res.send(buf);
+                    if let Some(size) = match req.param("size").unwrap() {
+                        "s" => Some(200),
+                        "m" => Some(800),
+                        "l" => Some(1200),
+                        _ => None
+                    } {
+                        let buf = get_scaled_image(photo, size, size);
+                        res.set(MediaType::Jpeg);
+                        res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                        return res.send(buf);
+                    }
                 }
             }
         }

@@ -9,8 +9,8 @@
     {{> head}}
     <h1>Photo details</h1>
 
-    <p>{{photo.path}}</p>
-    <p><img src="/view/{{photo.id}}"></p>
+    <p><a href="/img/{{photo.id}}/l">{{photo.path}}</a></p>
+    <p><img src="/img/{{photo.id}}/m"></p>
     {{#photo.grade}}<p>Betyg: {{.}}</p>{{/photo.grade}}
     <p>People: {{#people}}<a href="/person/{{slug}}">{{name}}</a>, {{/people}}</p>
     <p>Places: {{#places}}<a href="/place/{{slug}}">{{place}}</a>, {{/places}}</p>
