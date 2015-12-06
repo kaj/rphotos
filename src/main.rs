@@ -17,8 +17,6 @@ use models::{Photo, Tag, Person, Place, query_for};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
-use rustorm::database::{Database};
-use std::collections::HashMap;
 use time::Duration;
 
 mod env;
@@ -29,32 +27,6 @@ use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
 
 mod requestloggermiddleware;
 use requestloggermiddleware::RequestLoggerMiddleware;
-
-#[derive(Debug, Clone, RustcEncodable)]
-struct DetailsData {
-    photo: Photo,
-    people: Vec<Person>,
-    places: Vec<Place>,
-    tags: Vec<Tag>
-}
-
-#[derive(Debug, Clone, RustcEncodable)]
-struct TagData {
-    tag: Tag,
-    photos: Vec<Photo>
-}
-
-#[derive(Debug, Clone, RustcEncodable)]
-struct PersonData {
-    person: Person,
-    photos: Vec<Photo>
-}
-
-#[derive(Debug, Clone, RustcEncodable)]
-struct PlaceData {
-    place: Place,
-    photos: Vec<Photo>
-}
 
 fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
     let path = format!("/home/kaj/Bilder/foto/{}", photo.path);
@@ -83,6 +55,26 @@ fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
     buf
 }
 
+macro_rules! render {
+    ($res:expr, $template:expr, { $($param:ident : $ptype:ty = $value:expr),* })
+        =>
+    {
+        {
+        #[derive(Debug, Clone, RustcEncodable)]
+        struct ParamData {
+            $(
+                $param: $ptype,
+                )*
+        }
+        $res.render($template, &ParamData {
+            $(
+                $param: $value,
+                )*
+        })
+        }
+    }
+}
+
 fn main() {
     env_logger::init().unwrap();
     info!("Initalized logger");
@@ -96,79 +88,73 @@ fn main() {
     server.utilize(RustormMiddleware::new(&dburl()));
     server.utilize(router! {
         get "/" => |req, res| {
-            let photos: Vec<Photo> = query_for::<Photo>()
-                .filter_gte("grade", &4_i16)
-                .limit(24)
-                .collect(req.db_conn()).unwrap();
-            let mut data = HashMap::new();
-            data.insert("photos", &photos);
-            info!("About to render for /");
-            return res.render("templates/index.tpl", &data);
+            return render!(res, "templates/index.tpl", {
+                photos: Vec<Photo> = query_for::<Photo>()
+                    .filter_gte("grade", &4_i16)
+                    .limit(24)
+                    .collect(req.db_conn()).unwrap()
+            });
         }
         get "/details/:id" => |req, res| {
             if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
                 if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
-
-                    let people = req.orm_get_related(&photo, "photo_person").unwrap();
-                    let places = req.orm_get_related(&photo, "photo_place").unwrap();
-                    let tags = req.orm_get_related(&photo, "photo_tag").unwrap();
-                    return res.render("templates/details.tpl", &DetailsData {
-                        photo: photo,
-                        people: people,
-                        places: places,
-                        tags: tags
+                    return render!(res, "templates/details.tpl", {
+                        people: Vec<Person> =
+                            req.orm_get_related(&photo, "photo_person").unwrap(),
+                        places: Vec<Place> =
+                            req.orm_get_related(&photo, "photo_place").unwrap(),
+                        tags: Vec<Tag> =
+                            req.orm_get_related(&photo, "photo_tag").unwrap(),
+                        photo: Photo = photo
                     });
                 }
             }
         }
         get "/tag/" => |req, res| {
-            let tags: Vec<Tag> = query_for::<Tag>().asc("tag")
-                .collect(req.db_conn()).unwrap();
-            let mut data = HashMap::new();
-            data.insert("tags", &tags);
-            return res.render("templates/tags.tpl", &data);
+            return render!(res, "templates/tags.tpl", {
+                tags: Vec<Tag> = query_for::<Tag>().asc("tag")
+                    .collect(req.db_conn()).unwrap()
+            });
         }
         get "/tag/:tag" => |req, res| {
             let slug = req.param("tag").unwrap();
             if let Ok(tag) = req.orm_get::<Tag>("slug", &slug) {
-                let photos = req.orm_get_related(&tag, "photo_tag").unwrap();
-                return res.render("templates/tag.tpl", &TagData {
-                    tag: tag,
-                    photos: photos
+                return render!(res, "templates/tag.tpl", {
+                    photos: Vec<Photo> =
+                        req.orm_get_related(&tag, "photo_tag").unwrap(),
+                    tag: Tag = tag
                 });
             }
         }
         get "/person/" => |req, res| {
-            let people: Vec<Person> = query_for::<Person>().asc("name")
-                .collect(req.db_conn()).unwrap();
-            let mut data = HashMap::new();
-            data.insert("people", &people);
-            return res.render("templates/people.tpl", &data);
+            return render!(res, "templates/people.tpl", {
+                people: Vec<Person> = query_for::<Person>().asc("name")
+                    .collect(req.db_conn()).unwrap()
+            });
         }
         get "/person/:slug" => |req, res| {
             let slug = req.param("slug").unwrap();
             if let Ok(person) = req.orm_get::<Person>("slug", &slug) {
-                let photos = req.orm_get_related(&person, "photo_person").unwrap();
-                return res.render("templates/person.tpl", &PersonData {
-                    person: person,
-                    photos: photos
+                return render!(res, "templates/person.tpl", {
+                    photos: Vec<Photo> =
+                        req.orm_get_related(&person, "photo_person").unwrap(),
+                    person: Person = person
                 });
             }
         }
         get "/place/" => |req, res| {
-            let places: Vec<Place> = query_for::<Place>().asc("place")
-                .collect(req.db_conn()).unwrap();
-            let mut data = HashMap::new();
-            data.insert("places", &places);
-            return res.render("templates/places.tpl", &data);
+            return render!(res, "templates/places.tpl", {
+                places: Vec<Place> = query_for::<Place>().asc("place")
+                    .collect(req.db_conn()).unwrap()
+            });
         }
         get "/place/:slug" => |req, res| {
             let slug = req.param("slug").unwrap();
             if let Ok(place) = req.orm_get::<Place>("slug", &slug) {
-                let photos = req.orm_get_related(&place, "photo_place").unwrap();
-                return res.render("templates/place.tpl", &PlaceData {
-                    place: place,
-                    photos: photos
+                return render!(res, "templates/place.tpl", {
+                    photos: Vec<Photo> =
+                        req.orm_get_related(&place, "photo_place").unwrap(),
+                    place: Place = place
                 });
             }
         }
