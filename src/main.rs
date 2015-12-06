@@ -17,10 +17,11 @@ use models::{Photo, Tag, Person, Place, query_for};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
+use std::path::{Path, PathBuf};
 use time::Duration;
 
 mod env;
-use env::dburl;
+use env::{dburl, env_or};
 
 mod rustormmiddleware;
 use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
@@ -28,31 +29,44 @@ use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
 mod requestloggermiddleware;
 use requestloggermiddleware::RequestLoggerMiddleware;
 
-fn get_scaled_image(photo: Photo, width: u32, height: u32) -> Vec<u8> {
-    let path = format!("/home/kaj/Bilder/foto/{}", photo.path);
-    info!("Should open {}", path);
-    let img = image_open(path).unwrap();
-    let img =
-        if width < img.width() || height < img.height() {
-            img.resize(width, height, FilterType::Nearest)
-        } else {
-            img
-        };
-    let img = match photo.rotation {
-        _x @ 0...44 => img,
-        _x @ 45...134 => img.rotate90(),
-        _x @ 135...224 => img.rotate180(),
-        _x @ 225...314 => img.rotate270(),
-        _x @ 315...360 => img,
-        x => {
-            warn!("Should rotate photo {} deg, which is unsupported", x);
-            img
+struct PhotosDir {
+    basedir: PathBuf
+}
+
+impl PhotosDir {
+    fn new(basedir: &Path) -> PhotosDir {
+        PhotosDir {
+            basedir: basedir.to_path_buf()
         }
-    };
-    // TODO Put the icon in some kind of cache!
-    let mut buf : Vec<u8> = Vec::new();
-    img.save(&mut buf, ImageFormat::JPEG).unwrap();
-    buf
+    }
+
+    fn get_scaled_image(&self, photo: Photo, width: u32, height: u32)
+                        -> Vec<u8> {
+        let path = self.basedir.join(photo.path);
+        info!("Should open {:?}", path);
+        let img = image_open(path).unwrap();
+        let img =
+            if width < img.width() || height < img.height() {
+                img.resize(width, height, FilterType::Nearest)
+            } else {
+                img
+            };
+        let img = match photo.rotation {
+            _x @ 0...44 => img,
+            _x @ 45...134 => img.rotate90(),
+            _x @ 135...224 => img.rotate180(),
+            _x @ 225...314 => img.rotate270(),
+            _x @ 315...360 => img,
+            x => {
+                warn!("Should rotate photo {} deg, which is unsupported", x);
+                img
+            }
+        };
+        // TODO Put the icon in some kind of cache!
+        let mut buf : Vec<u8> = Vec::new();
+        img.save(&mut buf, ImageFormat::JPEG).unwrap();
+        buf
+    }
 }
 
 macro_rules! render {
@@ -79,6 +93,8 @@ fn main() {
     env_logger::init().unwrap();
     info!("Initalized logger");
 
+    let photos = PhotosDir::new(Path::new(
+        &*env_or("RPHOTOS_DIR", "/home/kaj/Bilder/foto")));
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
     server.utilize(StaticFilesHandler::new("static/"));
@@ -164,7 +180,7 @@ fn main() {
                         "l" => Some(1200),
                         _ => None
                     } {
-                        let buf = get_scaled_image(photo, size, size);
+                        let buf = photos.get_scaled_image(photo, size, size);
                         res.set(MediaType::Jpeg);
                         res.set(Expires(HttpDate(time::now() + Duration::days(14))));
                         return res.send(buf);
@@ -174,5 +190,5 @@ fn main() {
         }
     });
 
-    server.listen("127.0.0.1:6767");
+    server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"));
 }

@@ -12,3 +12,7 @@ pub fn dburl() -> String {
         }
     }
 }
+
+pub fn env_or(name: &str, default: &str) -> String {
+    var(name).unwrap_or(default.to_string())
+}
