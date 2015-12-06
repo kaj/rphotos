@@ -1,5 +1,6 @@
 use std::env::var;
 use std::process::exit;
+use std::path::PathBuf;
 
 pub fn dburl() -> String {
     let db_var = "RPHOTOS_DB";
@@ -11,6 +12,10 @@ pub fn dburl() -> String {
             exit(1);
         }
     }
+}
+
+pub fn photos_dir() -> PathBuf {
+    PathBuf::from(&*env_or("RPHOTOS_DIR", "/home/kaj/Bilder/foto"))
 }
 
 pub fn env_or(name: &str, default: &str) -> String {

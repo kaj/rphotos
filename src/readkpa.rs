@@ -17,7 +17,7 @@ mod models;
 use models::{Photo, Tag, Person, Place, get_or_create};
 
 mod env;
-use env::dburl;
+use env::{dburl, photos_dir};
 
 fn find_attr(name: &str, attrs: &Vec<OwnedAttribute>) -> Option<String> {
     for attr in attrs {
@@ -124,7 +124,7 @@ fn main() {
     env_logger::init().unwrap();
     let pool = ManagedPool::init(&dburl(), 1).unwrap();
     let db = pool.connect().unwrap();
-    let file = File::open("/home/kaj/Bilder/foto/index.xml").unwrap();
+    let file = File::open(photos_dir().join("index.xml")).unwrap();
     info!("Reading kphotoalbum data");
     let mut xml = EventReader::new(file);
     let mut option : Option<String> = None;

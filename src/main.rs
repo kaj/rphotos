@@ -17,11 +17,11 @@ use models::{Photo, Tag, Person, Place, query_for};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use time::Duration;
 
 mod env;
-use env::{dburl, env_or};
+use env::{dburl, env_or, photos_dir};
 
 mod rustormmiddleware;
 use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
@@ -34,9 +34,9 @@ struct PhotosDir {
 }
 
 impl PhotosDir {
-    fn new(basedir: &Path) -> PhotosDir {
+    fn new(basedir: PathBuf) -> PhotosDir {
         PhotosDir {
-            basedir: basedir.to_path_buf()
+            basedir: basedir
         }
     }
 
@@ -93,8 +93,7 @@ fn main() {
     env_logger::init().unwrap();
     info!("Initalized logger");
 
-    let photos = PhotosDir::new(Path::new(
-        &*env_or("RPHOTOS_DIR", "/home/kaj/Bilder/foto")));
+    let photos = PhotosDir::new(photos_dir());
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
     server.utilize(StaticFilesHandler::new("static/"));
