@@ -78,9 +78,6 @@ macro_rules! render {
 fn main() {
     env_logger::init().unwrap();
     info!("Initalized logger");
-    // NOTE pool will need to be mut if we do db writes?
-    // let pool = ManagedPool::init(&dburl(), 1).unwrap();
-    info!("Initalized pool");
 
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
