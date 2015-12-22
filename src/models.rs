@@ -1,5 +1,7 @@
 //extern crate chrono;
 
+use chrono::datetime::DateTime;
+use chrono::offset::utc::UTC;
 use rustorm::query::Query;
 use rustorm::dao::{Dao, IsDao, ToValue};
 use rustorm::table::{IsTable, Table, Column};
@@ -13,6 +15,7 @@ pub trait Entity : IsTable + IsDao {
 pub struct Photo {
     pub id: i32,
     pub path: String,
+    pub date: Option<DateTime<UTC>>,
     pub grade: Option<i16>,
     pub rotation: i16
 }
@@ -27,6 +30,7 @@ impl IsDao for Photo {
         Photo {
             id: dao.get("id"),
             path: dao.get("path"),
+            date: dao.get_opt("date"),
             grade: dao.get_opt("grade"),
             rotation: dao.get("rotation")
         }
@@ -35,15 +39,21 @@ impl IsDao for Photo {
         let mut dao = Dao::new();
         dao.set("id", &self.id);
         dao.set("path", &self.path);
-        if let Some(grade) = self.grade { // NOTE dao.set_opt would be nice?
-            dao.set("grade", &grade);
-        } else {
-            dao.set_null("grade");
-        }
+        set_opt(&mut dao, "date", &self.date);
+        set_opt(&mut dao, "grade", &self.grade);
         dao.set("rotation", &self.rotation);
         dao
     }
 }
+
+// NOTE This should be a method on dao.
+fn set_opt<T: ToValue>(dao: &mut Dao, name: &str, value: &Option<T>) {
+    match value {
+        &Some(ref value) => dao.set(name, value),
+        &None => dao.set_null(name)
+    }
+}
+
 impl IsTable for Photo {
     fn table() -> Table {
         table("photo", vec![
@@ -68,6 +78,18 @@ impl IsTable for Photo {
                 default: None,
                 comment: None,
                 not_null: true,
+                foreign: None,
+                is_inherited: false
+            },
+            Column {
+                name: "date".to_string(),
+                data_type: "DateTime<UTC>".to_string(),
+                db_data_type: "timestamp".to_string(),
+                is_primary: false,
+                is_unique: false,
+                default: None,
+                comment: None,
+                not_null: false,
                 foreign: None,
                 is_inherited: false
             },

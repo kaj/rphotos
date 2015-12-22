@@ -8,15 +8,17 @@ extern crate plugin;
 extern crate image;
 extern crate hyper;
 extern crate time;
+extern crate chrono;
 
 mod models;
 use hyper::header::{Expires, HttpDate};
 use image::open as image_open;
 use image::{FilterType, ImageFormat, GenericImage};
-use models::{Photo, Tag, Person, Place, query_for};
+use models::{Entity, Photo, Tag, Person, Place, query_for};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
+use rustorm::query::Query;
 use std::path::PathBuf;
 use time::Duration;
 
@@ -89,6 +91,17 @@ macro_rules! render {
     }
 }
 
+fn orm_get_related<T: Entity, Src: Entity>(src: &Src, rel_table: &str)
+                                           -> Query
+{
+    let mut q = Query::select();
+    q.only_from(&T::table());
+    q.left_join_table(rel_table, &format!("{}.id", T::table().name),
+                      &format!("{}.{}", rel_table, T::table().name))
+        .filter_eq(&format!("{}.{}", rel_table, Src::table().name), src.id());
+    q
+}
+
 fn main() {
     env_logger::init().unwrap();
     info!("Initalized logger");
@@ -102,7 +115,8 @@ fn main() {
         get "/" => |req, res| {
             return render!(res, "templates/index.tpl", {
                 photos: Vec<Photo> = query_for::<Photo>()
-                    .filter_gte("grade", &4_i16)
+                    .desc_nulls_last("grade")
+                    .desc_nulls_last("date")
                     .limit(24)
                     .collect(req.db_conn()).unwrap()
             });
@@ -117,6 +131,12 @@ fn main() {
                             req.orm_get_related(&photo, "photo_place").unwrap(),
                         tags: Vec<Tag> =
                             req.orm_get_related(&photo, "photo_tag").unwrap(),
+                        date: String =
+                            if let Some(d) = photo.date {
+                                d.to_rfc3339()
+                            } else {
+                                "".to_string()
+                            },
                         photo: Photo = photo
                     });
                 }
@@ -149,7 +169,10 @@ fn main() {
             if let Ok(person) = req.orm_get::<Person>("slug", &slug) {
                 return render!(res, "templates/person.tpl", {
                     photos: Vec<Photo> =
-                        req.orm_get_related(&person, "photo_person").unwrap(),
+                        orm_get_related::<Photo, Person>(&person, "photo_person")
+                        .desc_nulls_last("grade")
+                        .desc_nulls_last("date")
+                        .collect(req.db_conn()).unwrap(),
                     person: Person = person
                 });
             }

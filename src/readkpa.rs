@@ -3,10 +3,17 @@ extern crate xml;
 extern crate rustorm;
 extern crate rustc_serialize;
 extern crate env_logger;
+extern crate time;
+extern crate chrono;
 
+use chrono::datetime::DateTime;
+use chrono::naive::datetime::NaiveDateTime;
+use chrono::offset::utc::UTC;
+use chrono::offset::TimeZone;
 use rustorm::database::Database;
 use rustorm::pool::ManagedPool;
 use rustorm::query::Query;
+use rustorm::dao::ToValue;
 use rustorm::table::IsTable;
 use std::fs::File;
 use xml::attribute::OwnedAttribute;
@@ -109,7 +116,7 @@ fn grade_photo(db: &Database, photo: &mut Photo, name: String) {
         "Usel" => 0,
         "Ok" => 3,
         "utvald" => 5,
-        x => panic!("Unknown grade {:?} on {:?}", name, photo)
+        x => panic!("Unknown grade {:?} on {:?}", x, photo)
     };
     photo.grade = Some(grade);
     let mut q = Query::update();
@@ -139,9 +146,15 @@ fn main() {
                 match &*name.local_name {
                     "image" => {
                         if let Some(file) = find_attr("file", attributes) {
-                            let img: Photo = get_or_create
-                                (db.as_ref(), "path", &file,
-                                 &[("rotation", &find_attr("angle", attributes).unwrap_or("0".to_string()).parse::<i16>().unwrap())]);
+                            let angle = find_attr("angle", attributes).unwrap_or("0".to_string()).parse::<i16>().unwrap();
+                            let date = find_image_date(attributes);
+                            let mut defaults: Vec<(&str, &ToValue)> =
+                                vec![("rotation", &angle)];
+                            if let Some(ref date) = date {
+                                defaults.push(("date", date));
+                            }
+                            let img: Photo = get_or_create(db.as_ref(), "path", &file,
+                                                           &defaults);
                             debug!("Found image {:?}", img);
                             photo = Some(img);
                         }
@@ -190,6 +203,31 @@ fn main() {
             }
             _ => {
             }
+        }
+    }
+}
+
+fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<DateTime<UTC>> {
+    let start_date = find_attr("startDate", attributes).unwrap_or("".to_string());
+    let end_date = find_attr("endDate", attributes).unwrap_or("".to_string());
+    let format = "%FT%T";
+    let utc : UTC = UTC;
+    if let Ok(start_t) = NaiveDateTime::parse_from_str(&*start_date, format) {
+        if let Ok(end_t) = NaiveDateTime::parse_from_str(&*end_date, format) {
+            if start_t != end_t {
+                println!("Found interval {} - {}", start_t, end_t);
+                utc.from_local_datetime(&end_t).latest()
+            } else {
+                utc.from_local_datetime(&start_t).latest()
+            }
+        } else {
+            utc.from_local_datetime(&start_t).latest()
+        }
+    } else {
+        if let Ok(end_t) = NaiveDateTime::parse_from_str(&*end_date, format) {
+            utc.from_local_datetime(&end_t).latest()
+        } else {
+            None
         }
     }
 }

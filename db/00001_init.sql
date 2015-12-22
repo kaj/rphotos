@@ -1,6 +1,7 @@
 create table public.photo (
    id       serial primary key,
    path     varchar(100) unique not null,
+   date     timestamp with time zone,
    grade    smallint,
    rotation smallint not null
 );
