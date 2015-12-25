@@ -10,17 +10,22 @@ extern crate hyper;
 extern crate time;
 extern crate chrono;
 
-mod models;
+use chrono::UTC;
+use chrono::offset::TimeZone;
+use chrono::{Duration as ChDuration};
+use chrono::Datelike;
 use hyper::header::{Expires, HttpDate};
 use image::open as image_open;
 use image::{FilterType, ImageFormat, GenericImage};
-use models::{Entity, Photo, Tag, Person, Place, query_for};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
 use rustorm::query::Query;
 use std::path::PathBuf;
 use time::Duration;
+
+mod models;
+use models::{Entity, Photo, Tag, Person, Place, query_for};
 
 mod env;
 use env::{dburl, env_or, photos_dir};
@@ -131,12 +136,22 @@ fn main() {
                             req.orm_get_related(&photo, "photo_place").unwrap(),
                         tags: Vec<Tag> =
                             req.orm_get_related(&photo, "photo_tag").unwrap(),
-                        date: String =
-                            if let Some(d) = photo.date {
-                                d.to_rfc3339()
-                            } else {
-                                "".to_string()
-                            },
+                        time: String = match photo.date {
+                            Some(d) => d.format("%T").to_string(),
+                            None => "".to_string()
+                        },
+                        year: i32 = match photo.date {
+                            Some(d) => d.year(),
+                            None => 0
+                        },
+                        month: u32 = match photo.date {
+                            Some(d) => d.month(),
+                            None => 0
+                        },
+                        day: u32 = match photo.date {
+                            Some(d) => d.day(),
+                            None => 0
+                        },
                         photo: Photo = photo
                     });
                 }
@@ -206,6 +221,53 @@ fn main() {
                         res.set(MediaType::Jpeg);
                         res.set(Expires(HttpDate(time::now() + Duration::days(14))));
                         return res.send(buf);
+                    }
+                }
+            }
+        }
+        get "/:year/" => |req, res| {
+            if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
+                let date = UTC.ymd(year, 1, 1).and_hms(0,0,0);
+                return render!(res, "templates/index.tpl", {
+                    photos: Vec<Photo> = query_for::<Photo>()
+                        .filter_gte("date", &date)
+                        .filter_lt("date", &(date + ChDuration::days(366)))
+                        .desc_nulls_last("grade")
+                        .asc_nulls_last("date")
+                        .limit(36)
+                        .collect(req.db_conn()).unwrap()
+                });
+            }
+        }
+        get "/:year/:month/" => |req, res| {
+            if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
+                if let Ok(month) = req.param("month").unwrap().parse::<u32>() {
+                    let date = UTC.ymd(year, month, 1).and_hms(0,0,0);
+                    return render!(res, "templates/index.tpl", {
+                        photos: Vec<Photo> = query_for::<Photo>()
+                            .filter_gte("date", &date)
+                            .filter_lt("date", &(date + ChDuration::days(31)))
+                            .desc_nulls_last("grade")
+                            .asc_nulls_last("date")
+                            .limit(36)
+                            .collect(req.db_conn()).unwrap()
+                    });
+                }
+            }
+        }
+        get "/:year/:month/:day" => |req, res| {
+            if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
+                if let Ok(month) = req.param("month").unwrap().parse::<u32>() {
+                    if let Ok(day) = req.param("day").unwrap().parse::<u32>() {
+                        let date = UTC.ymd(year, month, day).and_hms(0,0,0);
+                        return render!(res, "templates/index.tpl", {
+                            photos: Vec<Photo> = query_for::<Photo>()
+                                .filter_gte("date", &date)
+                                .filter_lt("date", &(date + ChDuration::days(1)))
+                                .desc_nulls_last("grade")
+                                .asc_nulls_last("date")
+                                .collect(req.db_conn()).unwrap()
+                        });
                     }
                 }
             }
