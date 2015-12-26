@@ -3,7 +3,7 @@
 use chrono::datetime::DateTime;
 use chrono::offset::utc::UTC;
 use rustorm::query::Query;
-use rustorm::dao::{Dao, IsDao, ToValue};
+use rustorm::dao::{Dao, IsDao, ToValue, Type};
 use rustorm::table::{IsTable, Table, Column};
 use rustorm::database::Database;
 
@@ -59,7 +59,7 @@ impl IsTable for Photo {
         table("photo", vec![
             Column {
                 name: "id".to_string(),
-                data_type: "i32".to_string(),
+                data_type: Type::I32,
                 db_data_type: "serial".to_string(),
                 is_primary: true,
                 is_unique: true,
@@ -71,7 +71,7 @@ impl IsTable for Photo {
             },
             Column {
                 name: "path".to_string(),
-                data_type: "String".to_string(),
+                data_type: Type::String,
                 db_data_type: "varchar(100)".to_string(),
                 is_primary: false,
                 is_unique: true,
@@ -83,7 +83,7 @@ impl IsTable for Photo {
             },
             Column {
                 name: "date".to_string(),
-                data_type: "DateTime<UTC>".to_string(),
+                data_type: Type::DateTime,
                 db_data_type: "timestamp".to_string(),
                 is_primary: false,
                 is_unique: false,
@@ -95,7 +95,7 @@ impl IsTable for Photo {
             },
             Column {
                 name: "grade".to_string(),
-                data_type: "i16".to_string(),
+                data_type: Type::I16,
                 db_data_type: "smallint".to_string(),
                 is_primary: false,
                 is_unique: false,
@@ -107,7 +107,7 @@ impl IsTable for Photo {
             },
             Column {
                 name: "rotation".to_string(),
-                data_type: "i16".to_string(),
+                data_type: Type::I16,
                 db_data_type: "smallint".to_string(),
                 is_primary: false,
                 is_unique: false,
@@ -155,7 +155,7 @@ impl IsTable for Tag {
         table("tag", vec![
             Column {
                 name: "id".to_string(),
-                data_type: "i32".to_string(),
+                data_type: Type::I32,
                 db_data_type: "serial".to_string(),
                 is_primary: true,
                 is_unique: true,
@@ -167,7 +167,7 @@ impl IsTable for Tag {
             },
             Column {
                 name: "tag".to_string(),
-                data_type: "String".to_string(),
+                data_type: Type::String,
                 db_data_type: "varchar(100)".to_string(),
                 is_primary: false,
                 is_unique: true,
@@ -179,7 +179,7 @@ impl IsTable for Tag {
             },
             Column {
                 name: "slug".to_string(),
-                data_type: "String".to_string(),
+                data_type: Type::String,
                 db_data_type: "varchar(100)".to_string(),
                 is_primary: false,
                 is_unique: true,
@@ -227,7 +227,7 @@ impl IsTable for Person {
         table("person", vec![
             Column {
                 name: "id".to_string(),
-                data_type: "i32".to_string(),
+                data_type: Type::I32,
                 db_data_type: "serial".to_string(),
                 is_primary: true,
                 is_unique: true,
@@ -239,7 +239,7 @@ impl IsTable for Person {
             },
             Column {
                 name: "name".to_string(),
-                data_type: "String".to_string(),
+                data_type: Type::String,
                 db_data_type: "varchar(100)".to_string(),
                 is_primary: false,
                 is_unique: true,
@@ -251,7 +251,7 @@ impl IsTable for Person {
             },
             Column {
                 name: "slug".to_string(),
-                data_type: "String".to_string(),
+                data_type: Type::String,
                 db_data_type: "varchar(100)".to_string(),
                 is_primary: false,
                 is_unique: true,
@@ -299,7 +299,7 @@ impl IsTable for Place {
         table("place", vec![
             Column {
                 name: "id".to_string(),
-                data_type: "i32".to_string(),
+                data_type: Type::I32,
                 db_data_type: "serial".to_string(),
                 is_primary: true,
                 is_unique: true,
@@ -311,7 +311,7 @@ impl IsTable for Place {
             },
             Column {
                 name: "place".to_string(),
-                data_type: "String".to_string(),
+                data_type: Type::String,
                 db_data_type: "varchar(100)".to_string(),
                 is_primary: false,
                 is_unique: true,
@@ -323,7 +323,7 @@ impl IsTable for Place {
             },
             Column {
                 name: "slug".to_string(),
-                data_type: "String".to_string(),
+                data_type: Type::String,
                 db_data_type: "varchar(100)".to_string(),
                 is_primary: false,
                 is_unique: true,
