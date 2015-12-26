@@ -1,0 +1,45 @@
+use std::path::PathBuf;
+use image::open as image_open;
+use image::{FilterType, ImageFormat, GenericImage};
+
+use models::Photo;
+
+pub struct PhotosDir {
+    basedir: PathBuf
+}
+
+impl PhotosDir {
+    pub fn new(basedir: PathBuf) -> PhotosDir {
+        PhotosDir {
+            basedir: basedir
+        }
+    }
+
+    pub fn get_scaled_image(&self, photo: Photo, width: u32, height: u32)
+                        -> Vec<u8> {
+        let path = self.basedir.join(photo.path);
+        info!("Should open {:?}", path);
+        let img = image_open(path).unwrap();
+        let img =
+            if width < img.width() || height < img.height() {
+                img.resize(width, height, FilterType::Nearest)
+            } else {
+                img
+            };
+        let img = match photo.rotation {
+            _x @ 0...44 => img,
+            _x @ 45...134 => img.rotate90(),
+            _x @ 135...224 => img.rotate180(),
+            _x @ 225...314 => img.rotate270(),
+            _x @ 315...360 => img,
+            x => {
+                warn!("Should rotate photo {} deg, which is unsupported", x);
+                img
+            }
+        };
+        // TODO Put the icon in some kind of cache!
+        let mut buf : Vec<u8> = Vec::new();
+        img.save(&mut buf, ImageFormat::JPEG).unwrap();
+        buf
+    }
+}

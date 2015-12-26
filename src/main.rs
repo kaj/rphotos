@@ -15,13 +15,10 @@ use chrono::offset::TimeZone;
 use chrono::{Duration as ChDuration};
 use chrono::Datelike;
 use hyper::header::{Expires, HttpDate};
-use image::open as image_open;
-use image::{FilterType, ImageFormat, GenericImage};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
 use rustorm::query::Query;
-use std::path::PathBuf;
 use time::Duration;
 
 mod models;
@@ -30,51 +27,15 @@ use models::{Entity, Photo, Tag, Person, Place, query_for};
 mod env;
 use env::{dburl, env_or, photos_dir};
 
+mod photosdir;
+use photosdir::PhotosDir;
+
 mod rustormmiddleware;
 use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
 
 mod requestloggermiddleware;
 use requestloggermiddleware::RequestLoggerMiddleware;
 
-struct PhotosDir {
-    basedir: PathBuf
-}
-
-impl PhotosDir {
-    fn new(basedir: PathBuf) -> PhotosDir {
-        PhotosDir {
-            basedir: basedir
-        }
-    }
-
-    fn get_scaled_image(&self, photo: Photo, width: u32, height: u32)
-                        -> Vec<u8> {
-        let path = self.basedir.join(photo.path);
-        info!("Should open {:?}", path);
-        let img = image_open(path).unwrap();
-        let img =
-            if width < img.width() || height < img.height() {
-                img.resize(width, height, FilterType::Nearest)
-            } else {
-                img
-            };
-        let img = match photo.rotation {
-            _x @ 0...44 => img,
-            _x @ 45...134 => img.rotate90(),
-            _x @ 135...224 => img.rotate180(),
-            _x @ 225...314 => img.rotate270(),
-            _x @ 315...360 => img,
-            x => {
-                warn!("Should rotate photo {} deg, which is unsupported", x);
-                img
-            }
-        };
-        // TODO Put the icon in some kind of cache!
-        let mut buf : Vec<u8> = Vec::new();
-        img.save(&mut buf, ImageFormat::JPEG).unwrap();
-        buf
-    }
-}
 
 macro_rules! render {
     ($res:expr, $template:expr, { $($param:ident : $ptype:ty = $value:expr),* })
