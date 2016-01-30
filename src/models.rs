@@ -339,7 +339,7 @@ impl IsTable for Place {
 
 fn table(name: &str, columns: Vec<Column>) -> Table {
     Table {
-        schema: "public".to_owned(),
+        schema: None,
         name: name.to_owned(),
         parent_table: None,
         sub_table: vec![],

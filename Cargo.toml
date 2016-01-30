@@ -11,11 +11,14 @@ path = "src/main.rs"
 name = "readkpa"
 path = "src/readkpa.rs"
 
+[dependencies.rustorm]
+version = "*"
+default-features = false
+
 [dependencies]
 nickel = "*"
 env_logger = "*"
 log = "*"
-rustorm = "*"
 chrono = "*"
 rustc-serialize = "*"
 typemap = "*"
