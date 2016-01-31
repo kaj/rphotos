@@ -9,10 +9,13 @@
     {{> head}}
     <h1>{{title}}</h1>
 
-    <div class="photos">
-    {{#photos}}
-    <p><a href="/details/{{id}}"><img src="/img/{{id}}/s"></a></p>
-    {{/photos}}
+    <div class="groups">
+      {{#groups}}
+      <div class="group"><h2>{{title}}</h2>
+	<p><a href="{{url}}"><img src="/img/{{photo.id}}/s"></a></p>
+	<p>{{count}} pictures</p>
+      </div>
+    {{/groups}}
     </div>
   </body>
 </html>

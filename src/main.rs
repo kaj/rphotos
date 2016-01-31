@@ -19,7 +19,7 @@ use hyper::header::{Expires, HttpDate};
 use nickel::{MediaType, Nickel, StaticFilesHandler};
 use plugin::{Pluggable};
 use rustc_serialize::Encodable;
-use rustorm::query::Query;
+use rustorm::query::{Query, Filter};
 use time::Duration;
 
 mod models;
@@ -69,6 +69,32 @@ fn orm_get_related<T: Entity, Src: Entity>(src: &Src, rel_table: &str)
     q
 }
 
+#[derive(Debug, Clone, RustcEncodable)]
+struct Group {
+    title: String,
+    url: String,
+    count: i64,
+    photo: Photo,
+}
+
+fn monthname(n: u8) -> &'static str {
+    match n {
+        1 => "january",
+        2 => "february",
+        3 => "march",
+        4 => "april",
+        5 => "may",
+        6 => "june",
+        7 => "july",
+        8 => "august",
+        9 => "september",
+        10 => "october",
+        11 => "november",
+        12 => "december",
+        _ => "non-month"
+    }
+}
+
 fn main() {
     env_logger::init().unwrap();
     info!("Initalized logger");
@@ -80,12 +106,32 @@ fn main() {
     server.utilize(RustormMiddleware::new(&dburl()));
     server.utilize(router! {
         get "/" => |req, res| {
-            return render!(res, "templates/index.tpl", {
-                photos: Vec<Photo> = query_for::<Photo>()
-                    .desc_nulls_last("grade")
-                    .desc_nulls_last("date")
-                    .limit(24)
-                    .collect(req.db_conn()).unwrap()
+            return render!(res, "templates/groups.tpl", {
+                title: &'static str = "All photos",
+                groups: Vec<Group> = {
+                    query_for::<Photo>()
+                        .columns(vec!("extract(year from date) y", "count(*) c"))
+                        .add_filter(Filter::is_not_null("date"))
+                        .group_by(vec!("y")).asc("y")
+                        .retrieve(req.db_conn()).expect("Get images per year")
+                        .dao.iter().map(|dao| {
+                            debug!("Got a pregroup: {:?}", dao);
+                            let year = dao.get::<f64>("y") as u16;
+                            let count : i64 = dao.get("c");
+                            let photo : Photo = query_for::<Photo>()
+                                .filter_eq("extract(year from date)", &(year as f64))
+                                .desc_nulls_last("grade")
+                                .asc_nulls_last("date")
+                                .limit(1)
+                                .collect_one(req.db_conn()).unwrap();
+                            Group {
+                                title: format!("{}", year),
+                                url: format!("/{}/", year),
+                                count: count,
+                                photo: photo
+                            }
+                    }).collect()
+                }
             });
         }
         get "/details/:id" => |req, res| {
@@ -189,40 +235,79 @@ fn main() {
         }
         get "/:year/" => |req, res| {
             if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
-                let date = UTC.ymd(year, 1, 1).and_hms(0,0,0);
-                return render!(res, "templates/index.tpl", {
-                    photos: Vec<Photo> = query_for::<Photo>()
-                        .filter_gte("date", &date)
-                        .filter_lt("date", &(date + ChDuration::days(366)))
-                        .desc_nulls_last("grade")
-                        .asc_nulls_last("date")
-                        .limit(36)
-                        .collect(req.db_conn()).unwrap()
+                return render!(res, "templates/groups.tpl", {
+                    title: String = format!("Photos from {}", year),
+                    groups: Vec<Group> = {
+                        let m = query_for::<Photo>()
+                            .columns(vec!("extract(month from date) m", "count(*) c"))
+                            .filter_eq("extract(year from date)", &(year as f64))
+                            .group_by(vec!("m")).asc("m")
+                            .retrieve(req.db_conn()).expect("Get images per month");
+                        m.dao.iter().map(|dao| {
+                            let month = dao.get::<f64>("m") as u8;
+                            let count : i64 = dao.get("c");
+                            let photo : Photo = query_for::<Photo>()
+                                .filter_eq("extract(year from date)", &(year as f64))
+                                .filter_eq("extract(month from date)", &(month as f64))
+                                .desc_nulls_last("grade")
+                                .asc_nulls_last("date")
+                                .limit(1)
+                                .collect_one(req.db_conn()).unwrap();
+                            Group {
+                                title: monthname(month).to_string(),
+                                url: format!("/{}/{}/", year, month),
+                                count: count,
+                                photo: photo
+                            }
+                        }).collect()
+                    }
                 });
             }
         }
         get "/:year/:month/" => |req, res| {
             if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
-                if let Ok(month) = req.param("month").unwrap().parse::<u32>() {
-                    let date = UTC.ymd(year, month, 1).and_hms(0,0,0);
-                    return render!(res, "templates/index.tpl", {
-                        photos: Vec<Photo> = query_for::<Photo>()
-                            .filter_gte("date", &date)
-                            .filter_lt("date", &(date + ChDuration::days(31)))
-                            .desc_nulls_last("grade")
-                            .asc_nulls_last("date")
-                            .limit(36)
-                            .collect(req.db_conn()).unwrap()
+                if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
+                    return render!(res, "templates/groups.tpl", {
+                        title: String = format!("Photos from {} {}", monthname(month),
+                                                year),
+                        groups: Vec<Group> = {
+                            let m = query_for::<Photo>()
+                                .columns(vec!("extract(day from date) d", "count(*) c"))
+                                .filter_eq("extract(year from date)", &(year as f64))
+                                .filter_eq("extract(month from date)", &(month as f64))
+                                .group_by(vec!("d")).asc("d")
+                                .retrieve(req.db_conn()).expect("Get images per day");
+                            m.dao.iter().map(|dao| {
+                                let day = dao.get::<f64>("d") as u8;
+                                let count : i64 = dao.get("c");
+                                let photo : Photo = query_for::<Photo>()
+                                    .filter_eq("extract(year from date)", &(year as f64))
+                                    .filter_eq("extract(month from date)", &(month as f64))
+                                    .filter_eq("extract(day from date)", &(day as f64))
+                                    .desc_nulls_last("grade")
+                                    .asc_nulls_last("date")
+                                    .limit(1)
+                                    .collect_one(req.db_conn()).unwrap();
+                                Group {
+                                    title: format!("{}/{}", day, month),
+                                    url: format!("/{}/{}/{}", year, month, day),
+                                    count: count,
+                                    photo: photo
+                                }
+                            }).collect()
+                        }
                     });
                 }
             }
         }
         get "/:year/:month/:day" => |req, res| {
             if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
-                if let Ok(month) = req.param("month").unwrap().parse::<u32>() {
+                if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
                     if let Ok(day) = req.param("day").unwrap().parse::<u32>() {
-                        let date = UTC.ymd(year, month, day).and_hms(0,0,0);
+                        let date = UTC.ymd(year, month as u32, day).and_hms(0,0,0);
                         return render!(res, "templates/index.tpl", {
+                            title: String = format!("Photos from {} {} {}",
+                                                    day, monthname(month), year),
                             photos: Vec<Photo> = query_for::<Photo>()
                                 .filter_gte("date", &date)
                                 .filter_lt("date", &(date + ChDuration::days(1)))
