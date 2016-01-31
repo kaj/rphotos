@@ -11,6 +11,10 @@ path = "src/main.rs"
 name = "readkpa"
 path = "src/readkpa.rs"
 
+[[bin]]
+name = "findphotos"
+path = "src/findphotos.rs"
+
 [dependencies.rustorm]
 version = "*"
 default-features = false
@@ -27,3 +31,4 @@ image = "*"
 hyper = "0.6.16"
 time = "*"
 xml-rs = "*"
+rexif = "0.3.3"

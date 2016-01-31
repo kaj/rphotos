@@ -9,6 +9,7 @@ extern crate image;
 extern crate hyper;
 extern crate time;
 extern crate chrono;
+extern crate rexif;
 
 use chrono::UTC;
 use chrono::offset::TimeZone;

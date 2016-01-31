@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::fs;
+use std::io;
 use image::open as image_open;
 use image::{FilterType, ImageFormat, GenericImage};
+use rexif::{self, ExifData};
 
 use models::Photo;
 
@@ -41,5 +44,26 @@ impl PhotosDir {
         let mut buf : Vec<u8> = Vec::new();
         img.save(&mut buf, ImageFormat::JPEG).unwrap();
         buf
+    }
+
+    pub fn find_files(&self, dir: &Path, cb: &Fn(&str, &ExifData)) -> io::Result<()> {
+        let absdir = self.basedir.join(dir);
+        if try!(fs::metadata(&absdir)).is_dir() {
+            let bl = self.basedir.to_str().unwrap().len() + 1;
+            debug!("Should look in {:?}", absdir);
+            for entry in try!(fs::read_dir(absdir)) {
+                let entry = try!(entry);
+                if try!(fs::metadata(entry.path())).is_dir() {
+                    try!(self.find_files(&entry.path(), cb));
+                } else {
+                    let p1 = entry.path();
+                    if let Ok(exif) = rexif::parse_file(&p1.to_str().unwrap()) {
+                        let path = p1.to_str().unwrap();
+                        cb(&path[bl..], &exif);
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
