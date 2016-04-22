@@ -40,6 +40,7 @@ use requestloggermiddleware::RequestLoggerMiddleware;
 mod photosdirmiddleware;
 use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
 
+
 macro_rules! render {
     ($res:expr, $template:expr, { $($param:ident : $ptype:ty = $value:expr),* })
         =>
@@ -47,11 +48,13 @@ macro_rules! render {
         {
         #[derive(Debug, Clone, RustcEncodable)]
         struct ParamData {
+            csslink: String,
             $(
                 $param: $ptype,
                 )*
         }
         $res.render($template, &ParamData {
+            csslink: include!(concat!(env!("OUT_DIR"), "/stylelink")).into(),
             $(
                 $param: $value,
                 )*
@@ -103,7 +106,10 @@ fn main() {
 
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
-    server.utilize(StaticFilesHandler::new("static/"));
+    // TODO This is a "build" location, not an "install" location ...
+    let staticdir = concat!(env!("OUT_DIR"), "/static/");
+    info!("Serving static files from {}", staticdir);
+    server.utilize(StaticFilesHandler::new(staticdir));
     server.utilize(RustormMiddleware::new(&dburl()));
     server.utilize(PhotosDirMiddleware::new(photos_dir()));
 

@@ -3,7 +3,7 @@
   <head>
     <title>Photo places</title>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-    <link rel="stylesheet" href="/static/photos.css" type="text/css"/>
+    {{{csslink}}}
   </head>
   <body>
     {{> head}}

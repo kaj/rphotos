@@ -3,6 +3,13 @@ name = "rphotos"
 version = "0.1.0"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 
+build = "src/sassify.rs"
+
+[build-dependencies]
+sass-rs = "*"
+md5 = "*"
+rustc-serialize = "*"
+
 [[bin]]
 name = "rphotos"
 path = "src/main.rs"

@@ -1,22 +1,25 @@
+$bordercolor: #666;
+
 body {
-    background: #eee;
+  background: #eee;
 }
+
 header {
     border-bottom: 1px solid #aaa;
 }
 
-div.groups, div.photos {
-    display: flex;
-    flex-flow: row wrap;
-}
-div.groups div.group,
-div.photos p {
-    border: 1px solid #666;
+div.group {
+  display: flex;
+  flex-flow: row wrap;
+
+  .item {
+    border: 1px solid $bordercolor;
     flex-basis: 210px;
     flex-grow: 1;
     margin: 0 -1px -1px 0;
     padding: 1ex;
     text-align: center;
+  }
 }
 
 ul.alltags, ul.allpeople, ul.allplaces {
