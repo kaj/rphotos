@@ -25,7 +25,7 @@ impl PhotosDir {
         let img = image_open(path).unwrap();
         let img =
             if width < img.width() || height < img.height() {
-                img.resize(width, height, FilterType::Nearest)
+                img.resize(width, height, FilterType::CatmullRom)
             } else {
                 img
             };
@@ -46,6 +46,7 @@ impl PhotosDir {
         buf
     }
 
+    #[allow(dead_code)]
     pub fn find_files(&self, dir: &Path, cb: &Fn(&str, &ExifData)) -> io::Result<()> {
         let absdir = self.basedir.join(dir);
         if try!(fs::metadata(&absdir)).is_dir() {

@@ -356,6 +356,7 @@ pub fn query_for<T: IsTable>() -> Query {
     q
 }
 
+#[allow(dead_code)]
 pub fn get_or_create<'a, T: IsTable + IsDao>
     (db: &Database, key: &str, val: &ToValue, defaults: &[(&str, &ToValue)]) -> T
 {
