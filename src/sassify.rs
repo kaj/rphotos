@@ -1,4 +1,5 @@
 extern crate sass_rs;
+extern crate sass_sys;
 extern crate md5;
 extern crate rustc_serialize as serialize;
 
@@ -22,7 +23,7 @@ fn main() {
     let staticdir = od.join("static").join("static");
     create_dir_all(&staticdir).unwrap();
     let mut f = &File::create(&staticdir.join(&*filename)).unwrap();
-    writeln!(f, "{}", css).unwrap();
+    write!(f, "{}", css).unwrap();
 
     let mut link = &File::create(&od.join("stylelink")).unwrap();
     writeln!(link,
@@ -35,6 +36,14 @@ fn compile(filename:&str) -> Result<String, String> {
     let mut file_context = SassFileContext::new(filename);
     let fns:Vec<(&'static str,Box<SassFunction>)> = vec![];
     let options = file_context.sass_context.sass_options.clone();
+    // options.set_output_style(COMPRESSED) or similar, when supported.
+    if let Ok(mut opt) = (*options).write() {
+        unsafe {
+            sass_sys::sass_option_set_output_style(
+                opt.raw.get_mut(),
+                sass_sys::SASS_STYLE_COMPRESSED);
+        }
+    }
     thread::spawn(move|| {
         let dispatcher = Dispatcher::build(fns, options);
         while dispatcher.dispatch().is_ok() {}

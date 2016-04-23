@@ -7,6 +7,7 @@ build = "src/sassify.rs"
 
 [build-dependencies]
 sass-rs = "*"
+sass-sys = "*"
 md5 = "*"
 rustc-serialize = "*"
 
