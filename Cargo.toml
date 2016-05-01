@@ -29,6 +29,7 @@ default-features = false
 
 [dependencies]
 nickel = "*"
+nickel-jwt-session = "*"
 env_logger = "*"
 log = "*"
 chrono = "*"

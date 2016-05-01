@@ -3,12 +3,18 @@ use std::process::exit;
 use std::path::PathBuf;
 
 pub fn dburl() -> String {
-    let db_var = "RPHOTOS_DB";
-    match var(db_var) {
+    require_var("RPHOTOS_DB", "Database url")
+}
+
+pub fn jwt_key() -> String {
+    require_var("JWT_KEY", "Signing key for jwt")
+}
+
+pub fn require_var(name: &str, desc: &str) -> String {
+    match var(name) {
         Ok(result) => result,
         Err(error) => {
-            println!("A database url needs to be given in env {}: {}",
-                     db_var, error);
+            println!("{} needed in {}: {}", desc, name, error);
             exit(1);
         }
     }
