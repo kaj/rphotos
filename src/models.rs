@@ -11,6 +11,8 @@ pub trait Entity : IsTable + IsDao {
     fn id(&self) -> &ToValue;
 }
 
+const MIN_PUBLIC_GRADE : i16 = 4;
+
 #[derive(Debug, Clone, RustcEncodable)]
 pub struct Photo {
     pub id: i32,
@@ -20,6 +22,16 @@ pub struct Photo {
     pub rotation: i16
 }
 
+impl Photo {
+    #[allow(dead_code)]
+    pub fn is_public(&self) -> bool {
+        if let Some(grade) = self.grade {
+            grade >= MIN_PUBLIC_GRADE
+        } else {
+            false
+        }
+    }
+}
 impl Entity for Photo {
     fn id(&self) -> &ToValue {
         &self.id
@@ -118,6 +130,20 @@ impl IsTable for Photo {
                 is_inherited: false
             }
             ])
+    }
+}
+
+pub trait PhotoQuery {
+    fn only_public(&mut self, only_public: bool) -> &mut Self;
+}
+
+impl PhotoQuery for Query {
+    fn only_public(&mut self, only_public: bool) -> &mut Self {
+        if only_public {
+            self.filter_gte("grade", &MIN_PUBLIC_GRADE)
+        } else {
+            self
+        }
     }
 }
 

@@ -28,7 +28,7 @@ use nickel::status::StatusCode;
 use std::io::Read;
 
 mod models;
-use models::{Entity, Photo, Tag, Person, Place, query_for};
+use models::{Entity, Photo, PhotoQuery, Tag, Person, Place, query_for};
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -167,7 +167,8 @@ fn show_image<'mw>(req: &mut Request, mut res: Response<'mw>)
               -> MiddlewareResult<'mw>  {
     if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
         if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
-            if let Some(size) = match req.param("size").unwrap() {
+            if req.authorized_user().is_some() || photo.is_public() {
+                if let Some(size) = match req.param("size").unwrap() {
                 "s" => Some(200),
                 "m" => Some(800),
                 "l" => Some(1200),
@@ -177,6 +178,7 @@ fn show_image<'mw>(req: &mut Request, mut res: Response<'mw>)
                 res.set(MediaType::Jpeg);
                 res.set(Expires(HttpDate(time::now() + Duration::days(14))));
                 return res.send(buf);
+                }
             }
         }
     }
@@ -198,7 +200,11 @@ fn tag_one<'mw>(req: &mut Request, res: Response<'mw>)
         return render!(res, "templates/tag.tpl", {
             user: Option<String> = req.authorized_user(),
             photos: Vec<Photo> =
-                req.orm_get_related(&tag, "photo_tag").unwrap(),
+                orm_get_related::<Photo, Tag>(&tag, "photo_tag")
+                .only_public(req.authorized_user().is_none())
+                .desc_nulls_last("grade")
+                .desc_nulls_last("date")
+                .collect(req.db_conn()).unwrap(),
             tag: Tag = tag
         });
     }
@@ -220,7 +226,11 @@ fn place_one<'mw>(req: &mut Request, res: Response<'mw>)
         return render!(res, "templates/place.tpl", {
             user: Option<String> = req.authorized_user(),
             photos: Vec<Photo> =
-                req.orm_get_related(&place, "photo_place").unwrap(),
+                orm_get_related::<Photo, Place>(&place, "photo_place")
+                .only_public(req.authorized_user().is_none())
+                .desc_nulls_last("grade")
+                .desc_nulls_last("date")
+                .collect(req.db_conn()).unwrap(),
             place: Place = place
         });
     }
@@ -243,6 +253,7 @@ fn person_one<'mw>(req: &mut Request, res: Response<'mw>)
             user: Option<String> = req.authorized_user(),
             photos: Vec<Photo> =
                 orm_get_related::<Photo, Person>(&person, "photo_person")
+                .only_public(req.authorized_user().is_none())
                 .desc_nulls_last("grade")
                 .desc_nulls_last("date")
                 .collect(req.db_conn()).unwrap(),
@@ -256,6 +267,7 @@ fn photo_details<'mw>(req: &mut Request, res: Response<'mw>)
                       -> MiddlewareResult<'mw>  {
     if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
         if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
+            if req.authorized_user().is_some() || photo.is_public() {
             return render!(res, "templates/details.tpl", {
                 user: Option<String> = req.authorized_user(),
                 people: Vec<Person> =
@@ -282,6 +294,7 @@ fn photo_details<'mw>(req: &mut Request, res: Response<'mw>)
                 },
                 photo: Photo = photo
             });
+            }
         }
     }
     res.error(StatusCode::NotFound, "Not a year")
@@ -293,6 +306,7 @@ fn all_years<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw
         title: &'static str = "All photos",
         groups: Vec<Group> = query_for::<Photo>()
             .columns(vec!("extract(year from date) y", "count(*) c"))
+            .only_public(req.authorized_user().is_none())
             .add_filter(Filter::is_not_null("date"))
             .group_by(vec!("y")).asc("y")
             .retrieve(req.db_conn()).expect("Get images per year")
@@ -301,6 +315,7 @@ fn all_years<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw
                 let year = dao.get::<f64>("y") as u16;
                 let count : i64 = dao.get("c");
                 let photo : Photo = query_for::<Photo>()
+                    .only_public(req.authorized_user().is_none())
                     .filter_eq("extract(year from date)", &(year as f64))
                     .desc_nulls_last("grade")
                     .asc_nulls_last("date")
@@ -322,6 +337,7 @@ fn months_in_year<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResul
             user: Option<String> = req.authorized_user(),
             title: String = format!("Photos from {}", year),
             groups: Vec<Group> = query_for::<Photo>()
+                .only_public(req.authorized_user().is_none())
                 .columns(vec!("extract(month from date) m", "count(*) c"))
                 .filter_eq("extract(year from date)", &(year as f64))
                 .group_by(vec!("m")).asc("m")
@@ -330,6 +346,7 @@ fn months_in_year<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResul
                     let month = dao.get::<f64>("m") as u8;
                     let count : i64 = dao.get("c");
                     let photo : Photo = query_for::<Photo>()
+                        .only_public(req.authorized_user().is_none())
                         .filter_eq("extract(year from date)", &(year as f64))
                         .filter_eq("extract(month from date)", &(month as f64))
                         .desc_nulls_last("grade")
@@ -356,6 +373,7 @@ fn days_in_month<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult
                 title: String = format!("Photos from {} {}", monthname(month),
                                         year),
                 groups: Vec<Group> = query_for::<Photo>()
+                    .only_public(req.authorized_user().is_none())
                     .columns(vec!("extract(day from date) d", "count(*) c"))
                     .filter_eq("extract(year from date)", &(year as f64))
                     .filter_eq("extract(month from date)", &(month as f64))
@@ -364,7 +382,8 @@ fn days_in_month<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult
                     .dao.iter().map(|dao| {
                         let day = dao.get::<f64>("d") as u8;
                         let count : i64 = dao.get("c");
-                        let photo : Photo = query_for::<Photo>()
+                        let photo = query_for::<Photo>()
+                            .only_public(req.authorized_user().is_none())
                             .filter_eq("extract(year from date)", &(year as f64))
                             .filter_eq("extract(month from date)", &(month as f64))
                             .filter_eq("extract(day from date)", &(day as f64))
@@ -395,6 +414,7 @@ fn all_for_day<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'
                     title: String = format!("Photos from {} {} {}",
                                             day, monthname(month), year),
                     photos: Vec<Photo> = query_for::<Photo>()
+                        .only_public(req.authorized_user().is_none())
                         .filter_gte("date", &date)
                         .filter_lt("date", &(date + ChDuration::days(1)))
                         .desc_nulls_last("grade")
