@@ -29,6 +29,10 @@ fn main() {
     writeln!(link,
              "\"<link rel='stylesheet' href='/static/{}' type='text/css'/>\"",
              filename).unwrap();
+
+    println!("cargo:rerun-if-changed=src/sassify.rs");
+    // TODO Find any referenced files!
+    println!("cargo:rerun-if-changed=photos.scss");
 }
 
 /// Setup the environment and compile a file.
