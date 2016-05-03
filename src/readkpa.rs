@@ -143,6 +143,7 @@ fn main() {
                 break;
             },
             XmlEvent::StartElement{ref name, ref attributes, ref namespace} => {
+                debug!("Found {} {:?} {:?}", name, attributes, namespace);
                 match &*name.local_name {
                     "image" => {
                         if let Some(file) = find_attr("file", attributes) {

@@ -18,6 +18,7 @@ impl PhotosDir {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_scaled_image(&self, photo: Photo, width: u32, height: u32)
                         -> Vec<u8> {
         let path = self.basedir.join(photo.path);

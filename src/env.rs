@@ -6,6 +6,7 @@ pub fn dburl() -> String {
     require_var("RPHOTOS_DB", "Database url")
 }
 
+#[allow(dead_code)]
 pub fn jwt_key() -> String {
     require_var("JWT_KEY", "Signing key for jwt")
 }
