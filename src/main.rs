@@ -169,15 +169,22 @@ fn show_image<'mw>(req: &mut Request, mut res: Response<'mw>)
         if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
             if req.authorized_user().is_some() || photo.is_public() {
                 if let Some(size) = match req.param("size").unwrap() {
-                "s" => Some(200),
-                "m" => Some(800),
-                "l" => Some(1200),
-                _ => None
-            } {
-                let buf = req.photos().get_scaled_image(photo, size, size);
-                res.set(MediaType::Jpeg);
-                res.set(Expires(HttpDate(time::now() + Duration::days(14))));
-                return res.send(buf);
+                    "s" => Some(200),
+                    "m" => Some(800),
+                    "l" => Some(1200),
+                    _ => None
+                } {
+                    match req.photos().get_scaled_image(photo, size, size) {
+                        Ok(buf) => {
+                            res.set(MediaType::Jpeg);
+                            res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                            return res.send(buf);
+                        },
+                        Err(err) => {
+                            return res.error(StatusCode::InternalServerError,
+                                             format!("{}", err));
+                        }
+                    }
                 }
             }
         }

@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use std::io;
 use image::open as image_open;
-use image::{FilterType, ImageFormat, GenericImage};
+use image::{FilterType, ImageFormat, GenericImage, ImageError};
 use rexif::{self, ExifData};
 
 use models::Photo;
@@ -20,10 +20,10 @@ impl PhotosDir {
 
     #[allow(dead_code)]
     pub fn get_scaled_image(&self, photo: Photo, width: u32, height: u32)
-                        -> Vec<u8> {
+                        -> Result<Vec<u8>, ImageError> {
         let path = self.basedir.join(photo.path);
         info!("Should open {:?}", path);
-        let img = image_open(path).unwrap();
+        let img = try!(image_open(path));
         let img =
             if width < img.width() || height < img.height() {
                 img.resize(width, height, FilterType::CatmullRom)
@@ -43,8 +43,8 @@ impl PhotosDir {
         };
         // TODO Put the icon in some kind of cache!
         let mut buf : Vec<u8> = Vec::new();
-        img.save(&mut buf, ImageFormat::JPEG).unwrap();
-        buf
+        try!(img.save(&mut buf, ImageFormat::JPEG));
+        Ok(buf)
     }
 
     #[allow(dead_code)]
