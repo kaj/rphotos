@@ -132,6 +132,8 @@ impl IsTable for Photo {
 
 pub trait PhotoQuery {
     fn only_public(&mut self, only_public: bool) -> &mut Self;
+
+    fn filter_date(&mut self, field: &str, part: &str, val: u32) -> &mut Self;
 }
 
 impl PhotoQuery for Query {
@@ -141,6 +143,10 @@ impl PhotoQuery for Query {
         } else {
             self
         }
+    }
+    fn filter_date(&mut self, field: &str, part: &str, val: u32) -> &mut Self {
+        self.filter_eq(&format!("extract({} from {})", part, field),
+                       &(val as f64))
     }
 }
 
