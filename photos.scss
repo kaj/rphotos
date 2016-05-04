@@ -7,11 +7,11 @@ header {
     display: flex;
     flex-wrap: wrap;
 
-    & > * {
+    & > span {
         flex-grow: 1;
     }
 
-    span {
+    span.user {
         flex-grow: 5;
         padding-left: 1em;
         text-align: right;

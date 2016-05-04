@@ -30,6 +30,7 @@ use rustorm::query::{Query, Filter};
 use time::Duration;
 use nickel::status::StatusCode;
 use std::io::Read;
+use std::collections::HashMap;
 
 mod models;
 use models::{Entity, Photo, PhotoQuery, Tag, Person, Place, query_for};
@@ -294,6 +295,9 @@ fn photo_details<'mw>(req: &mut Request,
             if req.authorized_user().is_some() || photo.is_public() {
                 return render!(res, "templates/details.tpl", {
                     user: Option<String> = req.authorized_user(),
+                    monthlink: HashMap<String, String> =
+                        photo.date.map(|d| month_link(d.year(), d.month() as u8))
+                             .unwrap_or_else(|| HashMap::new()),
                 people: Vec<Person> =
                     req.orm_get_related(&photo, "photo_person").unwrap(),
                 places: Vec<Place> =
@@ -304,18 +308,9 @@ fn photo_details<'mw>(req: &mut Request,
                     Some(d) => d.format("%T").to_string(),
                     None => "".to_string()
                 },
-                year: i32 = match photo.date {
-                    Some(d) => d.year(),
-                    None => 0
-                },
-                month: u32 = match photo.date {
-                    Some(d) => d.month(),
-                    None => 0
-                },
-                day: u32 = match photo.date {
-                    Some(d) => d.day(),
-                    None => 0
-                },
+                year: Option<i32> = photo.date.map(|d| d.year()),
+                month: Option<u32> = photo.date.map(|d| d.month()),
+                day: Option<u32> = photo.date.map(|d| d.day()),
                 photo: Photo = photo
                 });
             }
@@ -400,6 +395,7 @@ fn days_in_month<'mw>(req: &mut Request,
         if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
             return render!(res, "templates/groups.tpl", {
                 user: Option<String> = req.authorized_user(),
+                year: Option<i32> = Some(year),
                 title: String = format!("Photos from {} {}", monthname(month),
                                         year),
                 groups: Vec<Group> = query_for::<Photo>()
@@ -443,6 +439,8 @@ fn all_for_day<'mw>(req: &mut Request,
                 let date = UTC.ymd(year, month as u32, day).and_hms(0, 0, 0);
                 return render!(res, "templates/index.tpl", {
                     user: Option<String> = req.authorized_user(),
+                    year: Option<i32> = Some(year),
+                    monthlink: HashMap<String, String> = month_link(year, month),
                     title: String = format!("Photos from {} {} {}",
                                             day, monthname(month), year),
                     photos: Vec<Photo> = query_for::<Photo>()
@@ -457,4 +455,11 @@ fn all_for_day<'mw>(req: &mut Request,
         }
     }
     res.error(StatusCode::NotFound, "Not a day")
+}
+
+fn month_link(year: i32, month: u8) -> HashMap<String, String> {
+    let mut ml = HashMap::new();
+    ml.insert("url".to_string(), format!("/{}/{}/", year, month));
+    ml.insert("name".to_string(), format!("{}", month));
+    ml
 }
