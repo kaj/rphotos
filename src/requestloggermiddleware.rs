@@ -1,6 +1,6 @@
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use nickel::status::StatusCode;
-use plugin::{Extensible};
+use plugin::Extensible;
 use typemap::Key;
 use time::{Duration, Timespec, get_time};
 use std::sync::{Arc, Mutex};
@@ -10,7 +10,7 @@ pub struct RequestLoggerMiddleware;
 pub struct RequestLogger {
     start: Timespec,
     mu: String,
-    status: Arc<Mutex<StatusCode>>
+    status: Arc<Mutex<StatusCode>>,
 }
 
 impl RequestLogger {
@@ -19,7 +19,7 @@ impl RequestLogger {
         RequestLogger {
             start: get_time(),
             mu: mu,
-            status: status
+            status: status,
         }
     }
 }
@@ -27,7 +27,10 @@ impl RequestLogger {
 impl Drop for RequestLogger {
     fn drop(&mut self) {
         let status = self.status.lock().unwrap();
-        info!("{} {} after {}", self.mu, *status, fmt_elapsed(get_time() - self.start));
+        info!("{} {} after {}",
+              self.mu,
+              *status,
+              fmt_elapsed(get_time() - self.start));
     }
 }
 
@@ -47,10 +50,15 @@ fn fmt_elapsed(t: Duration) -> String {
     }
 }
 
-impl Key for RequestLoggerMiddleware { type Value = RequestLogger; }
+impl Key for RequestLoggerMiddleware {
+    type Value = RequestLogger;
+}
 
 impl<D> Middleware<D> for RequestLoggerMiddleware {
-    fn invoke<'mw, 'conn>(&self, req: &mut Request<'mw, 'conn, D>, res: Response<'mw, D>) -> MiddlewareResult<'mw, D> {
+    fn invoke<'mw, 'conn>(&self,
+                          req: &mut Request<'mw, 'conn, D>,
+                          res: Response<'mw, D>)
+                          -> MiddlewareResult<'mw, D> {
         let mu = format!("\"{} {}\"", req.origin.method, req.origin.uri);
         let status = Arc::new(Mutex::new(StatusCode::Continue));
         let rl = RequestLogger::new(mu, status.clone());

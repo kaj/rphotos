@@ -8,28 +8,28 @@ use rexif::{self, ExifData};
 use models::Photo;
 
 pub struct PhotosDir {
-    basedir: PathBuf
+    basedir: PathBuf,
 }
 
 impl PhotosDir {
-    pub fn new(basedir: PathBuf) -> PhotosDir {
-        PhotosDir {
-            basedir: basedir
-        }
+    pub fn new(basedir: PathBuf) -> Self {
+        PhotosDir { basedir: basedir }
     }
 
     #[allow(dead_code)]
-    pub fn get_scaled_image(&self, photo: Photo, width: u32, height: u32)
-                        -> Result<Vec<u8>, ImageError> {
+    pub fn get_scaled_image(&self,
+                            photo: Photo,
+                            width: u32,
+                            height: u32)
+                            -> Result<Vec<u8>, ImageError> {
         let path = self.basedir.join(photo.path);
         info!("Should open {:?}", path);
         let img = try!(image_open(path));
-        let img =
-            if width < img.width() || height < img.height() {
-                img.resize(width, height, FilterType::CatmullRom)
-            } else {
-                img
-            };
+        let img = if width < img.width() || height < img.height() {
+            img.resize(width, height, FilterType::CatmullRom)
+        } else {
+            img
+        };
         let img = match photo.rotation {
             _x @ 0...44 => img,
             _x @ 45...134 => img.rotate90(),
@@ -42,13 +42,16 @@ impl PhotosDir {
             }
         };
         // TODO Put the icon in some kind of cache!
-        let mut buf : Vec<u8> = Vec::new();
+        let mut buf = Vec::new();
         try!(img.save(&mut buf, ImageFormat::JPEG));
         Ok(buf)
     }
 
     #[allow(dead_code)]
-    pub fn find_files(&self, dir: &Path, cb: &Fn(&str, &ExifData)) -> io::Result<()> {
+    pub fn find_files(&self,
+                      dir: &Path,
+                      cb: &Fn(&str, &ExifData))
+                      -> io::Result<()> {
         let absdir = self.basedir.join(dir);
         if try!(fs::metadata(&absdir)).is_dir() {
             let bl = self.basedir.to_str().unwrap().len() + 1;

@@ -1,5 +1,7 @@
-#[macro_use] extern crate nickel;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate nickel;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 extern crate nickel_jwt_session;
 extern crate rustorm;
@@ -14,13 +16,15 @@ extern crate rexif;
 
 use chrono::UTC;
 use chrono::offset::TimeZone;
-use chrono::{Duration as ChDuration};
+use chrono::Duration as ChDuration;
 use chrono::Datelike;
 use hyper::header::{Expires, HttpDate};
-use nickel::{MediaType, HttpRouter, Nickel, StaticFilesHandler, Request, Response, MiddlewareResult};
+use nickel::{MediaType, HttpRouter, Nickel, StaticFilesHandler, Request,
+             Response, MiddlewareResult};
 use nickel::extensions::response::Redirect;
-use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions, SessionResponseExtensions};
-use plugin::{Pluggable};
+use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
+                         SessionResponseExtensions};
+use plugin::Pluggable;
 use rustc_serialize::Encodable;
 use rustorm::query::{Query, Filter};
 use time::Duration;
@@ -67,14 +71,15 @@ macro_rules! render {
     }
 }
 
-fn orm_get_related<T: Entity, Src: Entity>(src: &Src, rel_table: &str)
-                                           -> Query
-{
+fn orm_get_related<T: Entity, Src: Entity>(src: &Src,
+                                           rel_table: &str)
+                                           -> Query {
     let mut q = Query::select();
     q.only_from(&T::table());
-    q.left_join_table(rel_table, &format!("{}.id", T::table().name),
+    q.left_join_table(rel_table,
+                      &format!("{}.id", T::table().name),
                       &format!("{}.{}", rel_table, T::table().name))
-        .filter_eq(&format!("{}.{}", rel_table, Src::table().name), src.id());
+     .filter_eq(&format!("{}.{}", rel_table, Src::table().name), src.id());
     q
 }
 
@@ -100,7 +105,7 @@ fn monthname(n: u8) -> &'static str {
         10 => "october",
         11 => "november",
         12 => "december",
-        _ => "non-month"
+        _ => "non-month",
     }
 }
 
@@ -137,13 +142,15 @@ fn main() {
     server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"));
 }
 
-fn login<'mw>(_req: &mut Request, mut res: Response<'mw>)
+fn login<'mw>(_req: &mut Request,
+              mut res: Response<'mw>)
               -> MiddlewareResult<'mw> {
     res.clear_jwt_user();
     render!(res, "templates/login.tpl", {})
 }
 
-fn do_login<'mw>(req: &mut Request, mut res: Response<'mw>)
+fn do_login<'mw>(req: &mut Request,
+                 mut res: Response<'mw>)
                  -> MiddlewareResult<'mw> {
     // TODO It seems form data parsing is next version of nickel ...
     let mut form_data = String::new();
@@ -157,14 +164,16 @@ fn do_login<'mw>(req: &mut Request, mut res: Response<'mw>)
     }
 }
 
-fn logout<'mw>(_req: &mut Request, mut res: Response<'mw>)
-               -> MiddlewareResult<'mw>  {
+fn logout<'mw>(_req: &mut Request,
+               mut res: Response<'mw>)
+               -> MiddlewareResult<'mw> {
     res.clear_jwt_user();
     res.redirect("/")
 }
 
-fn show_image<'mw>(req: &mut Request, mut res: Response<'mw>)
-              -> MiddlewareResult<'mw>  {
+fn show_image<'mw>(req: &mut Request,
+                   mut res: Response<'mw>)
+                   -> MiddlewareResult<'mw> {
     if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
         if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
             if req.authorized_user().is_some() || photo.is_public() {
@@ -172,14 +181,15 @@ fn show_image<'mw>(req: &mut Request, mut res: Response<'mw>)
                     "s" => Some(200),
                     "m" => Some(800),
                     "l" => Some(1200),
-                    _ => None
+                    _ => None,
                 } {
                     match req.photos().get_scaled_image(photo, size, size) {
                         Ok(buf) => {
                             res.set(MediaType::Jpeg);
-                            res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                            res.set(Expires(HttpDate(time::now() +
+                                                     Duration::days(14))));
                             return res.send(buf);
-                        },
+                        }
                         Err(err) => {
                             return res.error(StatusCode::InternalServerError,
                                              format!("{}", err));
@@ -192,16 +202,18 @@ fn show_image<'mw>(req: &mut Request, mut res: Response<'mw>)
     res.error(StatusCode::NotFound, "No such image")
 }
 
-fn tag_all<'mw>(req: &mut Request, res: Response<'mw>)
-                -> MiddlewareResult<'mw>  {
+fn tag_all<'mw>(req: &mut Request,
+                res: Response<'mw>)
+                -> MiddlewareResult<'mw> {
     return render!(res, "templates/tags.tpl", {
         user: Option<String> = req.authorized_user(),
         tags: Vec<Tag> = query_for::<Tag>().asc("tag")
             .collect(req.db_conn()).unwrap()
     });
 }
-fn tag_one<'mw>(req: &mut Request, res: Response<'mw>)
-                -> MiddlewareResult<'mw>  {
+fn tag_one<'mw>(req: &mut Request,
+                res: Response<'mw>)
+                -> MiddlewareResult<'mw> {
     let slug = req.param("tag").unwrap();
     if let Ok(tag) = req.orm_get::<Tag>("slug", &slug) {
         return render!(res, "templates/tag.tpl", {
@@ -218,16 +230,18 @@ fn tag_one<'mw>(req: &mut Request, res: Response<'mw>)
     res.error(StatusCode::NotFound, "Not a tag")
 }
 
-fn place_all<'mw>(req: &mut Request, res: Response<'mw>)
-                -> MiddlewareResult<'mw>  {
+fn place_all<'mw>(req: &mut Request,
+                  res: Response<'mw>)
+                  -> MiddlewareResult<'mw> {
     return render!(res, "templates/places.tpl", {
         user: Option<String> = req.authorized_user(),
         places: Vec<Place> = query_for::<Place>().asc("place")
             .collect(req.db_conn()).unwrap()
     });
 }
-fn place_one<'mw>(req: &mut Request, res: Response<'mw>)
-                -> MiddlewareResult<'mw>  {
+fn place_one<'mw>(req: &mut Request,
+                  res: Response<'mw>)
+                  -> MiddlewareResult<'mw> {
     let slug = req.param("slug").unwrap();
     if let Ok(place) = req.orm_get::<Place>("slug", &slug) {
         return render!(res, "templates/place.tpl", {
@@ -244,16 +258,18 @@ fn place_one<'mw>(req: &mut Request, res: Response<'mw>)
     res.error(StatusCode::NotFound, "Not a place")
 }
 
-fn person_all<'mw>(req: &mut Request, res: Response<'mw>)
-                -> MiddlewareResult<'mw>  {
+fn person_all<'mw>(req: &mut Request,
+                   res: Response<'mw>)
+                   -> MiddlewareResult<'mw> {
     return render!(res, "templates/people.tpl", {
         user: Option<String> = req.authorized_user(),
         people: Vec<Person> = query_for::<Person>().asc("name")
             .collect(req.db_conn()).unwrap()
     });
 }
-fn person_one<'mw>(req: &mut Request, res: Response<'mw>)
-                -> MiddlewareResult<'mw>  {
+fn person_one<'mw>(req: &mut Request,
+                   res: Response<'mw>)
+                   -> MiddlewareResult<'mw> {
     let slug = req.param("slug").unwrap();
     if let Ok(person) = req.orm_get::<Person>("slug", &slug) {
         return render!(res, "templates/person.tpl", {
@@ -270,13 +286,14 @@ fn person_one<'mw>(req: &mut Request, res: Response<'mw>)
     res.error(StatusCode::NotFound, "Not a place")
 }
 
-fn photo_details<'mw>(req: &mut Request, res: Response<'mw>)
-                      -> MiddlewareResult<'mw>  {
+fn photo_details<'mw>(req: &mut Request,
+                      res: Response<'mw>)
+                      -> MiddlewareResult<'mw> {
     if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
         if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
             if req.authorized_user().is_some() || photo.is_public() {
-            return render!(res, "templates/details.tpl", {
-                user: Option<String> = req.authorized_user(),
+                return render!(res, "templates/details.tpl", {
+                    user: Option<String> = req.authorized_user(),
                 people: Vec<Person> =
                     req.orm_get_related(&photo, "photo_person").unwrap(),
                 places: Vec<Place> =
@@ -300,14 +317,16 @@ fn photo_details<'mw>(req: &mut Request, res: Response<'mw>)
                     None => 0
                 },
                 photo: Photo = photo
-            });
+                });
             }
         }
     }
     res.error(StatusCode::NotFound, "Not a year")
 }
 
-fn all_years<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw>  {
+fn all_years<'mw>(req: &mut Request,
+                  res: Response<'mw>)
+                  -> MiddlewareResult<'mw> {
     return render!(res, "templates/groups.tpl", {
         user: Option<String> = req.authorized_user(),
         title: &'static str = "All photos",
@@ -338,7 +357,9 @@ fn all_years<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw
     });
 }
 
-fn months_in_year<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw>  {
+fn months_in_year<'mw>(req: &mut Request,
+                       res: Response<'mw>)
+                       -> MiddlewareResult<'mw> {
     if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
         return render!(res, "templates/groups.tpl", {
             user: Option<String> = req.authorized_user(),
@@ -372,7 +393,9 @@ fn months_in_year<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResul
     res.error(StatusCode::NotFound, "Not a year")
 }
 
-fn days_in_month<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw>  {
+fn days_in_month<'mw>(req: &mut Request,
+                      res: Response<'mw>)
+                      -> MiddlewareResult<'mw> {
     if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
         if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
             return render!(res, "templates/groups.tpl", {
@@ -411,11 +434,13 @@ fn days_in_month<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult
     res.error(StatusCode::NotFound, "Not a month")
 }
 
-fn all_for_day<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw>  {
+fn all_for_day<'mw>(req: &mut Request,
+                    res: Response<'mw>)
+                    -> MiddlewareResult<'mw> {
     if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
         if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
             if let Ok(day) = req.param("day").unwrap().parse::<u32>() {
-                let date = UTC.ymd(year, month as u32, day).and_hms(0,0,0);
+                let date = UTC.ymd(year, month as u32, day).and_hms(0, 0, 0);
                 return render!(res, "templates/index.tpl", {
                     user: Option<String> = req.authorized_user(),
                     title: String = format!("Photos from {} {} {}",
@@ -427,7 +452,7 @@ fn all_for_day<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'
                         .desc_nulls_last("grade")
                         .asc_nulls_last("date")
                         .collect(req.db_conn()).unwrap()
-                })
+                });
             }
         }
     }

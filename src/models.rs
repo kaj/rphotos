@@ -1,5 +1,3 @@
-//extern crate chrono;
-
 use chrono::datetime::DateTime;
 use chrono::offset::utc::UTC;
 use rustorm::query::Query;
@@ -7,11 +5,11 @@ use rustorm::dao::{Dao, IsDao, ToValue, Type};
 use rustorm::table::{IsTable, Table, Column};
 use rustorm::database::Database;
 
-pub trait Entity : IsTable + IsDao {
+pub trait Entity: IsTable + IsDao {
     fn id(&self) -> &ToValue;
 }
 
-const MIN_PUBLIC_GRADE : i16 = 4;
+const MIN_PUBLIC_GRADE: i16 = 4;
 
 #[derive(Debug, Clone, RustcEncodable)]
 pub struct Photo {
@@ -19,7 +17,7 @@ pub struct Photo {
     pub path: String,
     pub date: Option<DateTime<UTC>>,
     pub grade: Option<i16>,
-    pub rotation: i16
+    pub rotation: i16,
 }
 
 impl Photo {
@@ -38,13 +36,13 @@ impl Entity for Photo {
     }
 }
 impl IsDao for Photo {
-    fn from_dao(dao:&Dao) -> Self {
+    fn from_dao(dao: &Dao) -> Self {
         Photo {
             id: dao.get("id"),
             path: dao.get("path"),
             date: dao.get_opt("date"),
             grade: dao.get_opt("grade"),
-            rotation: dao.get("rotation")
+            rotation: dao.get("rotation"),
         }
     }
     fn to_dao(&self) -> Dao {
@@ -62,74 +60,73 @@ impl IsDao for Photo {
 fn set_opt<T: ToValue>(dao: &mut Dao, name: &str, value: &Option<T>) {
     match value {
         &Some(ref value) => dao.set(name, value),
-        &None => dao.set_null(name)
+        &None => dao.set_null(name),
     }
 }
 
 impl IsTable for Photo {
     fn table() -> Table {
-        table("photo", vec![
-            Column {
-                name: "id".to_string(),
-                data_type: Type::I32,
-                db_data_type: "serial".to_string(),
-                is_primary: true,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "path".to_string(),
-                data_type: Type::String,
-                db_data_type: "varchar(100)".to_string(),
-                is_primary: false,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "date".to_string(),
-                data_type: Type::DateTime,
-                db_data_type: "timestamp".to_string(),
-                is_primary: false,
-                is_unique: false,
-                default: None,
-                comment: None,
-                not_null: false,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "grade".to_string(),
-                data_type: Type::I16,
-                db_data_type: "smallint".to_string(),
-                is_primary: false,
-                is_unique: false,
-                default: None,
-                comment: None,
-                not_null: false,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "rotation".to_string(),
-                data_type: Type::I16,
-                db_data_type: "smallint".to_string(),
-                is_primary: false,
-                is_unique: false,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            }
-            ])
+        table("photo",
+              vec![Column {
+                       name: "id".to_string(),
+                       data_type: Type::I32,
+                       db_data_type: "serial".to_string(),
+                       is_primary: true,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "path".to_string(),
+                       data_type: Type::String,
+                       db_data_type: "varchar(100)".to_string(),
+                       is_primary: false,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "date".to_string(),
+                       data_type: Type::DateTime,
+                       db_data_type: "timestamp".to_string(),
+                       is_primary: false,
+                       is_unique: false,
+                       default: None,
+                       comment: None,
+                       not_null: false,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "grade".to_string(),
+                       data_type: Type::I16,
+                       db_data_type: "smallint".to_string(),
+                       is_primary: false,
+                       is_unique: false,
+                       default: None,
+                       comment: None,
+                       not_null: false,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "rotation".to_string(),
+                       data_type: Type::I16,
+                       db_data_type: "smallint".to_string(),
+                       is_primary: false,
+                       is_unique: false,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   }])
     }
 }
 
@@ -178,44 +175,43 @@ impl IsDao for Tag {
 
 impl IsTable for Tag {
     fn table() -> Table {
-        table("tag", vec![
-            Column {
-                name: "id".to_string(),
-                data_type: Type::I32,
-                db_data_type: "serial".to_string(),
-                is_primary: true,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "tag".to_string(),
-                data_type: Type::String,
-                db_data_type: "varchar(100)".to_string(),
-                is_primary: false,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "slug".to_string(),
-                data_type: Type::String,
-                db_data_type: "varchar(100)".to_string(),
-                is_primary: false,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            }
-            ])
+        table("tag",
+              vec![Column {
+                       name: "id".to_string(),
+                       data_type: Type::I32,
+                       db_data_type: "serial".to_string(),
+                       is_primary: true,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "tag".to_string(),
+                       data_type: Type::String,
+                       db_data_type: "varchar(100)".to_string(),
+                       is_primary: false,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "slug".to_string(),
+                       data_type: Type::String,
+                       db_data_type: "varchar(100)".to_string(),
+                       is_primary: false,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   }])
     }
 }
 
@@ -250,44 +246,43 @@ impl IsDao for Person {
 
 impl IsTable for Person {
     fn table() -> Table {
-        table("person", vec![
-            Column {
-                name: "id".to_string(),
-                data_type: Type::I32,
-                db_data_type: "serial".to_string(),
-                is_primary: true,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "name".to_string(),
-                data_type: Type::String,
-                db_data_type: "varchar(100)".to_string(),
-                is_primary: false,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "slug".to_string(),
-                data_type: Type::String,
-                db_data_type: "varchar(100)".to_string(),
-                is_primary: false,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            }
-            ])
+        table("person",
+              vec![Column {
+                       name: "id".to_string(),
+                       data_type: Type::I32,
+                       db_data_type: "serial".to_string(),
+                       is_primary: true,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "name".to_string(),
+                       data_type: Type::String,
+                       db_data_type: "varchar(100)".to_string(),
+                       is_primary: false,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "slug".to_string(),
+                       data_type: Type::String,
+                       db_data_type: "varchar(100)".to_string(),
+                       is_primary: false,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   }])
     }
 }
 
@@ -322,44 +317,43 @@ impl IsDao for Place {
 
 impl IsTable for Place {
     fn table() -> Table {
-        table("place", vec![
-            Column {
-                name: "id".to_string(),
-                data_type: Type::I32,
-                db_data_type: "serial".to_string(),
-                is_primary: true,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "place".to_string(),
-                data_type: Type::String,
-                db_data_type: "varchar(100)".to_string(),
-                is_primary: false,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            },
-            Column {
-                name: "slug".to_string(),
-                data_type: Type::String,
-                db_data_type: "varchar(100)".to_string(),
-                is_primary: false,
-                is_unique: true,
-                default: None,
-                comment: None,
-                not_null: true,
-                foreign: None,
-                is_inherited: false
-            }
-            ])
+        table("place",
+              vec![Column {
+                       name: "id".to_string(),
+                       data_type: Type::I32,
+                       db_data_type: "serial".to_string(),
+                       is_primary: true,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "place".to_string(),
+                       data_type: Type::String,
+                       db_data_type: "varchar(100)".to_string(),
+                       is_primary: false,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   },
+                   Column {
+                       name: "slug".to_string(),
+                       data_type: Type::String,
+                       db_data_type: "varchar(100)".to_string(),
+                       is_primary: false,
+                       is_unique: true,
+                       default: None,
+                       comment: None,
+                       not_null: true,
+                       foreign: None,
+                       is_inherited: false,
+                   }])
     }
 }
 
@@ -371,7 +365,7 @@ fn table(name: &str, columns: Vec<Column>) -> Table {
         sub_table: vec![],
         comment: None,
         columns: columns,
-        is_view: false
+        is_view: false,
     }
 }
 
@@ -383,9 +377,11 @@ pub fn query_for<T: IsTable>() -> Query {
 }
 
 #[allow(dead_code)]
-pub fn get_or_create<'a, T: IsTable + IsDao>
-    (db: &Database, key: &str, val: &ToValue, defaults: &[(&str, &ToValue)]) -> T
-{
+pub fn get_or_create<'a, T: IsTable + IsDao>(db: &Database,
+                                             key: &str,
+                                             val: &ToValue,
+                                             defaults: &[(&str, &ToValue)])
+                                             -> T {
     if let Ok(result) = query_for::<T>().filter_eq(key, val).collect_one(db) {
         result
     } else {
@@ -398,7 +394,7 @@ pub fn get_or_create<'a, T: IsTable + IsDao>
             q.set(key, f);
         }
         q.returns(table.columns.iter().map(|c| &*c.name).collect())
-            .collect_one(db).unwrap()
+         .collect_one(db)
+         .unwrap()
     }
 }
-

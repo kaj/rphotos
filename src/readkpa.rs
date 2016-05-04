@@ -1,4 +1,5 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate xml;
 extern crate rustorm;
 extern crate rustc_serialize;
@@ -29,26 +30,28 @@ use env::{dburl, photos_dir};
 fn find_attr(name: &str, attrs: &Vec<OwnedAttribute>) -> Option<String> {
     for attr in attrs {
         if attr.name.local_name == name {
-            return Some(attr.value.clone())
+            return Some(attr.value.clone());
         }
     }
     None
 }
 
 fn slugify(val: String) -> String {
-    val.chars().map(|c| match c {
-        c @ '0' ... '9' => c,
-        c @ 'a' ... 'z' => c,
-        c @ 'A' ... 'Z' => c.to_lowercase().next().unwrap(),
-        'Å' | 'å' | 'Ä' | 'ä' => 'a',
-        'Ö' | 'ö' => 'o',
-        'É' | 'é' => 'e',
-        _ => '_'
-    }).collect()
+    val.chars()
+       .map(|c| match c {
+           c @ '0'...'9' => c,
+           c @ 'a'...'z' => c,
+           c @ 'A'...'Z' => c.to_lowercase().next().unwrap(),
+           'Å' | 'å' | 'Ä' | 'ä' => 'a',
+           'Ö' | 'ö' => 'o',
+           'É' | 'é' => 'e',
+           _ => '_',
+       })
+       .collect()
 }
 
 fn tag_photo(db: &Database, photo: &Photo, tag: String) {
-    let v2 : String = tag.clone();
+    let v2: String = tag.clone();
 
     let tag: Tag = get_or_create(db, "tag", &tag, &[("slug", &slugify(v2))]);
     debug!("  tag {:?}", tag);
@@ -70,7 +73,9 @@ fn tag_photo(db: &Database, photo: &Photo, tag: String) {
 
 fn person_photo(db: &Database, photo: &Photo, name: String) {
     let v2: String = name.clone();
-    let person: Person = get_or_create(db, "name", &name,
+    let person: Person = get_or_create(db,
+                                       "name",
+                                       &name,
                                        &[("slug", &slugify(v2))]);
     debug!("  person {:?}", person);
     let mut q = Query::select();
@@ -91,7 +96,9 @@ fn person_photo(db: &Database, photo: &Photo, name: String) {
 
 fn place_photo(db: &Database, photo: &Photo, name: String) {
     let v2: String = name.clone();
-    let place: Place = get_or_create(db, "place", &name,
+    let place: Place = get_or_create(db,
+                                     "place",
+                                     &name,
                                      &[("slug", &slugify(v2))]);
     debug!("  place {:?}", place);
     let mut q = Query::select();
@@ -116,7 +123,7 @@ fn grade_photo(db: &Database, photo: &mut Photo, name: String) {
         "Usel" => 0,
         "Ok" => 3,
         "utvald" => 5,
-        x => panic!("Unknown grade {:?} on {:?}", x, photo)
+        x => panic!("Unknown grade {:?} on {:?}", x, photo),
     };
     photo.grade = Some(grade);
     let mut q = Query::update();
@@ -134,27 +141,34 @@ fn main() {
     let file = File::open(photos_dir().join("index.xml")).unwrap();
     info!("Reading kphotoalbum data");
     let mut xml = EventReader::new(file);
-    let mut option : Option<String> = None;
-    let mut photo : Option<Photo> = None;
+    let mut option: Option<String> = None;
+    let mut photo: Option<Photo> = None;
     while let Ok(event) = xml.next() {
         match event {
             XmlEvent::EndDocument => {
                 debug!("End of xml");
                 break;
-            },
-            XmlEvent::StartElement{ref name, ref attributes, ref namespace} => {
+            }
+            XmlEvent::StartElement { ref name,
+                                     ref attributes,
+                                     ref namespace } => {
                 debug!("Found {} {:?} {:?}", name, attributes, namespace);
                 match &*name.local_name {
                     "image" => {
                         if let Some(file) = find_attr("file", attributes) {
-                            let angle = find_attr("angle", attributes).unwrap_or("0".to_string()).parse::<i16>().unwrap();
+                            let angle = find_attr("angle", attributes)
+                                            .unwrap_or("0".to_string())
+                                            .parse::<i16>()
+                                            .unwrap();
                             let date = find_image_date(attributes);
                             let mut defaults: Vec<(&str, &ToValue)> =
                                 vec![("rotation", &angle)];
                             if let Some(ref date) = date {
                                 defaults.push(("date", date));
                             }
-                            let img: Photo = get_or_create(db.as_ref(), "path", &file,
+                            let img: Photo = get_or_create(db.as_ref(),
+                                                           "path",
+                                                           &file,
                                                            &defaults);
                             debug!("Found image {:?}", img);
                             photo = Some(img);
@@ -171,48 +185,56 @@ fn main() {
                                         if let Some(ref photo) = photo {
                                             tag_photo(db.as_ref(), &photo, v);
                                         }
-                                    },
+                                    }
                                     "Personer" => {
                                         if let Some(ref photo) = photo {
-                                            person_photo(db.as_ref(), &photo, v);
+                                            person_photo(db.as_ref(),
+                                                         &photo,
+                                                         v);
                                         }
-                                    },
+                                    }
                                     "Platser" => {
                                         if let Some(ref photo) = photo {
                                             place_photo(db.as_ref(), &photo, v);
                                         }
-                                    },
+                                    }
                                     "Betyg" => {
                                         if let Some(ref mut photo) = photo {
                                             grade_photo(db.as_ref(), photo, v);
                                         }
                                     }
-                                    o => { warn!("Unsupported metadata {} = {}", o, v); }
+                                    o => {
+                                        warn!("Unsupported metadata {} = {}",
+                                              o,
+                                              v);
+                                    }
                                 }
-                                
+
                             }
                         }
                     }
                     _ => {}
                 }
-            },
-            XmlEvent::EndElement{ref name} => {
+            }
+            XmlEvent::EndElement { ref name } => {
                 match &*name.local_name {
-                    "option" => { option = None; }
+                    "option" => {
+                        option = None;
+                    }
                     _ => {}
                 }
             }
-            _ => {
-            }
+            _ => {}
         }
     }
 }
 
 fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<DateTime<UTC>> {
-    let start_date = find_attr("startDate", attributes).unwrap_or("".to_string());
+    let start_date = find_attr("startDate", attributes)
+                         .unwrap_or("".to_string());
     let end_date = find_attr("endDate", attributes).unwrap_or("".to_string());
     let format = "%FT%T";
-    let utc : UTC = UTC;
+    let utc: UTC = UTC;
     if let Ok(start_t) = NaiveDateTime::parse_from_str(&*start_date, format) {
         if let Ok(end_t) = NaiveDateTime::parse_from_str(&*end_date, format) {
             if start_t != end_t {

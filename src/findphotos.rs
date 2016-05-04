@@ -1,4 +1,5 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate chrono;
 extern crate env_logger;
 extern crate image;
@@ -33,23 +34,35 @@ fn main() {
     let photos = PhotosDir::new(photos_dir());
 
     let only_in = Path::new("2016"); // TODO Get from command line!
-    photos.find_files(only_in, &|path, exif| {
-        match save_photo(db.as_ref(), path, &exif) {
-            Ok(()) => debug!("Saved photo {}", path),
-            Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
-        }
-    }).unwrap();
+    photos.find_files(only_in,
+                      &|path, exif| {
+                          match save_photo(db.as_ref(), path, &exif) {
+                              Ok(()) => debug!("Saved photo {}", path),
+                              Err(e) => {
+                                  warn!("Failed to save photo {}: {:?}",
+                                        path,
+                                        e)
+                              }
+                          }
+                      })
+          .unwrap();
 }
 
-fn save_photo(db: &Database, path: &str, exif: &ExifData) -> Result<(), FindPhotoError> {
+fn save_photo(db: &Database,
+              path: &str,
+              exif: &ExifData)
+              -> Result<(), FindPhotoError> {
     let date = &try!(find_date(&exif));
     let rotation = &try!(find_rotation(&exif));
-    let photo: Photo = get_or_create(db, "path", &path.to_string(), &[
-        ("date", date),
-        ("rotation", rotation),
-        ]);
+    let photo: Photo = get_or_create(db,
+                                     "path",
+                                     &path.to_string(),
+                                     &[("date", date), ("rotation", rotation)]);
     if *date != photo.date.unwrap() {
-        panic!("Should update date for {} from {:?} to {:?}", path, photo.date, date);
+        panic!("Should update date for {} from {:?} to {:?}",
+               path,
+               photo.date,
+               date);
     }
     if *rotation != photo.rotation {
         let mut q = Query::update();
@@ -106,8 +119,9 @@ fn find_date(exif: &ExifData) -> Result<DateTime<UTC>, FindPhotoError> {
         if let TagValue::Ascii(ref str) = value.value {
             let utc = UTC;
             debug!("Try to parse {:?} as datetime", str);
-            Ok(utc.from_local_datetime(&try!(
-                NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T"))).latest().unwrap())
+            Ok(utc.from_local_datetime(&try!(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")))
+                  .latest()
+                  .unwrap())
         } else {
             Err(FindPhotoError::ExifOfUnexpectedType(value.value.clone()))
         }
