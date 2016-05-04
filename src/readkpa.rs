@@ -36,7 +36,7 @@ fn find_attr(name: &str, attrs: &Vec<OwnedAttribute>) -> Option<String> {
     None
 }
 
-fn slugify(val: String) -> String {
+fn slugify(val: &str) -> String {
     val.chars()
        .map(|c| match c {
            c @ '0'...'9' => c,
@@ -50,10 +50,8 @@ fn slugify(val: String) -> String {
        .collect()
 }
 
-fn tag_photo(db: &Database, photo: &Photo, tag: String) {
-    let v2: String = tag.clone();
-
-    let tag: Tag = get_or_create(db, "tag", &tag, &[("slug", &slugify(v2))]);
+fn tag_photo(db: &Database, photo: &Photo, tag: &str) {
+    let tag: Tag = get_or_create(db, "tag", &tag, &[("slug", &slugify(tag))]);
     debug!("  tag {:?}", tag);
     let mut q = Query::select();
     q.from_table("public.photo_tag");
@@ -71,12 +69,11 @@ fn tag_photo(db: &Database, photo: &Photo, tag: String) {
     }
 }
 
-fn person_photo(db: &Database, photo: &Photo, name: String) {
-    let v2: String = name.clone();
+fn person_photo(db: &Database, photo: &Photo, name: &str) {
     let person: Person = get_or_create(db,
                                        "name",
                                        &name,
-                                       &[("slug", &slugify(v2))]);
+                                       &[("slug", &slugify(name))]);
     debug!("  person {:?}", person);
     let mut q = Query::select();
     q.from_table("public.photo_person");
@@ -94,12 +91,11 @@ fn person_photo(db: &Database, photo: &Photo, name: String) {
     }
 }
 
-fn place_photo(db: &Database, photo: &Photo, name: String) {
-    let v2: String = name.clone();
+fn place_photo(db: &Database, photo: &Photo, name: &str) {
     let place: Place = get_or_create(db,
                                      "place",
                                      &name,
-                                     &[("slug", &slugify(v2))]);
+                                     &[("slug", &slugify(name))]);
     debug!("  place {:?}", place);
     let mut q = Query::select();
     q.from_table("public.photo_place");
@@ -117,9 +113,9 @@ fn place_photo(db: &Database, photo: &Photo, name: String) {
     }
 }
 
-fn grade_photo(db: &Database, photo: &mut Photo, name: String) {
+fn grade_photo(db: &Database, photo: &mut Photo, name: &str) {
     debug!("Should set  grade {:?} on {:?}", name, photo);
-    let grade = match &*name {
+    let grade = match name {
         "Usel" => 0,
         "Ok" => 3,
         "utvald" => 5,
@@ -183,24 +179,26 @@ fn main() {
                                 match &**o {
                                     "Nyckelord" => {
                                         if let Some(ref photo) = photo {
-                                            tag_photo(db.as_ref(), &photo, v);
+                                            tag_photo(db.as_ref(), &photo, &v);
                                         }
                                     }
                                     "Personer" => {
                                         if let Some(ref photo) = photo {
                                             person_photo(db.as_ref(),
                                                          &photo,
-                                                         v);
+                                                         &v);
                                         }
                                     }
                                     "Platser" => {
                                         if let Some(ref photo) = photo {
-                                            place_photo(db.as_ref(), &photo, v);
+                                            place_photo(db.as_ref(),
+                                                        &photo,
+                                                        &v);
                                         }
                                     }
                                     "Betyg" => {
                                         if let Some(ref mut photo) = photo {
-                                            grade_photo(db.as_ref(), photo, v);
+                                            grade_photo(db.as_ref(), photo, &v);
                                         }
                                     }
                                     o => {
