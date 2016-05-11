@@ -28,7 +28,7 @@ version = "*"
 default-features = false
 
 [dependencies]
-nickel = "*"
+nickel = ">= 0.8.1"
 nickel-jwt-session = "*"
 env_logger = "*"
 log = "*"

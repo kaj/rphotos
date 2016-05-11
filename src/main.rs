@@ -19,21 +19,20 @@ use chrono::offset::TimeZone;
 use chrono::Duration as ChDuration;
 use chrono::Datelike;
 use hyper::header::{Expires, HttpDate};
-use nickel::{MediaType, HttpRouter, Nickel, StaticFilesHandler, Request,
-             Response, MiddlewareResult};
+use nickel::{FormBody, HttpRouter, MediaType, MiddlewareResult, Nickel,
+             Request, Response, StaticFilesHandler};
 use nickel::extensions::response::Redirect;
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
 use plugin::Pluggable;
 use rustc_serialize::Encodable;
-use rustorm::query::{Query, Filter};
+use rustorm::query::{Filter, Query};
 use time::Duration;
 use nickel::status::StatusCode;
-use std::io::Read;
 use std::collections::HashMap;
 
 mod models;
-use models::{Entity, Photo, PhotoQuery, Tag, Person, Place, query_for};
+use models::{Entity, Person, Photo, PhotoQuery, Place, Tag, query_for};
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -153,16 +152,16 @@ fn login<'mw>(_req: &mut Request,
 fn do_login<'mw>(req: &mut Request,
                  mut res: Response<'mw>)
                  -> MiddlewareResult<'mw> {
-    // TODO It seems form data parsing is next version of nickel ...
-    let mut form_data = String::new();
-    req.origin.read_to_string(&mut form_data).unwrap();
-    println!("Form: {:?}", form_data);
-    if form_data == "user=kaj&password=kaj123" {
-        res.set_jwt_user("kaj");
-        res.redirect("/")
-    } else {
-        render!(res, "templates/login.tpl", {})
+    let form_data = try_with!(res, req.form_body());
+    if let (Some(user), Some(password)) = (form_data.get("user"),
+                                           form_data.get("password")) {
+        // TODO Actual password hashing and checking
+        if user == "kaj" && password == "kaj123" {
+            res.set_jwt_user(user);
+            return res.redirect("/");
+        }
     }
+    render!(res, "templates/login.tpl", {})
 }
 
 fn logout<'mw>(_req: &mut Request,
