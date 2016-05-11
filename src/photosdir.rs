@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use std::io;
 use image::open as image_open;
-use image::{FilterType, ImageFormat, GenericImage, ImageError};
+use image::{FilterType, GenericImage, ImageError, ImageFormat};
 use rexif::{self, ExifData};
 
 use models::Photo;

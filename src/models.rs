@@ -2,7 +2,7 @@ use chrono::datetime::DateTime;
 use chrono::offset::utc::UTC;
 use rustorm::query::Query;
 use rustorm::dao::{Dao, IsDao, ToValue, Type};
-use rustorm::table::{IsTable, Table, Column};
+use rustorm::table::{Column, IsTable, Table};
 use rustorm::database::Database;
 
 pub trait Entity: IsTable + IsDao {

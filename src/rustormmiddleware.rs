@@ -1,5 +1,5 @@
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
-use plugin::{Pluggable, Extensible};
+use plugin::{Extensible, Pluggable};
 use rustorm::dao::{IsDao, ToValue};
 use rustorm::database::{Database, DbError};
 use rustorm::pool::{ManagedPool, Platform};
@@ -7,7 +7,7 @@ use rustorm::query::Query;
 use rustorm::table::IsTable;
 use typemap::Key;
 
-use models::{query_for, Entity};
+use models::{Entity, query_for};
 
 pub struct RustormMiddleware {
     pool: ManagedPool,

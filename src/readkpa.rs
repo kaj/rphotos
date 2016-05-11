@@ -22,7 +22,7 @@ use xml::reader::EventReader;
 use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
 
 mod models;
-use models::{Photo, Tag, Person, Place, get_or_create};
+use models::{Person, Photo, Place, Tag, get_or_create};
 
 mod env;
 use env::{dburl, photos_dir};
