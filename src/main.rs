@@ -328,6 +328,7 @@ fn all_years<'mw>(req: &mut Request,
         groups: Vec<Group> = query_for::<Photo>()
             .columns(vec!("extract(year from date) y", "count(*) c"))
             .only_public(req.authorized_user().is_none())
+            .no_raw()
             .add_filter(Filter::is_not_null("date"))
             .group_by(vec!("y")).asc("y")
             .retrieve(req.db_conn()).expect("Get images per year")
@@ -337,6 +338,7 @@ fn all_years<'mw>(req: &mut Request,
                 let count : i64 = dao.get("c");
                 let photo : Photo = query_for::<Photo>()
                     .only_public(req.authorized_user().is_none())
+                    .no_raw()
                     .filter_date("date", "year", year as u32)
                     .desc_nulls_last("grade")
                     .asc_nulls_last("date")
@@ -361,6 +363,7 @@ fn months_in_year<'mw>(req: &mut Request,
             title: String = format!("Photos from {}", year),
             groups: Vec<Group> = query_for::<Photo>()
                 .only_public(req.authorized_user().is_none())
+                .no_raw()
                 .columns(vec!("extract(month from date) m", "count(*) c"))
                 .filter_date("date", "year", year as u32)
                 .group_by(vec!("m")).asc("m")
@@ -370,6 +373,7 @@ fn months_in_year<'mw>(req: &mut Request,
                     let count : i64 = dao.get("c");
                     let photo : Photo = query_for::<Photo>()
                         .only_public(req.authorized_user().is_none())
+                        .no_raw()
                         .filter_date("date", "year", year as u32)
                         .filter_date("date", "month", month as u32)
                         .desc_nulls_last("grade")
@@ -400,6 +404,7 @@ fn days_in_month<'mw>(req: &mut Request,
                                         year),
                 groups: Vec<Group> = query_for::<Photo>()
                     .only_public(req.authorized_user().is_none())
+                    .no_raw()
                     .columns(vec!("extract(day from date) d", "count(*) c"))
                     .filter_date("date", "year", year as u32)
                     .filter_date("date", "month", month as u32)
@@ -410,6 +415,7 @@ fn days_in_month<'mw>(req: &mut Request,
                         let count : i64 = dao.get("c");
                         let photo = query_for::<Photo>()
                             .only_public(req.authorized_user().is_none())
+                            .no_raw()
                             .filter_date("date", "year", year as u32)
                             .filter_date("date", "month", month as u32)
                             .filter_date("date", "day", day as u32)
@@ -446,6 +452,7 @@ fn all_for_day<'mw>(req: &mut Request,
                                             day, monthname(month), year),
                     photos: Vec<Photo> = query_for::<Photo>()
                         .only_public(req.authorized_user().is_none())
+                        .no_raw()
                         .filter_gte("date", &date)
                         .filter_lt("date", &(date + ChDuration::days(1)))
                         .desc_nulls_last("grade")

@@ -1,6 +1,6 @@
 use chrono::datetime::DateTime;
 use chrono::offset::utc::UTC;
-use rustorm::query::Query;
+use rustorm::query::{Equality, Filter, Query};
 use rustorm::dao::{Dao, IsDao, ToValue, Type};
 use rustorm::table::{Column, IsTable, Table};
 use rustorm::database::Database;
@@ -132,7 +132,7 @@ impl IsTable for Photo {
 
 pub trait PhotoQuery {
     fn only_public(&mut self, only_public: bool) -> &mut Self;
-
+    fn no_raw(&mut self) -> &mut Self;
     fn filter_date(&mut self, field: &str, part: &str, val: u32) -> &mut Self;
 }
 
@@ -144,6 +144,14 @@ impl PhotoQuery for Query {
             self
         }
     }
+    fn no_raw(&mut self) -> &mut Self {
+        let mut filter = Filter::new("path", Equality::ILIKE, &"%.gif");
+        filter.or("path", Equality::ILIKE, &"%.png")
+              .or("path", Equality::ILIKE, &"%.jpg")
+              .or("path", Equality::ILIKE, &"%.jpeg");
+        self.add_filter(filter)
+    }
+
     fn filter_date(&mut self, field: &str, part: &str, val: u32) -> &mut Self {
         self.filter_eq(&format!("extract({} from {})", part, field),
                        &(val as f64))
