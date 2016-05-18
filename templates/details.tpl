@@ -12,10 +12,7 @@
     <p><a href="/img/{{photo.id}}/l">{{photo.path}}</a></p>
     <p><img src="/img/{{photo.id}}/m"></p>
     {{#photo.grade}}<p>Betyg: {{.}}</p>{{/photo.grade}}
-    {{#photo.date}}<p>
-      <a href="/{{year}}/">{{year}}</a>-<a
-         href="/{{year}}/{{month}}/">{{month}}</a>-<a
-         href="/{{year}}/{{month}}/{{day}}">{{day}}</a>
+    {{#photo.date}}<p>Tid: {{year}}-{{month}}-{{day}}
       {{time}}</p>{{/photo.date}}
     <p>People: {{#people}}<a href="/person/{{slug}}">{{name}}</a>, {{/people}}</p>
     <p>Places: {{#places}}<a href="/place/{{slug}}">{{place}}</a>, {{/places}}</p>

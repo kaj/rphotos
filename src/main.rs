@@ -29,7 +29,6 @@ use rustc_serialize::Encodable;
 use rustorm::query::{Filter, Query};
 use time::Duration;
 use nickel::status::StatusCode;
-use std::collections::HashMap;
 
 mod models;
 use models::{Entity, Person, Photo, PhotoQuery, Place, Tag, query_for};
@@ -294,10 +293,12 @@ fn photo_details<'mw>(req: &mut Request,
             if req.authorized_user().is_some() || photo.is_public() {
                 return render!(res, "templates/details.tpl", {
                     user: Option<String> = req.authorized_user(),
-                    monthlink: HashMap<String, String> =
+                    lpath: Vec<Link> =
                         photo.date
-                             .map(|d| month_link(d.year(), d.month() as u8))
-                             .unwrap_or_else(|| HashMap::new()),
+                        .map(|d| vec![Link::year(d.year()),
+                                      Link::month(d.year(), d.month() as u8),
+                                      Link::day(d.year(), d.month() as u8, d.day())])
+                        .unwrap_or_else(|| vec![]),
                 people: Vec<Person> =
                     req.orm_get_related(&photo, "photo_person").unwrap(),
                 places: Vec<Place> =
@@ -399,7 +400,7 @@ fn days_in_month<'mw>(req: &mut Request,
         if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
             return render!(res, "templates/groups.tpl", {
                 user: Option<String> = req.authorized_user(),
-                year: Option<i32> = Some(year),
+                lpath: Vec<Link> = vec![Link::year(year)],
                 title: String = format!("Photos from {} {}", monthname(month),
                                         year),
                 groups: Vec<Group> = query_for::<Photo>()
@@ -445,9 +446,8 @@ fn all_for_day<'mw>(req: &mut Request,
                 let date = UTC.ymd(year, month as u32, day).and_hms(0, 0, 0);
                 return render!(res, "templates/index.tpl", {
                     user: Option<String> = req.authorized_user(),
-                    year: Option<i32> = Some(year),
-                    monthlink: HashMap<String, String> =
-                        month_link(year, month),
+                    lpath: Vec<Link> = vec![Link::year(year),
+                                            Link::month(year, month)],
                     title: String = format!("Photos from {} {} {}",
                                             day, monthname(month), year),
                     photos: Vec<Photo> = query_for::<Photo>()
@@ -465,9 +465,29 @@ fn all_for_day<'mw>(req: &mut Request,
     res.error(StatusCode::NotFound, "Not a day")
 }
 
-fn month_link(year: i32, month: u8) -> HashMap<String, String> {
-    let mut ml = HashMap::new();
-    ml.insert("url".to_string(), format!("/{}/{}/", year, month));
-    ml.insert("name".to_string(), format!("{}", month));
-    ml
+#[derive(Debug, Clone, RustcEncodable)]
+struct Link {
+    pub url: String,
+    pub name: String,
+}
+
+impl Link {
+    fn year(year: i32) -> Self {
+        Link {
+            url: format!("/{}/", year),
+            name: format!("{}", year),
+        }
+    }
+    fn month(year: i32, month: u8) -> Self {
+        Link {
+            url: format!("/{}/{}/", year, month),
+            name: format!("{}", month),
+        }
+    }
+    fn day(year: i32, month: u8, day: u32) -> Self {
+        Link {
+            url: format!("/{}/{}/{}", year, month, day),
+            name: format!("{}", day),
+        }
+    }
 }

@@ -1,7 +1,6 @@
 <header>
 <span><a href="/">Bilder</a>
-{{#year}}/<a href="/{{.}}/">{{.}}</a>{{/year}}
-{{#monthlink}}- <a href="{{url}}">{{name}}</a>{{/monthlink}}
+{{#lpath}} - <a href="{{url}}">{{name}}</a>{{/lpath}}
 </span>
 <span>· <a href="/tag/">Taggar</a></span>
 <span>· <a href="/person/">Personer</a></span>
