@@ -1,8 +1,12 @@
-extern crate sass_rs;
-extern crate sass_sys;
+extern crate brotli2;
+extern crate flate2;
 extern crate md5;
 extern crate rustc_serialize as serialize;
+extern crate sass_rs;
+extern crate sass_sys;
 
+use brotli2::write::BrotliEncoder;
+use flate2::{Compression, FlateWriteExt};
 use sass_rs::dispatcher::Dispatcher;
 use sass_rs::sass_context::SassFileContext;
 use serialize::base64::{self, ToBase64};
@@ -23,6 +27,16 @@ fn main() {
     File::create(&static_dir.join(&filename))
         .map(|mut f| {
             write!(f, "{}", css).unwrap();
+        })
+        .unwrap();
+    File::create(&static_dir.join(format!("{}.gz", &filename)))
+        .map(|f| {
+            write!(f.gz_encode(Compression::Best), "{}", css).unwrap();
+        })
+        .unwrap();
+    File::create(&static_dir.join(format!("{}.br", &filename)))
+        .map(|f| {
+            write!(BrotliEncoder::new(f, 11), "{}", css).unwrap();
         })
         .unwrap();
 

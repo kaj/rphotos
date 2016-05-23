@@ -10,6 +10,8 @@ sass-rs = "*"
 sass-sys = "*"
 md5 = "*"
 rustc-serialize = "*"
+flate2 = "*"
+brotli2 = "*"
 
 [[bin]]
 name = "rphotos"
