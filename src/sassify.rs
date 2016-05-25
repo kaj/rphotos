@@ -24,31 +24,26 @@ fn main() {
     let css = compile("photos.scss").unwrap();
     let filename = format!("style-{}.css", checksum_slug(&css));
 
-    File::create(&static_dir.join(&filename))
-        .map(|mut f| {
-            write!(f, "{}", css).unwrap();
-        })
-        .unwrap();
-    File::create(&static_dir.join(format!("{}.gz", &filename)))
-        .map(|f| {
-            write!(f.gz_encode(Compression::Best), "{}", css).unwrap();
-        })
-        .unwrap();
-    File::create(&static_dir.join(format!("{}.br", &filename)))
-        .map(|f| {
-            write!(BrotliEncoder::new(f, 11), "{}", css).unwrap();
-        })
-        .unwrap();
+    File::create(static_dir.join(&filename))
+        .and_then(|mut f| write!(f, "{}", css))
+        .expect("Writing css");
+    File::create(static_dir.join(format!("{}.gz", filename)))
+        .map(|f| f.gz_encode(Compression::Best))
+        .and_then(|mut f| write!(f, "{}", css))
+        .expect("Writing gzipped css");
+    File::create(static_dir.join(format!("{}.br", filename)))
+        .map(|f| BrotliEncoder::new(f, 11))
+        .and_then(|mut f| write!(f, "{}", css))
+        .expect("Writing brotli compressed css");
 
     File::create(&out_dir.join("stylelink"))
-        .map(|mut f| {
+        .and_then(|mut f| {
             writeln!(f,
                      "\"<link rel='stylesheet' href='/static/{}' \
                       type='text/css'/>\"",
                      filename)
-                .unwrap();
         })
-        .unwrap();
+        .expect("Writing stylelink");
 
     println!("cargo:rerun-if-changed=src/sassify.rs");
     // TODO Find any referenced files!
