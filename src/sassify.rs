@@ -16,7 +16,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::thread;
 
-fn main() {
+pub fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let static_dir = out_dir.join("static").join("static");
     create_dir_all(&static_dir).unwrap();

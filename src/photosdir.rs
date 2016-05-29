@@ -5,7 +5,7 @@ use image::open as image_open;
 use image::{FilterType, GenericImage, ImageError, ImageFormat};
 use rexif::{self, ExifData};
 
-use models::Photo;
+use rphotos::models::Photo;
 
 pub struct PhotosDir {
     basedir: PathBuf,

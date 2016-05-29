@@ -5,38 +5,35 @@ extern crate env_logger;
 extern crate image;
 extern crate rexif;
 extern crate rustc_serialize;
-extern crate rustorm;
+extern crate dotenv;
+extern crate diesel;
+extern crate rphotos;
 
-use chrono::datetime::DateTime;
 use chrono::format::ParseError;
 use chrono::naive::datetime::NaiveDateTime;
-use chrono::offset::TimeZone;
-use chrono::offset::utc::UTC;
 use rexif::{ExifData, ExifEntry, ExifTag, TagValue};
-use rustorm::database::{Database, DbError};
-use rustorm::pool::ManagedPool;
-use rustorm::query::Query;
-use rustorm::table::IsTable;
 use std::path::Path;
+use dotenv::dotenv;
+use diesel::pg::PgConnection;
+use self::diesel::prelude::*;
 
 mod env;
 use env::{dburl, photos_dir};
 mod photosdir;
 use photosdir::PhotosDir;
-mod models;
-use models::{Photo, get_or_create};
 
 
 fn main() {
+    dotenv().ok();
     env_logger::init().unwrap();
-    let pool = ManagedPool::init(&dburl(), 1).unwrap();
-    let db = pool.connect().unwrap();
+    let db = PgConnection::establish(&dburl())
+        .expect("Error connecting to database");
     let photos = PhotosDir::new(photos_dir());
 
     let only_in = Path::new("2016"); // TODO Get from command line!
     photos.find_files(only_in,
                       &|path, exif| {
-                          match save_photo(db.as_ref(), path, &exif) {
+                          match save_photo(&db, path, &exif) {
                               Ok(()) => debug!("Saved photo {}", path),
                               Err(e) => {
                                   warn!("Failed to save photo {}: {:?}",
@@ -48,48 +45,64 @@ fn main() {
           .unwrap();
 }
 
-fn save_photo(db: &Database,
-              path: &str,
+fn save_photo(db: &PgConnection,
+              file_path: &str,
               exif: &ExifData)
               -> Result<(), FindPhotoError> {
-    let date = &try!(find_date(&exif));
-    let rotation = &try!(find_rotation(&exif));
-    let photo: Photo = get_or_create(db,
-                                     "path",
-                                     &path.to_string(),
-                                     &[("date", date), ("rotation", rotation)]);
-    if *date != photo.date.unwrap() {
-        panic!("Should update date for {} from {:?} to {:?}",
-               path,
-               photo.date,
-               date);
-    }
-    if *rotation != photo.rotation {
-        let mut q = Query::update();
-        q.table(&Photo::table());
-        q.filter_eq("id", &photo.id);
-        q.set("rotation", rotation);
-        try!(q.execute(db));
+    use rphotos::schema::photo::dsl::*;
+    use rphotos::models::{Photo, NewPhoto};
+    let exifdate = &try!(find_date(&exif));
+    let exifrotation = &try!(find_rotation(&exif));
+    if let Some(pic) = try!(photo.filter(path.eq(&file_path.to_string()))
+                            .first::<Photo>(db).optional()) {
+        debug!("Photo is {:?}", pic);
+        if Some(*exifdate) != pic.date {
+            try!(diesel::update(photo.find(id))
+                 .set(date.eq(exifdate))
+                 .get_result::<Photo>(db));
+            info!("Updated date for {} from {:?} to {:?}",
+                  file_path,
+                  pic.date,
+                  exifdate);
+        }
+        if *exifrotation != pic.rotation {
+            try!(diesel::update(photo.find(id))
+                 .set(rotation.eq(exifrotation))
+                 .get_result::<Photo>(db));
+            info!("Updated rotation for {} from {:?} to {:?}",
+                  file_path,
+                  pic.rotation,
+                  exifrotation);
+        }
+    } else {
+        let pic = NewPhoto {
+            path: &file_path,
+            date: Some(*exifdate),
+            rotation: *exifrotation,
+        };
+        let p = try!(diesel::insert(&pic).into(photo)
+                     .get_result::<Photo>(db));
+        info!("Inserted {:?}", p);
     }
     Ok(())
 }
 
 #[derive(Debug)]
 enum FindPhotoError {
-    DatabaseError(DbError),
+    DatabaseError(diesel::result::Error),
     ExifOfUnexpectedType(TagValue),
     ExifTagMissing(ExifTag),
     TimeFormat(ParseError),
     UnknownOrientation(u16),
 }
+impl From<diesel::result::Error> for FindPhotoError {
+    fn from(err: diesel::result::Error) -> FindPhotoError {
+        FindPhotoError::DatabaseError(err)
+    }
+}
 impl From<ParseError> for FindPhotoError {
     fn from(err: ParseError) -> FindPhotoError {
         FindPhotoError::TimeFormat(err)
-    }
-}
-impl From<DbError> for FindPhotoError {
-    fn from(err: DbError) -> FindPhotoError {
-        FindPhotoError::DatabaseError(err)
     }
 }
 
@@ -97,7 +110,7 @@ fn find_rotation(exif: &ExifData) -> Result<i16, FindPhotoError> {
     if let Some(ref value) = find_entry(exif, &ExifTag::Orientation) {
         if let TagValue::U16(ref v) = value.value {
             let n = v[0];
-            info!("Raw orientation is {}", n);
+            debug!("Raw orientation is {}", n);
             match n {
                 1 => Ok(0),
                 3 => Ok(180),
@@ -114,14 +127,11 @@ fn find_rotation(exif: &ExifData) -> Result<i16, FindPhotoError> {
     }
 }
 
-fn find_date(exif: &ExifData) -> Result<DateTime<UTC>, FindPhotoError> {
+fn find_date(exif: &ExifData) -> Result<NaiveDateTime, FindPhotoError> {
     if let Some(ref value) = find_entry(exif, &ExifTag::DateTimeOriginal) {
         if let TagValue::Ascii(ref str) = value.value {
-            let utc = UTC;
             debug!("Try to parse {:?} as datetime", str);
-            Ok(utc.from_local_datetime(&try!(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")))
-                  .latest()
-                  .unwrap())
+            Ok(try!(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")))
         } else {
             Err(FindPhotoError::ExifOfUnexpectedType(value.value.clone()))
         }

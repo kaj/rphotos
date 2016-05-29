@@ -4,7 +4,6 @@ extern crate nickel;
 extern crate log;
 extern crate env_logger;
 extern crate nickel_jwt_session;
-extern crate rustorm;
 extern crate rustc_serialize;
 extern crate typemap;
 extern crate plugin;
@@ -13,7 +12,14 @@ extern crate hyper;
 extern crate time;
 extern crate chrono;
 extern crate rexif;
+extern crate rphotos;
+extern crate r2d2;
+extern crate nickel_diesel;
+extern crate diesel;
+extern crate r2d2_diesel;
 
+use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
+use r2d2::NopErrorHandler;
 use chrono::UTC;
 use chrono::offset::TimeZone;
 use chrono::Duration as ChDuration;
@@ -26,20 +32,21 @@ use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
 use plugin::Pluggable;
 use rustc_serialize::Encodable;
-use rustorm::query::{Filter, Query};
 use time::Duration;
 use nickel::status::StatusCode;
+use diesel::prelude::*;
+use diesel::pg::PgConnection;
 
-mod models;
-use models::{Entity, Person, Photo, PhotoQuery, Place, Tag, query_for};
+//mod models;
+use rphotos::models::{Person, Photo, Place, Tag};
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
 
 mod photosdir;
 
-mod rustormmiddleware;
-use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
+//mod rustormmiddleware;
+//use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
 
 mod requestloggermiddleware;
 use requestloggermiddleware::RequestLoggerMiddleware;
@@ -70,6 +77,7 @@ macro_rules! render {
     }
 }
 
+/*
 fn orm_get_related<T: Entity, Src: Entity>(src: &Src,
                                            rel_table: &str)
                                            -> Query {
@@ -81,8 +89,9 @@ fn orm_get_related<T: Entity, Src: Entity>(src: &Src,
      .filter_eq(&format!("{}.{}", rel_table, Src::table().name), src.id());
     q
 }
+ */
 
-#[derive(Debug, Clone, RustcEncodable)]
+#[derive(Debug, Clone/*, RustcEncodable*/)]
 struct Group {
     title: String,
     url: String,
@@ -119,7 +128,10 @@ fn main() {
     let staticdir = concat!(env!("OUT_DIR"), "/static/");
     info!("Serving static files from {}", staticdir);
     server.utilize(StaticFilesHandler::new(staticdir));
-    server.utilize(RustormMiddleware::new(&dburl()));
+    let dm : DieselMiddleware<PgConnection> = DieselMiddleware::new(&dburl(),
+                                         5,
+                                         Box::new(NopErrorHandler)).unwrap();
+    server.utilize(dm);
     server.utilize(PhotosDirMiddleware::new(photos_dir()));
 
     server.get("/login",             login);
@@ -173,6 +185,7 @@ fn logout<'mw>(_req: &mut Request,
 fn show_image<'mw>(req: &mut Request,
                    mut res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
+    /*
     if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
         if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
             if req.authorized_user().is_some() || photo.is_public() {
@@ -198,32 +211,39 @@ fn show_image<'mw>(req: &mut Request,
             }
         }
     }
+*/
     res.error(StatusCode::NotFound, "No such image")
 }
 
 fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
+    use rphotos::schema::tag::dsl::*;
+    let connection = req.db_conn();
+    let c : &PgConnection = &connection;
     return render!(res, "templates/tags.tpl", {
         user: Option<String> = req.authorized_user(),
-        tags: Vec<Tag> = query_for::<Tag>().asc("tag")
-            .collect(req.db_conn()).unwrap()
+        // TODO order by tag name!
+        tags: Vec<Tag> = tag.load(c).unwrap()
     });
 }
 fn tag_one<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
-    let slug = req.param("tag").unwrap();
-    if let Ok(tag) = req.orm_get::<Tag>("slug", &slug) {
+    use rphotos::schema::tag::dsl::*;
+    let tslug = req.param("tag").unwrap();
+    let connection = req.db_conn();
+    let c : &PgConnection = &connection;
+    if let Ok(ttag) = tag.filter(slug.eq(tslug)).first::<Tag>(c) {
         return render!(res, "templates/tag.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> =
+            photos: Vec<i32> = vec![], /* FIXME Vec<Photo>
                 orm_get_related::<Photo, Tag>(&tag, "photo_tag")
                 .only_public(req.authorized_user().is_none())
                 .desc_nulls_last("grade")
                 .desc_nulls_last("date")
-                .collect(req.db_conn()).unwrap(),
-            tag: Tag = tag
+                .collect(req.db_conn()).unwrap(),*/
+            tag: Tag = ttag
         });
     }
     res.error(StatusCode::NotFound, "Not a tag")
@@ -232,26 +252,32 @@ fn tag_one<'mw>(req: &mut Request,
 fn place_all<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
+    use rphotos::schema::place::dsl::*;
+    let connection = req.db_conn();
+    let c : &PgConnection = &connection;
     return render!(res, "templates/places.tpl", {
         user: Option<String> = req.authorized_user(),
-        places: Vec<Place> = query_for::<Place>().asc("place")
-            .collect(req.db_conn()).unwrap()
+        // TODO order by place name!
+        places: Vec<Place> = place.load(c).unwrap()
     });
 }
 fn place_one<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
-    let slug = req.param("slug").unwrap();
-    if let Ok(place) = req.orm_get::<Place>("slug", &slug) {
+    let tslug = req.param("slug").unwrap();
+    use rphotos::schema::place::dsl::*;
+    let connection = req.db_conn();
+    let c : &PgConnection = &connection;
+    if let Ok(tplace) = place.filter(slug.eq(tslug)).first::<Place>(c) {
         return render!(res, "templates/place.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> =
+            photos: Vec<i32> = vec![], /* TODO Vec<Photo> =
                 orm_get_related::<Photo, Place>(&place, "photo_place")
                 .only_public(req.authorized_user().is_none())
                 .desc_nulls_last("grade")
                 .desc_nulls_last("date")
-                .collect(req.db_conn()).unwrap(),
-            place: Place = place
+                .collect(req.db_conn()).unwrap(), */
+            place: Place = tplace
         });
     }
     res.error(StatusCode::NotFound, "Not a place")
@@ -260,26 +286,32 @@ fn place_one<'mw>(req: &mut Request,
 fn person_all<'mw>(req: &mut Request,
                    res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
+    use rphotos::schema::person::dsl::*;
+    let connection = req.db_conn();
+    let c : &PgConnection = &connection;
     return render!(res, "templates/people.tpl", {
         user: Option<String> = req.authorized_user(),
-        people: Vec<Person> = query_for::<Person>().asc("name")
-            .collect(req.db_conn()).unwrap()
+        // TODO order by name!
+        people: Vec<Person> = person.load(c).expect("list persons")
     });
 }
 fn person_one<'mw>(req: &mut Request,
                    res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
-    let slug = req.param("slug").unwrap();
-    if let Ok(person) = req.orm_get::<Person>("slug", &slug) {
+    let tslug = req.param("slug").unwrap();
+    use rphotos::schema::person::dsl::*;
+    let connection = req.db_conn();
+    let c : &PgConnection = &connection;
+    if let Ok(tperson) = person.filter(slug.eq(tslug)).first::<Person>(c) {
         return render!(res, "templates/person.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> =
+            photos: Vec<i32> = vec![], /* TODO Vec<Photo> =
                 orm_get_related::<Photo, Person>(&person, "photo_person")
                 .only_public(req.authorized_user().is_none())
                 .desc_nulls_last("grade")
                 .desc_nulls_last("date")
-                .collect(req.db_conn()).unwrap(),
-            person: Person = person
+                .collect(req.db_conn()).unwrap(), */
+            person: Person = tperson
         });
     }
     res.error(StatusCode::NotFound, "Not a place")
@@ -289,30 +321,33 @@ fn photo_details<'mw>(req: &mut Request,
                       res: Response<'mw>)
                       -> MiddlewareResult<'mw> {
     if let Ok(id) = req.param("id").unwrap().parse::<i32>() {
-        if let Ok(photo) = req.orm_get::<Photo>("id", &id) {
-            if req.authorized_user().is_some() || photo.is_public() {
+        use rphotos::schema::photo::dsl::*;
+        let connection = req.db_conn();
+        let c : &PgConnection = &connection;
+        if let Ok(tphoto) = photo.filter(id.eq(&id)).first::<Photo>(c) {
+            if req.authorized_user().is_some() || tphoto.is_public() {
                 return render!(res, "templates/details.tpl", {
                     user: Option<String> = req.authorized_user(),
                     lpath: Vec<Link> =
-                        photo.date
+                        tphoto.date
                         .map(|d| vec![Link::year(d.year()),
                                       Link::month(d.year(), d.month() as u8),
                                       Link::day(d.year(), d.month() as u8, d.day())])
                         .unwrap_or_else(|| vec![]),
-                people: Vec<Person> =
-                    req.orm_get_related(&photo, "photo_person").unwrap(),
-                places: Vec<Place> =
-                    req.orm_get_related(&photo, "photo_place").unwrap(),
-                tags: Vec<Tag> =
-                    req.orm_get_related(&photo, "photo_tag").unwrap(),
-                time: String = match photo.date {
+                people: Vec<Person> = vec![],
+                    // req.orm_get_related(&photo, "photo_person").unwrap(),
+                places: Vec<Place> = vec![],
+                    // req.orm_get_related(&photo, "photo_place").unwrap(),
+                tags: Vec<Tag> = vec![],
+                    // req.orm_get_related(&photo, "photo_tag").unwrap(),
+                time: String = match tphoto.date {
                     Some(d) => d.format("%T").to_string(),
                     None => "".to_string()
                 },
-                year: Option<i32> = photo.date.map(|d| d.year()),
-                month: Option<u32> = photo.date.map(|d| d.month()),
-                day: Option<u32> = photo.date.map(|d| d.day()),
-                photo: Photo = photo
+                year: Option<i32> = tphoto.date.map(|d| d.year()),
+                month: Option<u32> = tphoto.date.map(|d| d.month()),
+                day: Option<u32> = tphoto.date.map(|d| d.day())
+                // photo: Photo = tphoto
                 });
             }
         }
@@ -326,7 +361,7 @@ fn all_years<'mw>(req: &mut Request,
     return render!(res, "templates/groups.tpl", {
         user: Option<String> = req.authorized_user(),
         title: &'static str = "All photos",
-        groups: Vec<Group> = query_for::<Photo>()
+        groups: Vec<u32> = vec![] /* Vec<Group> = query_for::<Photo>()
             .columns(vec!("extract(year from date) y", "count(*) c"))
             .only_public(req.authorized_user().is_none())
             .no_raw()
@@ -351,7 +386,7 @@ fn all_years<'mw>(req: &mut Request,
                     count: count,
                     photo: photo
                 }
-            }).collect()
+            }).collect() */
     });
 }
 
@@ -362,7 +397,7 @@ fn months_in_year<'mw>(req: &mut Request,
         return render!(res, "templates/groups.tpl", {
             user: Option<String> = req.authorized_user(),
             title: String = format!("Photos from {}", year),
-            groups: Vec<Group> = query_for::<Photo>()
+            groups: Vec<u32> = vec![] /*Vec<Group> = query_for::<Photo>()
                 .only_public(req.authorized_user().is_none())
                 .no_raw()
                 .columns(vec!("extract(month from date) m", "count(*) c"))
@@ -387,7 +422,7 @@ fn months_in_year<'mw>(req: &mut Request,
                         count: count,
                         photo: photo
                     }
-                }).collect()
+                }).collect()*/
         });
     }
     res.error(StatusCode::NotFound, "Not a year")
@@ -396,6 +431,7 @@ fn months_in_year<'mw>(req: &mut Request,
 fn days_in_month<'mw>(req: &mut Request,
                       res: Response<'mw>)
                       -> MiddlewareResult<'mw> {
+    /*
     if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
         if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
             return render!(res, "templates/groups.tpl", {
@@ -434,6 +470,7 @@ fn days_in_month<'mw>(req: &mut Request,
             });
         }
     }
+     */
     res.error(StatusCode::NotFound, "Not a month")
 }
 
@@ -449,15 +486,15 @@ fn all_for_day<'mw>(req: &mut Request,
                     lpath: Vec<Link> = vec![Link::year(year),
                                             Link::month(year, month)],
                     title: String = format!("Photos from {} {} {}",
-                                            day, monthname(month), year),
-                    photos: Vec<Photo> = query_for::<Photo>()
+                                            day, monthname(month), year)
+                    /*photos: Vec<Photo> = query_for::<Photo>()
                         .only_public(req.authorized_user().is_none())
                         .no_raw()
                         .filter_gte("date", &date)
                         .filter_lt("date", &(date + ChDuration::days(1)))
                         .desc_nulls_last("grade")
                         .asc_nulls_last("date")
-                        .collect(req.db_conn()).unwrap()
+                        .collect(req.db_conn()).unwrap()*/
                 });
             }
         }

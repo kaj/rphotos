@@ -1,22 +1,29 @@
-use chrono::datetime::DateTime;
-use chrono::offset::utc::UTC;
-use rustorm::query::{Equality, Filter, Query};
-use rustorm::dao::{Dao, IsDao, ToValue, Type};
-use rustorm::table::{Column, IsTable, Table};
-use rustorm::database::Database;
+use chrono::naive::datetime::NaiveDateTime;
+use rustc_serialize::Encodable;
 
+/*
 pub trait Entity: IsTable + IsDao {
     fn id(&self) -> &ToValue;
 }
+*/
 
 const MIN_PUBLIC_GRADE: i16 = 4;
 
-#[derive(Debug, Clone, RustcEncodable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct Photo {
     pub id: i32,
     pub path: String,
-    pub date: Option<DateTime<UTC>>,
+    pub date: Option<NaiveDateTime>,
     pub grade: Option<i16>,
+    pub rotation: i16,
+}
+
+use super::schema::photo;
+#[insertable_into(photo)]
+#[derive(Debug, Clone)]
+pub struct NewPhoto<'a> {
+    pub path: &'a str,
+    pub date: Option<NaiveDateTime>,
     pub rotation: i16,
 }
 
@@ -30,6 +37,7 @@ impl Photo {
         }
     }
 }
+/*
 impl Entity for Photo {
     fn id(&self) -> &ToValue {
         &self.id
@@ -157,14 +165,32 @@ impl PhotoQuery for Query {
                        &(val as f64))
     }
 }
+*/
 
-#[derive(Debug, Clone, RustcEncodable)]
+#[derive(Debug, Clone, RustcEncodable, Queryable)]
 pub struct Tag {
     pub id: i32,
-    pub tag: String,
+    pub tag_name: String,
     pub slug: String,
 }
 
+#[derive(Debug, Clone, RustcEncodable, Queryable)]
+pub struct PhotoTag {
+    pub id: i32,
+    pub photo_id: i32,
+    pub tag_id: i32,
+}
+
+use super::schema::tag;
+#[insertable_into(tag)]
+#[derive(Debug, Clone)]
+pub struct NewTag<'a> {
+    pub tag_name: &'a str,
+    pub slug: &'a str,
+}
+
+
+/*
 impl Entity for Tag {
     fn id(&self) -> &ToValue {
         &self.id
@@ -228,14 +254,14 @@ impl IsTable for Tag {
                    }])
     }
 }
-
-#[derive(Debug, Clone, RustcEncodable)]
+*/
+#[derive(Debug, Clone, RustcEncodable, Queryable)]
 pub struct Person {
     pub id: i32,
     pub name: String,
     pub slug: String,
 }
-
+/*
 impl Entity for Person {
     fn id(&self) -> &ToValue {
         &self.id
@@ -299,14 +325,15 @@ impl IsTable for Person {
                    }])
     }
 }
-
-#[derive(Debug, Clone, RustcEncodable)]
+*/
+#[derive(Debug, Clone, RustcEncodable, Queryable)]
 pub struct Place {
     pub id: i32,
     pub place: String,
     pub slug: String,
 }
 
+/*
 impl Entity for Place {
     fn id(&self) -> &ToValue {
         &self.id
@@ -412,3 +439,4 @@ pub fn get_or_create<'a, T: IsTable + IsDao>(db: &Database,
          .unwrap()
     }
 }
+*/

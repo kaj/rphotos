@@ -1,28 +1,26 @@
 #[macro_use]
 extern crate log;
 extern crate xml;
-extern crate rustorm;
 extern crate rustc_serialize;
 extern crate env_logger;
 extern crate time;
 extern crate chrono;
+extern crate diesel;
+extern crate rphotos;
+extern crate dotenv;
 
 use chrono::datetime::DateTime;
 use chrono::naive::datetime::NaiveDateTime;
 use chrono::offset::utc::UTC;
 use chrono::offset::TimeZone;
-use rustorm::database::Database;
-use rustorm::pool::ManagedPool;
-use rustorm::query::Query;
-use rustorm::dao::ToValue;
-use rustorm::table::IsTable;
 use std::fs::File;
 use xml::attribute::OwnedAttribute;
 use xml::reader::EventReader;
 use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
-
-mod models;
-use models::{Person, Photo, Place, Tag, get_or_create};
+use diesel::pg::PgConnection;
+use rphotos::models::{Person, Photo, Place, Tag};
+use dotenv::dotenv;
+use self::diesel::prelude::*;
 
 mod env;
 use env::{dburl, photos_dir};
@@ -50,26 +48,39 @@ fn slugify(val: &str) -> String {
        .collect()
 }
 
-fn tag_photo(db: &Database, photo: &Photo, tag: &str) {
-    let tag: Tag = get_or_create(db, "tag", &tag, &[("slug", &slugify(tag))]);
+fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
+    use rphotos::models::{NewTag, PhotoTag};
+    let ttag = {
+        use rphotos::schema::tag::dsl::*;
+        if let Ok(ttag) = tag.filter(tag_name.eq(tagname)).first::<Tag>(db) {
+            ttag
+        } else {
+            diesel::insert(&NewTag {
+                tag_name: tagname,
+                slug: &slugify(tagname),
+            }).into(tag).get_result::<Tag>(db).expect("Insert new tag")
+        }
+    };
+    //        get_or_create(db, "tag", &tag, &[("slug", &slugify(tag))]);
     debug!("  tag {:?}", tag);
-    let mut q = Query::select();
-    q.from_table("public.photo_tag");
-    q.filter_eq("photo", &photo.id);
-    q.filter_eq("tag", &tag.id);
-    if let Ok(Some(result)) = q.retrieve_one(db) {
+    use rphotos::schema::photo_tag::dsl::*;
+    let q = photo_tag.filter(photo.eq(thephoto.id)).filter(tag.eq(ttag.id));
+    if let Ok(result) = q.first::<PhotoTag>(db) {
         debug!("  match {:?}", result)
     } else {
         debug!("  new tag {:?} on {:?}!", tag, photo);
+        /* TODO
         let mut q = Query::insert();
         q.into_table("public.photo_tag");
         q.set("photo", &photo.id);
         q.set("tag", &tag.id);
         q.execute(db).unwrap();
+         */
     }
 }
 
-fn person_photo(db: &Database, photo: &Photo, name: &str) {
+fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {
+    /*
     let person: Person = get_or_create(db,
                                        "name",
                                        &name,
@@ -89,9 +100,11 @@ fn person_photo(db: &Database, photo: &Photo, name: &str) {
         q.set("person", &person.id);
         q.execute(db).unwrap();
     }
+     */
 }
 
-fn place_photo(db: &Database, photo: &Photo, name: &str) {
+fn place_photo(db: &PgConnection, photo: &Photo, name: &str) {
+    /*
     let place: Place = get_or_create(db,
                                      "place",
                                      &name,
@@ -111,9 +124,10 @@ fn place_photo(db: &Database, photo: &Photo, name: &str) {
         q.set("place", &place.id);
         q.execute(db).unwrap();
     }
+*/
 }
 
-fn grade_photo(db: &Database, photo: &mut Photo, name: &str) {
+fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) {
     debug!("Should set  grade {:?} on {:?}", name, photo);
     let grade = match name {
         "Usel" => 0,
@@ -122,18 +136,21 @@ fn grade_photo(db: &Database, photo: &mut Photo, name: &str) {
         x => panic!("Unknown grade {:?} on {:?}", x, photo),
     };
     photo.grade = Some(grade);
+    /*
     let mut q = Query::update();
     q.from(&Photo::table());
     q.filter_eq("id", &photo.id);
     q.set("grade", &grade);
     let n = q.execute(db).unwrap();
     debug!("Graded {} photo", n);
+     */
 }
 
 fn main() {
+    dotenv().ok();
     env_logger::init().unwrap();
-    let pool = ManagedPool::init(&dburl(), 1).unwrap();
-    let db = pool.connect().unwrap();
+    let db = PgConnection::establish(&dburl())
+        .expect("Error connecting to database");
     let file = File::open(photos_dir().join("index.xml")).unwrap();
     info!("Reading kphotoalbum data");
     let mut xml = EventReader::new(file);
@@ -157,6 +174,7 @@ fn main() {
                                             .parse::<i16>()
                                             .unwrap();
                             let date = find_image_date(attributes);
+                            /*
                             let mut defaults: Vec<(&str, &ToValue)> =
                                 vec![("rotation", &angle)];
                             if let Some(ref date) = date {
@@ -168,6 +186,7 @@ fn main() {
                                                            &defaults);
                             debug!("Found image {:?}", img);
                             photo = Some(img);
+                            */
                         }
                     }
                     "option" => {
@@ -179,26 +198,26 @@ fn main() {
                                 match &**o {
                                     "Nyckelord" => {
                                         if let Some(ref photo) = photo {
-                                            tag_photo(db.as_ref(), &photo, &v);
+                                            tag_photo(&db, &photo, &v);
                                         }
                                     }
                                     "Personer" => {
                                         if let Some(ref photo) = photo {
-                                            person_photo(db.as_ref(),
+                                            person_photo(&db,
                                                          &photo,
                                                          &v);
                                         }
                                     }
                                     "Platser" => {
                                         if let Some(ref photo) = photo {
-                                            place_photo(db.as_ref(),
+                                            place_photo(&db,
                                                         &photo,
                                                         &v);
                                         }
                                     }
                                     "Betyg" => {
                                         if let Some(ref mut photo) = photo {
-                                            grade_photo(db.as_ref(), photo, &v);
+                                            grade_photo(&db, photo, &v);
                                         }
                                     }
                                     o => {

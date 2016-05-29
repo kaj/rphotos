@@ -3,7 +3,8 @@ name = "rphotos"
 version = "0.1.0"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 
-build = "src/sassify.rs"
+build = "src/build.rs"
+# build = "src/sassify.rs"
 
 [build-dependencies]
 sass-rs = "*"
@@ -12,9 +13,12 @@ md5 = "*"
 rustc-serialize = "*"
 flate2 = "*"
 brotli2 = "*"
+syntex = { version = "0.31.0", optional = true }
+diesel_codegen = { version = "0.6.1", default-features = false, features = ["postgres"] }
+dotenv_codegen = { version = "0.8.1",  optional = true }
 
 [[bin]]
-name = "rphotos"
+name = "rphotoserver"
 path = "src/main.rs"
 
 [[bin]]
@@ -24,10 +28,6 @@ path = "src/readkpa.rs"
 [[bin]]
 name = "findphotos"
 path = "src/findphotos.rs"
-
-[dependencies.rustorm]
-version = "*"
-default-features = false
 
 [dependencies]
 nickel = ">= 0.8.1"
@@ -43,3 +43,15 @@ hyper = "0.8.1"
 time = "*"
 xml-rs = "*"
 rexif = "0.3.3"
+diesel = { version = "0.6.1", features = ["chrono"] }
+diesel_codegen = { version = "0.6.1", default-features = false, features = ["postgres"] }
+dotenv = "0.8.0"
+dotenv_macros = { version = "0.8.0", optional = true }
+r2d2 = "*"
+nickel-diesel = "*"
+r2d2-diesel = "*"
+
+[features]
+default = ["with-syntex"]
+with-syntex = ["syntex", "diesel_codegen/with-syntex", "dotenv_codegen"]
+nightly = ["diesel/unstable", "diesel_codegen/nightly", "dotenv_macros"]
