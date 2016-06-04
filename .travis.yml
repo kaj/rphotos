@@ -2,7 +2,7 @@ language: rust
 services:
  - postgresql
 before_script:
- - psql -c 'create database fandjango;' -U postgres
- - echo "DATABASE_URL='postgres://postgres@localhost/rphotos'" > .env
- - cargo install -v diesel_cli --no-default-features
+ - echo "DATABASE_URL='postgres://localhost/rphotos'" > .env
+ - cargo install -v diesel_cli --no-default-features --features postgres
+ - diesel setuup
  - diesel migration run
