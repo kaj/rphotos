@@ -1,1 +1,1 @@
-infer_schema!(dotenv!("RPHOTOS_DB"));
+infer_schema!(dotenv!("DATABASE_URL"));

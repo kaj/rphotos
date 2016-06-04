@@ -3,7 +3,7 @@ use std::process::exit;
 use std::path::PathBuf;
 
 pub fn dburl() -> String {
-    require_var("RPHOTOS_DB", "Database url")
+    require_var("DATABASE_URL", "Database url")
 }
 
 #[allow(dead_code)]
