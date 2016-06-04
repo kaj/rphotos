@@ -2,7 +2,7 @@ language: rust
 services:
  - postgresql
 before_script:
- - echo "DATABASE_URL='postgres://localhost/rphotos'" > .env
+ - echo "DATABASE_URL=postgres://localhost/rphotos" > .env
  - cargo install -v diesel_cli --no-default-features --features postgres
- - $HOME/.cargo/bin/diesel setup
+ - RUST_BACKTRACE=1 $HOME/.cargo/bin/diesel setup
  - $HOME/.cargo/bin/diesel migration run
