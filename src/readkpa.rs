@@ -50,6 +50,7 @@ fn slugify(val: &str) -> String {
 
 fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
     use rphotos::models::{NewTag, PhotoTag};
+    /*
     let ttag = {
         use rphotos::schema::tag::dsl::*;
         if let Ok(ttag) = tag.filter(tag_name.eq(tagname)).first::<Tag>(db) {
@@ -63,20 +64,22 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
     };
     //        get_or_create(db, "tag", &tag, &[("slug", &slugify(tag))]);
     debug!("  tag {:?}", tag);
+
     use rphotos::schema::photo_tag::dsl::*;
     let q = photo_tag.filter(photo.eq(thephoto.id)).filter(tag.eq(ttag.id));
     if let Ok(result) = q.first::<PhotoTag>(db) {
         debug!("  match {:?}", result)
     } else {
         debug!("  new tag {:?} on {:?}!", tag, photo);
-        /* TODO
+        / * TODO
         let mut q = Query::insert();
         q.into_table("public.photo_tag");
         q.set("photo", &photo.id);
         q.set("tag", &tag.id);
         q.execute(db).unwrap();
-         */
+         * /
     }
+    */
 }
 
 fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {

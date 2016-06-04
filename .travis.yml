@@ -1,1 +1,7 @@
 language: rust
+services:
+ - postgresql
+before_script:
+ - psql -c 'create database fandjango;' -U postgres
+ - echo "DATABASE_URL='postgres://postgres@localhost/rphotos'" > .env
+ - diesel migration run

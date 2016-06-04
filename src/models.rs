@@ -1,5 +1,5 @@
 use chrono::naive::datetime::NaiveDateTime;
-use rustc_serialize::Encodable;
+use rustc_serialize::{Encodable, Encoder};
 
 /*
 pub trait Entity: IsTable + IsDao {
@@ -18,8 +18,27 @@ pub struct Photo {
     pub rotation: i16,
 }
 
-use super::schema::photo;
-#[insertable_into(photo)]
+// NaiveDateTime isn't Encodable, so we have to implement this by hand.
+impl Encodable for Photo {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        s.emit_struct("Photo", 3, |s| {
+            try!(s.emit_struct_field("id", 0, |s| s.emit_i32(self.id)));
+            try!(s.emit_struct_field("path", 1, |s|s.emit_str(&self.path)));
+            try!(s.emit_struct_field("date", 2, |s|
+                s.emit_str(&self.date.map(|d|format!("{:?}", d))
+                           .unwrap_or("-".to_string()))
+            ));
+            try!(s.emit_struct_field("grade", 2, |s| match self.grade {
+                Some(g) => s.emit_option_some(|s| s.emit_i16(g)),
+                None => s.emit_option_none(),
+            }));
+            s.emit_struct_field("rotation", 2, |s|s.emit_i16(self.rotation))
+        })
+    }
+}
+
+use super::schema::photos;
+#[insertable_into(photos)]
 #[derive(Debug, Clone)]
 pub struct NewPhoto<'a> {
     pub path: &'a str,
@@ -137,34 +156,6 @@ impl IsTable for Photo {
                    }])
     }
 }
-
-pub trait PhotoQuery {
-    fn only_public(&mut self, only_public: bool) -> &mut Self;
-    fn no_raw(&mut self) -> &mut Self;
-    fn filter_date(&mut self, field: &str, part: &str, val: u32) -> &mut Self;
-}
-
-impl PhotoQuery for Query {
-    fn only_public(&mut self, only_public: bool) -> &mut Self {
-        if only_public {
-            self.filter_gte("grade", &MIN_PUBLIC_GRADE)
-        } else {
-            self
-        }
-    }
-    fn no_raw(&mut self) -> &mut Self {
-        let mut filter = Filter::new("path", Equality::ILIKE, &"%.gif");
-        filter.or("path", Equality::ILIKE, &"%.png")
-              .or("path", Equality::ILIKE, &"%.jpg")
-              .or("path", Equality::ILIKE, &"%.jpeg");
-        self.add_filter(filter)
-    }
-
-    fn filter_date(&mut self, field: &str, part: &str, val: u32) -> &mut Self {
-        self.filter_eq(&format!("extract({} from {})", part, field),
-                       &(val as f64))
-    }
-}
 */
 
 #[derive(Debug, Clone, RustcEncodable, Queryable)]
@@ -181,8 +172,10 @@ pub struct PhotoTag {
     pub tag_id: i32,
 }
 
+/*
 use super::schema::tag;
 #[insertable_into(tag)]
+*/
 #[derive(Debug, Clone)]
 pub struct NewTag<'a> {
     pub tag_name: &'a str,

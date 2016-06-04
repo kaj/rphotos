@@ -49,24 +49,24 @@ fn save_photo(db: &PgConnection,
               file_path: &str,
               exif: &ExifData)
               -> Result<(), FindPhotoError> {
-    use rphotos::schema::photo::dsl::*;
+    use rphotos::schema::photos::dsl::*;
     use rphotos::models::{Photo, NewPhoto};
     let exifdate = &try!(find_date(&exif));
     let exifrotation = &try!(find_rotation(&exif));
-    if let Some(pic) = try!(photo.filter(path.eq(&file_path.to_string()))
+    if let Some(pic) = try!(photos.filter(path.eq(&file_path.to_string()))
                             .first::<Photo>(db).optional()) {
         debug!("Photo is {:?}", pic);
         if Some(*exifdate) != pic.date {
-            try!(diesel::update(photo.find(id))
+            let t = try!(diesel::update(photos.find(pic.id))
                  .set(date.eq(exifdate))
                  .get_result::<Photo>(db));
-            info!("Updated date for {} from {:?} to {:?}",
+            info!("Updated date for {} from {:?} to {:?}: {:?}",
                   file_path,
                   pic.date,
-                  exifdate);
+                  exifdate, t);
         }
         if *exifrotation != pic.rotation {
-            try!(diesel::update(photo.find(id))
+            try!(diesel::update(photos.find(pic.id))
                  .set(rotation.eq(exifrotation))
                  .get_result::<Photo>(db));
             info!("Updated rotation for {} from {:?} to {:?}",
@@ -80,7 +80,7 @@ fn save_photo(db: &PgConnection,
             date: Some(*exifdate),
             rotation: *exifrotation,
         };
-        let p = try!(diesel::insert(&pic).into(photo)
+        let p = try!(diesel::insert(&pic).into(photos)
                      .get_result::<Photo>(db));
         info!("Inserted {:?}", p);
     }
