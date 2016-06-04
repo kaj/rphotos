@@ -4,5 +4,5 @@ services:
 before_script:
  - echo "DATABASE_URL='postgres://localhost/rphotos'" > .env
  - cargo install -v diesel_cli --no-default-features --features postgres
- - diesel setuup
+ - diesel setup
  - diesel migration run
