@@ -170,16 +170,22 @@ fn main() {
                                             .parse::<i16>()
                                             .unwrap();
                             let date = find_image_date(attributes);
-                            match Photo::create_or_set_basics
+                            photo = Some(match Photo::create_or_set_basics
                                 (&db, &file, date, angle)
                                 .expect("Create or update photo") {
-                                    Modification::Created(photo)
-                                        => info!("Created {:?}", photo),
-                                    Modification::Updated(photo)
-                                        => info!("Modified {:?}", photo),
-                                    Modification::Unchanged(photo)
-                                        => debug!("No change for {:?}", photo),
-                                }
+                                    Modification::Created(photo) => {
+                                        info!("Created {:?}", photo);
+                                        photo
+                                    }
+                                    Modification::Updated(photo) => {
+                                        info!("Modified {:?}", photo);
+                                        photo
+                                    }
+                                    Modification::Unchanged(photo) => {
+                                        debug!("No change for {:?}", photo);
+                                        photo
+                                    },
+                                })
                         }
                     }
                     "option" => {
