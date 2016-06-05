@@ -4,12 +4,6 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 
-/*
-pub trait Entity: IsTable + IsDao {
-    fn id(&self) -> &ToValue;
-}
-*/
-
 const MIN_PUBLIC_GRADE: i16 = 4;
 
 #[derive(Debug, Clone, Queryable)]
@@ -103,107 +97,6 @@ impl Photo {
         }
     }
 }
-/*
-impl Entity for Photo {
-    fn id(&self) -> &ToValue {
-        &self.id
-    }
-}
-impl IsDao for Photo {
-    fn from_dao(dao: &Dao) -> Self {
-        Photo {
-            id: dao.get("id"),
-            path: dao.get("path"),
-            date: dao.get_opt("date"),
-            grade: dao.get_opt("grade"),
-            rotation: dao.get("rotation"),
-        }
-    }
-    fn to_dao(&self) -> Dao {
-        let mut dao = Dao::new();
-        dao.set("id", &self.id);
-        dao.set("path", &self.path);
-        set_opt(&mut dao, "date", &self.date);
-        set_opt(&mut dao, "grade", &self.grade);
-        dao.set("rotation", &self.rotation);
-        dao
-    }
-}
-
-// NOTE This should be a method on dao.
-fn set_opt<T: ToValue>(dao: &mut Dao, name: &str, value: &Option<T>) {
-    match value {
-        &Some(ref value) => dao.set(name, value),
-        &None => dao.set_null(name),
-    }
-}
-
-impl IsTable for Photo {
-    fn table() -> Table {
-        table("photo",
-              vec![Column {
-                       name: "id".to_string(),
-                       data_type: Type::I32,
-                       db_data_type: "serial".to_string(),
-                       is_primary: true,
-                       is_unique: true,
-                       default: None,
-                       comment: None,
-                       not_null: true,
-                       foreign: None,
-                       is_inherited: false,
-                   },
-                   Column {
-                       name: "path".to_string(),
-                       data_type: Type::String,
-                       db_data_type: "varchar(100)".to_string(),
-                       is_primary: false,
-                       is_unique: true,
-                       default: None,
-                       comment: None,
-                       not_null: true,
-                       foreign: None,
-                       is_inherited: false,
-                   },
-                   Column {
-                       name: "date".to_string(),
-                       data_type: Type::DateTime,
-                       db_data_type: "timestamp".to_string(),
-                       is_primary: false,
-                       is_unique: false,
-                       default: None,
-                       comment: None,
-                       not_null: false,
-                       foreign: None,
-                       is_inherited: false,
-                   },
-                   Column {
-                       name: "grade".to_string(),
-                       data_type: Type::I16,
-                       db_data_type: "smallint".to_string(),
-                       is_primary: false,
-                       is_unique: false,
-                       default: None,
-                       comment: None,
-                       not_null: false,
-                       foreign: None,
-                       is_inherited: false,
-                   },
-                   Column {
-                       name: "rotation".to_string(),
-                       data_type: Type::I16,
-                       db_data_type: "smallint".to_string(),
-                       is_primary: false,
-                       is_unique: false,
-                       default: None,
-                       comment: None,
-                       not_null: true,
-                       foreign: None,
-                       is_inherited: false,
-                   }])
-    }
-}
-*/
 
 #[derive(Debug, Clone, RustcEncodable, Queryable)]
 pub struct Tag {

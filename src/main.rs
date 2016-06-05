@@ -46,9 +46,6 @@ use env::{dburl, env_or, jwt_key, photos_dir};
 
 mod photosdir;
 
-//mod rustormmiddleware;
-//use rustormmiddleware::{RustormMiddleware, RustormRequestExtensions};
-
 mod requestloggermiddleware;
 use requestloggermiddleware::RequestLoggerMiddleware;
 
@@ -77,20 +74,6 @@ macro_rules! render {
         }
     }
 }
-
-/*
-fn orm_get_related<T: Entity, Src: Entity>(src: &Src,
-                                           rel_table: &str)
-                                           -> Query {
-    let mut q = Query::select();
-    q.only_from(&T::table());
-    q.left_join_table(rel_table,
-                      &format!("{}.id", T::table().name),
-                      &format!("{}.{}", rel_table, T::table().name))
-     .filter_eq(&format!("{}.{}", rel_table, Src::table().name), src.id());
-    q
-}
- */
 
 #[derive(Debug, Clone, RustcEncodable)]
 struct Group {
