@@ -382,28 +382,35 @@ fn all_years<'mw>(req: &mut Request,
         title: &'static str = "All photos",
         groups: Vec<Group> =
             // FIXME only public if not logged on!
-            SqlLiteral::new(concat!("select extract(year from date) y, count(*) c",
-                                    " from photos group by y order by y").to_string())
+            SqlLiteral::new(concat!(
+                "select extract(year from date) y, count(*) c",
+                " from photos group by y order by y").to_string())
             .load::<(Option<f64>, i64)>(c).unwrap()
             .iter().map(|&(year, count)| {
-              let year : i32 = year.map(|y: f64| y as i32).unwrap_or(0);
-              let fromdate = NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0);
-              let todate = NaiveDate::from_ymd(year + 1, 1, 1).and_hms(0, 0, 0);
-              let photo = photos
-                  // .only_public(req.authorized_user().is_none())
-                  .filter(date.ge(fromdate))
-                  .filter(date.lt(todate))
-                  // .filter(path.like("%.JPG"))
-                  .order(date)
-                  .limit(1)
-                  .first::<Photo>(c).unwrap();
-
-              Group {
-                  title: format!("{}", year),
-                  url: format!("/{}/", year),
-                  count: count,
-                  photo: photo
-              }
+                let q = photos
+                    // .only_public(req.authorized_user().is_none())
+                    // .filter(path.like("%.JPG"))
+                    .order(date)
+                    .limit(1);
+                let photo =
+                    if let Some(year) = year {
+                        let year = year as i32;
+                        q.filter(date.ge(NaiveDate::from_ymd(year, 1, 1)
+                                         .and_hms(0, 0, 0)))
+                         .filter(date.lt(NaiveDate::from_ymd(year + 1, 1, 1)
+                                         .and_hms(0, 0, 0)))
+                         .first::<Photo>(c).unwrap()
+                    } else {
+                        q.filter(date.is_null())
+                         .first::<Photo>(c).unwrap()
+                    };
+                Group {
+                    title: year.map(|y|format!("{}", y))
+                               .unwrap_or("-".to_string()),
+                    url: format!("/{}/", year.unwrap_or(0f64)),
+                    count: count,
+                    photo: photo
+                }
             }).collect()
     });
 }
