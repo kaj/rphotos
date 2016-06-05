@@ -1,5 +1,8 @@
 use chrono::naive::datetime::NaiveDateTime;
 use rustc_serialize::{Encodable, Encoder};
+use diesel::prelude::*;
+use diesel::pg::PgConnection;
+use diesel::result::Error as DieselError;
 
 /*
 pub trait Entity: IsTable + IsDao {
@@ -23,7 +26,7 @@ impl Encodable for Photo {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         s.emit_struct("Photo", 3, |s| {
             try!(s.emit_struct_field("id", 0, |s| s.emit_i32(self.id)));
-            try!(s.emit_struct_field("path", 1, |s|s.emit_str(&self.path)));
+            try!(s.emit_struct_field("path", 1, |s| s.emit_str(&self.path)));
             try!(s.emit_struct_field("date", 2, |s|
                 s.emit_str(&self.date.map(|d|format!("{:?}", d))
                            .unwrap_or("-".to_string()))
@@ -32,7 +35,7 @@ impl Encodable for Photo {
                 Some(g) => s.emit_option_some(|s| s.emit_i16(g)),
                 None => s.emit_option_none(),
             }));
-            s.emit_struct_field("rotation", 2, |s|s.emit_i16(self.rotation))
+            s.emit_struct_field("rotation", 2, |s| s.emit_i16(self.rotation))
         })
     }
 }
@@ -46,6 +49,13 @@ pub struct NewPhoto<'a> {
     pub rotation: i16,
 }
 
+#[derive(Debug)]
+pub enum Modification<T> {
+    Created(T),
+    Updated(T),
+    Unchanged(T),
+}
+
 impl Photo {
     #[allow(dead_code)]
     pub fn is_public(&self) -> bool {
@@ -53,6 +63,43 @@ impl Photo {
             grade >= MIN_PUBLIC_GRADE
         } else {
             false
+        }
+    }
+
+    pub fn create_or_set_basics(db: &PgConnection, file_path: &str,
+                                exifdate: Option<NaiveDateTime>, exifrotation: i16)
+                                -> Result<Modification<Photo>, DieselError> {
+        use diesel;
+        use diesel::prelude::*;
+        use schema::photos::dsl::*;
+        if let Some(mut pic) =
+            try!(photos.filter(path.eq(&file_path.to_string()))
+                       .first::<Photo>(db)
+                       .optional()) {
+            let mut change = false;
+            if exifdate.is_some() && exifdate != pic.date {
+                change = true;
+                pic = try!(diesel::update(photos.find(pic.id))
+                           .set(date.eq(exifdate))
+                           .get_result::<Photo>(db));
+            }
+            if exifrotation != pic.rotation {
+                change = true;
+                pic = try!(diesel::update(photos.find(pic.id))
+                           .set(rotation.eq(exifrotation))
+                           .get_result::<Photo>(db));
+            }
+            Ok(if change { Modification::Updated(pic) }
+               else { Modification::Unchanged(pic) })
+        } else {
+            let pic = NewPhoto {
+                path: &file_path,
+                date: exifdate,
+                rotation: exifrotation,
+            };
+            let pic = try!(diesel::insert(&pic).into(photos)
+                           .get_result::<Photo>(db));
+            Ok(Modification::Created(pic))
         }
     }
 }

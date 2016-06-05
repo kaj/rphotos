@@ -9,16 +9,13 @@ extern crate diesel;
 extern crate rphotos;
 extern crate dotenv;
 
-use chrono::datetime::DateTime;
 use chrono::naive::datetime::NaiveDateTime;
-use chrono::offset::utc::UTC;
-use chrono::offset::TimeZone;
 use std::fs::File;
 use xml::attribute::OwnedAttribute;
 use xml::reader::EventReader;
 use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
 use diesel::pg::PgConnection;
-use rphotos::models::{Person, Photo, Place, Tag};
+use rphotos::models::{Modification, Person, Photo, Place, Tag};
 use dotenv::dotenv;
 use self::diesel::prelude::*;
 
@@ -132,21 +129,17 @@ fn place_photo(db: &PgConnection, photo: &Photo, name: &str) {
 
 fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) {
     debug!("Should set  grade {:?} on {:?}", name, photo);
-    let grade = match name {
+    photo.grade = Some(match name {
         "Usel" => 0,
         "Ok" => 3,
         "utvald" => 5,
         x => panic!("Unknown grade {:?} on {:?}", x, photo),
-    };
-    photo.grade = Some(grade);
-    /*
-    let mut q = Query::update();
-    q.from(&Photo::table());
-    q.filter_eq("id", &photo.id);
-    q.set("grade", &grade);
-    let n = q.execute(db).unwrap();
+    });
+    use rphotos::schema::photos::dsl::*;
+    let n = diesel::update(photos.find(photo.id))
+        .set(grade.eq(photo.grade))
+        .execute(db).expect(&format!("Update grade of {:?}", photo));
     debug!("Graded {} photo", n);
-     */
 }
 
 fn main() {
@@ -177,19 +170,16 @@ fn main() {
                                             .parse::<i16>()
                                             .unwrap();
                             let date = find_image_date(attributes);
-                            /*
-                            let mut defaults: Vec<(&str, &ToValue)> =
-                                vec![("rotation", &angle)];
-                            if let Some(ref date) = date {
-                                defaults.push(("date", date));
-                            }
-                            let img: Photo = get_or_create(db.as_ref(),
-                                                           "path",
-                                                           &file,
-                                                           &defaults);
-                            debug!("Found image {:?}", img);
-                            photo = Some(img);
-                            */
+                            match Photo::create_or_set_basics
+                                (&db, &file, date, angle)
+                                .expect("Create or update photo") {
+                                    Modification::Created(photo)
+                                        => info!("Created {:?}", photo),
+                                    Modification::Updated(photo)
+                                        => info!("Modified {:?}", photo),
+                                    Modification::Unchanged(photo)
+                                        => debug!("No change for {:?}", photo),
+                                }
                         }
                     }
                     "option" => {
@@ -249,26 +239,25 @@ fn main() {
     }
 }
 
-fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<DateTime<UTC>> {
+fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<NaiveDateTime> {
     let start_date = find_attr("startDate", attributes)
                          .unwrap_or("".to_string());
     let end_date = find_attr("endDate", attributes).unwrap_or("".to_string());
     let format = "%FT%T";
-    let utc: UTC = UTC;
     if let Ok(start_t) = NaiveDateTime::parse_from_str(&*start_date, format) {
         if let Ok(end_t) = NaiveDateTime::parse_from_str(&*end_date, format) {
             if start_t != end_t {
                 println!("Found interval {} - {}", start_t, end_t);
-                utc.from_local_datetime(&end_t).latest()
+                Some(end_t)
             } else {
-                utc.from_local_datetime(&start_t).latest()
+                Some(start_t)
             }
         } else {
-            utc.from_local_datetime(&start_t).latest()
+            Some(start_t)
         }
     } else {
         if let Ok(end_t) = NaiveDateTime::parse_from_str(&*end_date, format) {
-            utc.from_local_datetime(&end_t).latest()
+            Some(end_t)
         } else {
             None
         }

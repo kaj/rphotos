@@ -16,6 +16,7 @@ use std::path::Path;
 use dotenv::dotenv;
 use diesel::pg::PgConnection;
 use self::diesel::prelude::*;
+use rphotos::models::{Modification, Photo};
 
 mod env;
 use env::{dburl, photos_dir};
@@ -49,41 +50,13 @@ fn save_photo(db: &PgConnection,
               file_path: &str,
               exif: &ExifData)
               -> Result<(), FindPhotoError> {
-    use rphotos::schema::photos::dsl::*;
-    use rphotos::models::{Photo, NewPhoto};
-    let exifdate = &try!(find_date(&exif));
-    let exifrotation = &try!(find_rotation(&exif));
-    if let Some(pic) = try!(photos.filter(path.eq(&file_path.to_string()))
-                            .first::<Photo>(db).optional()) {
-        debug!("Photo is {:?}", pic);
-        if Some(*exifdate) != pic.date {
-            let t = try!(diesel::update(photos.find(pic.id))
-                 .set(date.eq(exifdate))
-                 .get_result::<Photo>(db));
-            info!("Updated date for {} from {:?} to {:?}: {:?}",
-                  file_path,
-                  pic.date,
-                  exifdate, t);
-        }
-        if *exifrotation != pic.rotation {
-            try!(diesel::update(photos.find(pic.id))
-                 .set(rotation.eq(exifrotation))
-                 .get_result::<Photo>(db));
-            info!("Updated rotation for {} from {:?} to {:?}",
-                  file_path,
-                  pic.rotation,
-                  exifrotation);
-        }
-    } else {
-        let pic = NewPhoto {
-            path: &file_path,
-            date: Some(*exifdate),
-            rotation: *exifrotation,
-        };
-        let p = try!(diesel::insert(&pic).into(photos)
-                     .get_result::<Photo>(db));
-        info!("Inserted {:?}", p);
-    }
+    match try!(Photo::create_or_set_basics(db, file_path,
+                                           Some(try!(find_date(&exif))),
+                                           try!(find_rotation(&exif)))) {
+        Modification::Created(photo) => info!("Created {:?}", photo),
+        Modification::Updated(photo) => info!("Modified {:?}", photo),
+        Modification::Unchanged(photo) => debug!("No change for {:?}", photo),
+    };
     Ok(())
 }
 
