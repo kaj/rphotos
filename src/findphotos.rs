@@ -31,7 +31,17 @@ fn main() {
         .expect("Error connecting to database");
     let photos = PhotosDir::new(photos_dir());
 
-    let only_in = Path::new("2016"); // TODO Get from command line!
+    let args = std::env::args().skip(1);
+    if args.len() > 0 {
+        for a in args {
+            do_find(&db, &photos, Path::new(&a));
+        }
+    } else {
+        println!("No args");
+    }
+}
+
+fn do_find(db: &PgConnection, photos: &PhotosDir, only_in: &Path) {
     photos.find_files(only_in,
                       &|path, exif| {
                           match save_photo(&db, path, &exif) {
@@ -43,7 +53,7 @@ fn main() {
                               }
                           }
                       })
-          .unwrap();
+        .unwrap();
 }
 
 fn save_photo(db: &PgConnection,
