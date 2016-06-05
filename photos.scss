@@ -1,11 +1,19 @@
 body {
-  background: #eee;
+    background: #eee;
+    margin-top: 2em;
 }
 
 header {
-    border-bottom: 1px solid #aaa;
+    background-color: #eee;
+    box-shadow: 0 0 1ex #444;
     display: flex;
     flex-wrap: wrap;
+    left: 0;
+    padding: 0 1ex;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    width: -moz-available;
 
     & > span {
         flex-grow: 1;
