@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 
-const MIN_PUBLIC_GRADE: i16 = 4;
+pub const MIN_PUBLIC_GRADE: i16 = 4;
 
 #[derive(Debug, Clone, Queryable)]
 pub struct Photo {

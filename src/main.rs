@@ -365,15 +365,20 @@ fn all_years<'mw>(req: &mut Request,
         title: &'static str = "All photos",
         groups: Vec<Group> =
             // FIXME only public if not logged on!
-            SqlLiteral::new(concat!(
+            SqlLiteral::new(format!(concat!(
                 "select extract(year from date) y, count(*) c",
-                " from photos group by y order by y").to_string())
+                " from photos{} group by y order by y"),
+                                    if req.authorized_user().is_none() {
+                                        " where grade >= 4"
+                                    } else {
+                                        ""
+                                    }))
             .load::<(Option<f64>, i64)>(c).unwrap()
             .iter().map(|&(year, count)| {
                 let q = photos
                     // .only_public(req.authorized_user().is_none())
                     // .filter(path.like("%.JPG"))
-                    .order(date)
+                    .order((grade.desc(), date.asc()))
                     .limit(1);
                 let photo =
                     if let Some(year) = year {
@@ -413,8 +418,14 @@ fn months_in_year<'mw>(req: &mut Request,
                 // FIXME only public if not logged on!
                 SqlLiteral::new(format!(concat!(
                     "select extract(month from date) m, count(*) c ",
-                    "from photos where extract(year from date)={} group by m order by m"),
-                                        year))
+                    "from photos where extract(year from date)={}{} ",
+                    "group by m order by m"),
+                                        year,
+                                        if req.authorized_user().is_none() {
+                                            " and grade >= 4"
+                                        } else {
+                                            ""
+                                        }))
                 .load::<(Option<f64>, i64)>(c).unwrap()
                 .iter().map(|&(month, count)| {
                     let month = month.map(|y| y as u32).unwrap_or(0);
@@ -428,7 +439,7 @@ fn months_in_year<'mw>(req: &mut Request,
                         .filter(date.ge(fromdate))
                         .filter(date.lt(todate))
                         // .filter(path.like("%.JPG"))
-                        .order(date)
+                        .order((grade.desc(), date.asc()))
                         .limit(1)
                         .first::<Photo>(c).unwrap();
 
@@ -463,8 +474,13 @@ fn days_in_month<'mw>(req: &mut Request,
                 SqlLiteral::new(format!(concat!(
                     "select extract(day from date) d, count(*) c ",
                     "from photos where extract(year from date)={} ",
-                    "and extract(month from date)={} group by d order by d"),
-                                        year, month))
+                    "and extract(month from date)={}{} group by d order by d"),
+                                        year, month,
+                                        if req.authorized_user().is_none() {
+                                            " and grade >= 4"
+                                        } else {
+                                            ""
+                                        }))
                 .load::<(Option<f64>, i64)>(c).unwrap()
                     .iter().map(|&(day, count)| {
                         let day = day.map(|y| y as u32).unwrap_or(0);
@@ -474,7 +490,7 @@ fn days_in_month<'mw>(req: &mut Request,
                             .filter(date.ge(fromdate))
                             .filter(date.lt(fromdate + ChDuration::days(1)))
                             // .filter(path.like("%.JPG"))
-                            .order(date)
+                            .order((grade.desc(), date.asc()))
                             .limit(1)
                             .first::<Photo>(c).unwrap();
 
@@ -503,17 +519,9 @@ fn all_for_day<'mw>(req: &mut Request,
                     .filter(date.ge(thedate))
                     .filter(date.lt(thedate + ChDuration::days(1)))
                     //.filter(path.like("%.JPG"))
-                    .order(date)
+                    .order((grade.desc(), date.asc()))
                     .limit(500);
-                /*
-                let pq = if req.authorized_user().is_none() {
-                    pq.filter(grade.ge(&rphotos::models::MIN_PUBLIC_GRADE))
-                } else {
-                    pq
-            }*/
-                /*
-                        .no_raw()
-               */
+
                 let connection = req.db_conn();
                 let c : &PgConnection = &connection;
                 return render!(res, "templates/index.tpl", {
@@ -522,7 +530,13 @@ fn all_for_day<'mw>(req: &mut Request,
                                             Link::month(year, month)],
                     title: String = format!("Photos from {} {} {}",
                                             day, monthname(month), year),
-                    photos: Vec<Photo> = pq.load(c).unwrap()
+                    photos: Vec<Photo> =
+                        if req.authorized_user().is_none() {
+                            pq.filter(grade.ge(&rphotos::models::MIN_PUBLIC_GRADE))
+                              .load(c).unwrap()
+                        } else {
+                            pq.load(c).unwrap()
+                        }
                 });
             }
         }
