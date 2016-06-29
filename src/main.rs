@@ -38,7 +38,6 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use chrono::naive::date::NaiveDate;
 
-//mod models;
 use rphotos::models::{Person, Photo, Place, Tag};
 
 mod env;
@@ -112,9 +111,8 @@ fn main() {
     let staticdir = concat!(env!("OUT_DIR"), "/static/");
     info!("Serving static files from {}", staticdir);
     server.utilize(StaticFilesHandler::new(staticdir));
-    let dm : DieselMiddleware<PgConnection> = DieselMiddleware::new(&dburl(),
-                                         5,
-                                         Box::new(NopErrorHandler)).unwrap();
+    let dm: DieselMiddleware<PgConnection> =
+        DieselMiddleware::new(&dburl(), 5, Box::new(NopErrorHandler)).unwrap();
     server.utilize(dm);
     server.utilize(PhotosDirMiddleware::new(photos_dir()));
 
@@ -172,7 +170,7 @@ fn show_image<'mw>(req: &mut Request,
     if let Ok(the_id) = req.param("id").unwrap().parse::<i32>() {
         use rphotos::schema::photos::dsl::*;
         let connection = req.db_conn();
-        let c : &PgConnection = &connection;
+        let c: &PgConnection = &connection;
         if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
             if req.authorized_user().is_some() || tphoto.is_public() {
                 if let Some(size) = match req.param("size").unwrap() {
@@ -203,38 +201,37 @@ fn show_image<'mw>(req: &mut Request,
 fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
-    /*
-    use rphotos::schema::tag::dsl::*;
+    use rphotos::schema::tags::dsl::*;
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
-    */
+    let c: &PgConnection = &connection;
     return render!(res, "templates/tags.tpl", {
-        user: Option<String> = req.authorized_user()
+        user: Option<String> = req.authorized_user(),
         // TODO order by tag name!
-        // tags: Vec<Tag> = tag.load(c).unwrap()
+        tags: Vec<Tag> = tags.load(c).unwrap()
     });
 }
 fn tag_one<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
-    /*
-    use rphotos::schema::tag::dsl::*;
+    use rphotos::schema::tags::dsl::*;
     let tslug = req.param("tag").unwrap();
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
-    if let Ok(ttag) = tag.filter(slug.eq(tslug)).first::<Tag>(c) {
+    let c: &PgConnection = &connection;
+    if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
+        use rphotos::schema::photos::dsl::*;
+        use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         return render!(res, "templates/tag.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<i32> = vec![], / * FIXME Vec<Photo>
-                orm_get_related::<Photo, Tag>(&tag, "photo_tag")
-                .only_public(req.authorized_user().is_none())
-                .desc_nulls_last("grade")
-                .desc_nulls_last("date")
-                .collect(req.db_conn()).unwrap(),* /
-            tag: Tag = ttag
+            photos: Vec<Photo> = photos
+                .filter(id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))))
+                .load(c).unwrap(),
+            // TODO
+            // .only_public(req.authorized_user().is_none())
+            // .desc_nulls_last("grade")
+            // .desc_nulls_last("date")
+            tag: Tag = tag
         });
     }
-    */
     res.error(StatusCode::NotFound, "Not a tag")
 }
 
@@ -320,7 +317,7 @@ fn photo_details<'mw>(req: &mut Request,
     if let Ok(the_id) = req.param("id").unwrap().parse::<i32>() {
         use rphotos::schema::photos::dsl::*;
         let connection = req.db_conn();
-        let c : &PgConnection = &connection;
+        let c: &PgConnection = &connection;
         if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
             if req.authorized_user().is_some() || tphoto.is_public() {
                 return render!(res, "templates/details.tpl", {
@@ -335,8 +332,13 @@ fn photo_details<'mw>(req: &mut Request,
                     // req.orm_get_related(&photo, "photo_person").unwrap(),
                 places: Vec<Place> = vec![],
                     // req.orm_get_related(&photo, "photo_place").unwrap(),
-                tags: Vec<Tag> = vec![],
-                    // req.orm_get_related(&photo, "photo_tag").unwrap(),
+                    tags: Vec<Tag> = {
+                        use rphotos::schema::tags::dsl::{tags, id};
+                        use rphotos::schema::photo_tags::dsl::{photo_tags, photo_id, tag_id};
+                        tags.filter(id.eq_any(photo_tags.select(tag_id)
+                                                        .filter(photo_id.eq(tphoto.id))))
+                            .load(c).unwrap()
+                    },
                 time: String = match tphoto.date {
                     Some(d) => d.format("%T").to_string(),
                     None => "".to_string()
@@ -358,7 +360,7 @@ fn all_years<'mw>(req: &mut Request,
 
     use rphotos::schema::photos::dsl::*;
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
+    let c: &PgConnection = &connection;
 
     return render!(res, "templates/groups.tpl", {
         user: Option<String> = req.authorized_user(),
@@ -408,14 +410,14 @@ fn months_in_year<'mw>(req: &mut Request,
                        -> MiddlewareResult<'mw> {
     use rphotos::schema::photos::dsl::*;
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
+    let c: &PgConnection = &connection;
 
     if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
         return render!(res, "templates/groups.tpl", {
             user: Option<String> = req.authorized_user(),
             title: String = format!("Photos from {}", year),
             groups: Vec<Group> =
-                // FIXME only public if not logged on!
+            // FIXME only public if not logged on!
                 SqlLiteral::new(format!(concat!(
                     "select extract(month from date) m, count(*) c ",
                     "from photos where extract(year from date)={}{} ",
@@ -435,10 +437,10 @@ fn months_in_year<'mw>(req: &mut Request,
                         else { NaiveDate::from_ymd(year, month + 1, 1) }
                         .and_hms(0, 0, 0);
                     let photo = photos
-                        // .only_public(req.authorized_user().is_none())
+            // .only_public(req.authorized_user().is_none())
                         .filter(date.ge(fromdate))
                         .filter(date.lt(todate))
-                        // .filter(path.like("%.JPG"))
+            // .filter(path.like("%.JPG"))
                         .order((grade.desc(), date.asc()))
                         .limit(1)
                         .first::<Photo>(c).unwrap();
@@ -460,7 +462,7 @@ fn days_in_month<'mw>(req: &mut Request,
                       -> MiddlewareResult<'mw> {
     use rphotos::schema::photos::dsl::*;
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
+    let c: &PgConnection = &connection;
 
     if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
         if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
@@ -486,10 +488,10 @@ fn days_in_month<'mw>(req: &mut Request,
                         let day = day.map(|y| y as u32).unwrap_or(0);
                         let fromdate = NaiveDate::from_ymd(year, month as u32, day).and_hms(0, 0, 0);
                         let photo = photos
-                            // .only_public(req.authorized_user().is_none())
+                // .only_public(req.authorized_user().is_none())
                             .filter(date.ge(fromdate))
                             .filter(date.lt(fromdate + ChDuration::days(1)))
-                            // .filter(path.like("%.JPG"))
+                // .filter(path.like("%.JPG"))
                             .order((grade.desc(), date.asc()))
                             .limit(1)
                             .first::<Photo>(c).unwrap();
@@ -513,7 +515,8 @@ fn all_for_day<'mw>(req: &mut Request,
     if let Ok(year) = req.param("year").unwrap().parse::<i32>() {
         if let Ok(month) = req.param("month").unwrap().parse::<u8>() {
             if let Ok(day) = req.param("day").unwrap().parse::<u32>() {
-                let thedate = NaiveDate::from_ymd(year, month as u32, day).and_hms(0, 0, 0);
+                let thedate = NaiveDate::from_ymd(year, month as u32, day)
+                                  .and_hms(0, 0, 0);
                 use rphotos::schema::photos::dsl::*;
                 let pq = photos
                     .filter(date.ge(thedate))
@@ -523,7 +526,7 @@ fn all_for_day<'mw>(req: &mut Request,
                     .limit(500);
 
                 let connection = req.db_conn();
-                let c : &PgConnection = &connection;
+                let c: &PgConnection = &connection;
                 return render!(res, "templates/index.tpl", {
                     user: Option<String> = req.authorized_user(),
                     lpath: Vec<Link> = vec![Link::year(year),

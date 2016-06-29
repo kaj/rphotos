@@ -101,9 +101,10 @@ impl Photo {
 #[derive(Debug, Clone, RustcEncodable, Queryable)]
 pub struct Tag {
     pub id: i32,
-    pub tag_name: String,
     pub slug: String,
+    pub tag_name: String,
 }
+
 
 #[derive(Debug, Clone, RustcEncodable, Queryable)]
 pub struct PhotoTag {
@@ -112,14 +113,20 @@ pub struct PhotoTag {
     pub tag_id: i32,
 }
 
-/*
-use super::schema::tag;
-#[insertable_into(tag)]
-*/
+use super::schema::tags;
+#[insertable_into(tags)]
 #[derive(Debug, Clone)]
 pub struct NewTag<'a> {
     pub tag_name: &'a str,
     pub slug: &'a str,
+}
+
+use super::schema::photo_tags;
+#[insertable_into(photo_tags)]
+#[derive(Debug, Clone)]
+pub struct NewPhotoTag {
+    pub photo_id: i32,
+    pub tag_id: i32,
 }
 
 

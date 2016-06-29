@@ -46,37 +46,30 @@ fn slugify(val: &str) -> String {
 }
 
 fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
-    use rphotos::models::{NewTag, PhotoTag};
-    /*
-    let ttag = {
-        use rphotos::schema::tag::dsl::*;
-        if let Ok(ttag) = tag.filter(tag_name.eq(tagname)).first::<Tag>(db) {
-            ttag
+    use rphotos::models::{NewTag, NewPhotoTag, PhotoTag};
+    let tag = {
+        use rphotos::schema::tags::dsl::*;
+        if let Ok(tag) = tags.filter(tag_name.eq(tagname)).first::<Tag>(db) {
+            tag
         } else {
             diesel::insert(&NewTag {
                 tag_name: tagname,
                 slug: &slugify(tagname),
-            }).into(tag).get_result::<Tag>(db).expect("Insert new tag")
+            }).into(tags).get_result::<Tag>(db).expect("Insert new tag")
         }
     };
-    //        get_or_create(db, "tag", &tag, &[("slug", &slugify(tag))]);
     debug!("  tag {:?}", tag);
-
-    use rphotos::schema::photo_tag::dsl::*;
-    let q = photo_tag.filter(photo.eq(thephoto.id)).filter(tag.eq(ttag.id));
+    use rphotos::schema::photo_tags::dsl::*;
+    let q = photo_tags.filter(photo_id.eq(thephoto.id)).filter(tag_id.eq(tag.id));
     if let Ok(result) = q.first::<PhotoTag>(db) {
         debug!("  match {:?}", result)
     } else {
-        debug!("  new tag {:?} on {:?}!", tag, photo);
-        / * TODO
-        let mut q = Query::insert();
-        q.into_table("public.photo_tag");
-        q.set("photo", &photo.id);
-        q.set("tag", &tag.id);
-        q.execute(db).unwrap();
-         * /
+        debug!("  new tag {:?} on {:?}!", tag, thephoto);
+        diesel::insert(&NewPhotoTag {
+            photo_id: thephoto.id,
+            tag_id: tag.id,
+        }).into(photo_tags).execute(db).expect("Tag a photo");
     }
-    */
 }
 
 fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {

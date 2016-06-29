@@ -10,7 +10,7 @@
     <h1>Photo tags</h1>
 
     <ul class="alltags">{{#tags}}
-      <li><a href="/tag/{{slug}}">{{tag}}</a>
+      <li><a href="/tag/{{slug}}">{{tag_name}}</a>
     {{/tags}}</ul>
     </div>
   </body>
