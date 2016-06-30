@@ -16,6 +16,9 @@
 	<p>{{count}} pictures</p>
       </div>
     {{/groups}}
+    {{^groups}}
+      <p>Inga bilder.</p>
+    {{/groups}}
     </div>
   </body>
 </html>

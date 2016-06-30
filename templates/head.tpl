@@ -5,6 +5,7 @@
 <span>· <a href="/tag/">Taggar</a></span>
 <span>· <a href="/person/">Personer</a></span>
 <span>· <a href="/place/">Platser</a></span>
+<span>· <a href="/thisday">Denna dag</a></span>
 {{#user}}<span class="user">{{.}}
 (<a href="/logout">log out</a>)
 </span>{{/user}}

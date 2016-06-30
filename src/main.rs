@@ -131,6 +131,7 @@ fn main() {
     server.get("/:year/",            months_in_year);
     server.get("/:year/:month/",     days_in_month);
     server.get("/:year/:month/:day", all_for_day);
+    server.get("/thisday",           on_this_day);
 
     server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"));
 }
@@ -556,6 +557,55 @@ fn all_for_day<'mw>(req: &mut Request,
         }
     }
     res.error(StatusCode::NotFound, "Not a day")
+}
+
+fn on_this_day<'mw>(req: &mut Request,
+                    res: Response<'mw>)
+                      -> MiddlewareResult<'mw> {
+    use rphotos::schema::photos::dsl::*;
+    let connection = req.db_conn();
+    let c: &PgConnection = &connection;
+
+    let (month, day) = {
+        let now = time::now();
+        (now.tm_mon as u8 + 1, now.tm_mday as u32)
+    };
+    return render!(res, "templates/groups.tpl", {
+        user: Option<String> = req.authorized_user(),
+        //lpath: Vec<Link> = vec![Link::year(year)],
+        title: String = format!("Photos from {} {}", day, monthname(month)),
+        groups: Vec<Group> =
+            SqlLiteral::new(format!(concat!(
+                "select extract(year from date) y, count(*) c ",
+                "from photos where extract(month from date)={} ",
+                "and extract(day from date)={}{} group by y order by y desc"),
+                                    month, day,
+                                    if req.authorized_user().is_none() {
+                                        " and grade >= 4"
+                                    } else {
+                                        ""
+                                    }))
+            .load::<(Option<f64>, i64)>(c).unwrap()
+            .iter().map(|&(year, count)| {
+                let year = year.map(|y| y as i32).unwrap_or(0);
+                let fromdate = NaiveDate::from_ymd(year, month as u32, day).and_hms(0, 0, 0);
+                let photo = photos
+                    // .only_public(req.authorized_user().is_none())
+                    .filter(date.ge(fromdate))
+                    .filter(date.lt(fromdate + ChDuration::days(1)))
+                    // .filter(path.like("%.JPG"))
+                    .order((grade.desc(), date.asc()))
+                    .limit(1)
+                    .first::<Photo>(c).unwrap();
+
+                Group {
+                    title: format!("{}", year),
+                    url: format!("/{}/{}/{}", year, month, day),
+                    count: count,
+                    photo: photo
+                }
+            }).collect()
+    });
 }
 
 #[derive(Debug, Clone, RustcEncodable)]
