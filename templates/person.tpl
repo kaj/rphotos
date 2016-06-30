@@ -7,7 +7,7 @@
   </head>
   <body>
     {{> head}}
-    <h1>{{person.name}}</h1>
+    <h1>{{person.person_name}}</h1>
 
     <div class="group">
     {{#photos}}

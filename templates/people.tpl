@@ -10,7 +10,7 @@
     <h1>Photo people</h1>
 
     <ul class="allpeople">{{#people}}
-      <li><a href="/person/{{slug}}">{{name}}</a>
+      <li><a href="/person/{{slug}}">{{person_name}}</a>
     {{/people}}</ul>
     </div>
   </body>

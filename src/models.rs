@@ -198,9 +198,33 @@ impl IsTable for Tag {
 #[derive(Debug, Clone, RustcEncodable, Queryable)]
 pub struct Person {
     pub id: i32,
-    pub name: String,
     pub slug: String,
+    pub person_name: String,
 }
+
+#[derive(Debug, Clone, RustcEncodable, Queryable)]
+pub struct PhotoPerson {
+    pub id: i32,
+    pub photo_id: i32,
+    pub person_id: i32,
+}
+
+use super::schema::people;
+#[insertable_into(people)]
+#[derive(Debug, Clone)]
+pub struct NewPerson<'a> {
+    pub person_name: &'a str,
+    pub slug: &'a str,
+}
+
+use super::schema::photo_people;
+#[insertable_into(photo_people)]
+#[derive(Debug, Clone)]
+pub struct NewPhotoPerson {
+    pub photo_id: i32,
+    pub person_id: i32,
+}
+
 /*
 impl Entity for Person {
     fn id(&self) -> &ToValue {

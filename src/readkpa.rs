@@ -73,27 +73,30 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
 }
 
 fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {
-    /*
-    let person: Person = get_or_create(db,
-                                       "name",
-                                       &name,
-                                       &[("slug", &slugify(name))]);
+    use rphotos::models::{NewPerson, NewPhotoPerson, Person, PhotoPerson};
+    let person = {
+        use rphotos::schema::people::dsl::*;
+        if let Ok(person) = people.filter(person_name.eq(name)).first::<Person>(db) {
+            person
+        } else {
+            diesel::insert(&NewPerson {
+                person_name: name,
+                slug: &slugify(name),
+            }).into(people).get_result::<Person>(db).expect("Insert new person")
+        }
+    };
     debug!("  person {:?}", person);
-    let mut q = Query::select();
-    q.from_table("public.photo_person");
-    q.filter_eq("photo", &photo.id);
-    q.filter_eq("person", &person.id);
-    if let Ok(Some(result)) = q.retrieve_one(db) {
+    use rphotos::schema::photo_people::dsl::*;
+    let q = photo_people.filter(photo_id.eq(photo.id)).filter(person_id.eq(person.id));
+    if let Ok(result) = q.first::<PhotoPerson>(db) {
         debug!("  match {:?}", result)
     } else {
-        println!("  new person {:?} on {:?}!", person, photo);
-        let mut q = Query::insert();
-        q.into_table("public.photo_person");
-        q.set("photo", &photo.id);
-        q.set("person", &person.id);
-        q.execute(db).unwrap();
+        debug!("  new tag {:?} on {:?}!", person, photo);
+        diesel::insert(&NewPhotoPerson {
+            photo_id: photo.id,
+            person_id: person.id,
+        }).into(photo_people).execute(db).expect("Person a photo");
     }
-     */
 }
 
 fn place_photo(db: &PgConnection, photo: &Photo, name: &str) {

@@ -276,39 +276,40 @@ fn place_one<'mw>(req: &mut Request,
 fn person_all<'mw>(req: &mut Request,
                    res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
-    /*
-    use rphotos::schema::person::dsl::*;
+    use rphotos::schema::people::dsl::*;
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
-    */
+    let c: &PgConnection = &connection;
     return render!(res, "templates/people.tpl", {
-        user: Option<String> = req.authorized_user()
+        user: Option<String> = req.authorized_user(),
         // TODO order by name!
-        //people: Vec<Person> = person.load(c).expect("list persons")
+        people: Vec<Person> = people.load(c).expect("list people")
     });
 }
+
 fn person_one<'mw>(req: &mut Request,
                    res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
-    /*
+    use rphotos::schema::people::dsl::*;
     let tslug = req.param("slug").unwrap();
-    use rphotos::schema::person::dsl::*;
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
-    if let Ok(tperson) = person.filter(slug.eq(tslug)).first::<Person>(c) {
+    let c: &PgConnection = &connection;
+    if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
+        use rphotos::schema::photos::dsl::*;
+        use rphotos::schema::photo_people::dsl::{photo_id, photo_people, person_id};
         return render!(res, "templates/person.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<i32> = vec![], / * TODO Vec<Photo> =
-                orm_get_related::<Photo, Person>(&person, "photo_person")
-                .only_public(req.authorized_user().is_none())
-                .desc_nulls_last("grade")
-                .desc_nulls_last("date")
-                .collect(req.db_conn()).unwrap(), * /
-            person: Person = tperson
+            photos: Vec<Photo> = photos
+                .filter(id.eq_any(photo_people.select(photo_id)
+                                              .filter(person_id.eq(person.id))))
+                .load(c).unwrap(),
+            // TODO
+            // .only_public(req.authorized_user().is_none())
+            // .desc_nulls_last("grade")
+            // .desc_nulls_last("date")
+            person: Person = person
         });
     }
-    */
-    res.error(StatusCode::NotFound, "Not a place")
+    res.error(StatusCode::NotFound, "Not a person")
 }
 
 fn photo_details<'mw>(req: &mut Request,
@@ -328,8 +329,13 @@ fn photo_details<'mw>(req: &mut Request,
                                       Link::month(d.year(), d.month() as u8),
                                       Link::day(d.year(), d.month() as u8, d.day())])
                         .unwrap_or_else(|| vec![]),
-                people: Vec<Person> = vec![],
-                    // req.orm_get_related(&photo, "photo_person").unwrap(),
+                    people: Vec<Person> = {
+                        use rphotos::schema::people::dsl::{people, id};
+                        use rphotos::schema::photo_people::dsl::{photo_people, photo_id, person_id};
+                        people.filter(id.eq_any(photo_people.select(person_id)
+                                                            .filter(photo_id.eq(tphoto.id))))
+                            .load(c).unwrap()
+                    },
                 places: Vec<Place> = vec![],
                     // req.orm_get_related(&photo, "photo_place").unwrap(),
                     tags: Vec<Tag> = {
