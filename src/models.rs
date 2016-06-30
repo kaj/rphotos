@@ -293,8 +293,31 @@ impl IsTable for Person {
 #[derive(Debug, Clone, RustcEncodable, Queryable)]
 pub struct Place {
     pub id: i32,
-    pub place: String,
     pub slug: String,
+    pub place_name: String,
+}
+
+#[derive(Debug, Clone, RustcEncodable, Queryable)]
+pub struct PhotoPlace {
+    pub id: i32,
+    pub photo_id: i32,
+    pub place_id: i32,
+}
+
+use super::schema::places;
+#[insertable_into(places)]
+#[derive(Debug, Clone)]
+pub struct NewPlace<'a> {
+    pub slug: &'a str,
+    pub place_name: &'a str,
+}
+
+use super::schema::photo_places;
+#[insertable_into(photo_places)]
+#[derive(Debug, Clone)]
+pub struct NewPhotoPlace {
+    pub photo_id: i32,
+    pub place_id: i32,
 }
 
 /*

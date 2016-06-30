@@ -14,7 +14,7 @@
     {{#photo.grade}}<p>Betyg: {{.}}</p>{{/photo.grade}}
     {{#photo}}<p>Tid: {{date}}</p>{{/photo}}
     <p>People: {{#people}}<a href="/person/{{slug}}">{{person_name}}</a>, {{/people}}</p>
-    <p>Places: {{#places}}<a href="/place/{{slug}}">{{place}}</a>, {{/places}}</p>
+    <p>Places: {{#places}}<a href="/place/{{slug}}">{{place_name}}</a>, {{/places}}</p>
     <p>Tags: {{#tags}}<a href="/tag/{{slug}}">{{tag_name}}</a>, {{/tags}}</p>
   </body>
 </html>

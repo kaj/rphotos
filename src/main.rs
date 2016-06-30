@@ -238,38 +238,38 @@ fn tag_one<'mw>(req: &mut Request,
 fn place_all<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
-    /*
-    use rphotos::schema::place::dsl::*;
+    use rphotos::schema::places::dsl::*;
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
-    */
+    let c: &PgConnection = &connection;
     return render!(res, "templates/places.tpl", {
-        user: Option<String> = req.authorized_user()
+        user: Option<String> = req.authorized_user(),
         // TODO order by place name!
-        // places: Vec<Place> = place.load(c).unwrap()
+        places: Vec<Place> = places.load(c).unwrap()
     });
 }
+
 fn place_one<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
-    /*
+    use rphotos::schema::places::dsl::*;
     let tslug = req.param("slug").unwrap();
-    use rphotos::schema::place::dsl::*;
     let connection = req.db_conn();
-    let c : &PgConnection = &connection;
-    if let Ok(tplace) = place.filter(slug.eq(tslug)).first::<Place>(c) {
+    let c: &PgConnection = &connection;
+    if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
+        use rphotos::schema::photos::dsl::*;
+        use rphotos::schema::photo_places::dsl::{photo_id, photo_places, place_id};
         return render!(res, "templates/place.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<i32> = vec![], / * TODO Vec<Photo> =
-                orm_get_related::<Photo, Place>(&place, "photo_place")
-                .only_public(req.authorized_user().is_none())
-                .desc_nulls_last("grade")
-                .desc_nulls_last("date")
-                .collect(req.db_conn()).unwrap(), * /
-            place: Place = tplace
+            photos: Vec<Photo> = photos
+                .filter(id.eq_any(photo_places.select(photo_id).filter(place_id.eq(place.id))))
+                .load(c).unwrap(),
+            // TODO
+            // .only_public(req.authorized_user().is_none())
+            // .desc_nulls_last("grade")
+            // .desc_nulls_last("date")
+            place: Place = place
         });
     }
-    */
     res.error(StatusCode::NotFound, "Not a place")
 }
 
@@ -336,8 +336,13 @@ fn photo_details<'mw>(req: &mut Request,
                                                             .filter(photo_id.eq(tphoto.id))))
                             .load(c).unwrap()
                     },
-                places: Vec<Place> = vec![],
-                    // req.orm_get_related(&photo, "photo_place").unwrap(),
+                    places: Vec<Place> = {
+                        use rphotos::schema::places::dsl::{places, id};
+                        use rphotos::schema::photo_places::dsl::{photo_places, photo_id, place_id};
+                        places.filter(id.eq_any(photo_places.select(place_id)
+                                                            .filter(photo_id.eq(tphoto.id))))
+                              .load(c).unwrap()
+                    },
                     tags: Vec<Tag> = {
                         use rphotos::schema::tags::dsl::{tags, id};
                         use rphotos::schema::photo_tags::dsl::{photo_tags, photo_id, tag_id};

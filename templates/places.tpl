@@ -10,7 +10,7 @@
     <h1>Photo places</h1>
 
     <ul class="allplaces">{{#places}}
-      <li><a href="/place/{{slug}}">{{place}}</a>
+      <li><a href="/place/{{slug}}">{{place_name}}</a>
     {{/places}}</ul>
     </div>
   </body>

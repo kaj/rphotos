@@ -73,7 +73,7 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
 }
 
 fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {
-    use rphotos::models::{NewPerson, NewPhotoPerson, Person, PhotoPerson};
+    use rphotos::models::{NewPerson, NewPhotoPerson, PhotoPerson};
     let person = {
         use rphotos::schema::people::dsl::*;
         if let Ok(person) = people.filter(person_name.eq(name)).first::<Person>(db) {
@@ -91,7 +91,7 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {
     if let Ok(result) = q.first::<PhotoPerson>(db) {
         debug!("  match {:?}", result)
     } else {
-        debug!("  new tag {:?} on {:?}!", person, photo);
+        debug!("  new person {:?} on {:?}!", person, photo);
         diesel::insert(&NewPhotoPerson {
             photo_id: photo.id,
             person_id: person.id,
@@ -100,27 +100,30 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {
 }
 
 fn place_photo(db: &PgConnection, photo: &Photo, name: &str) {
-    /*
-    let place: Place = get_or_create(db,
-                                     "place",
-                                     &name,
-                                     &[("slug", &slugify(name))]);
+    use rphotos::models::{NewPlace, NewPhotoPlace, PhotoPlace};
+    let place = {
+        use rphotos::schema::places::dsl::*;
+        if let Ok(place) = places.filter(place_name.eq(name)).first::<Place>(db) {
+            place
+        } else {
+            diesel::insert(&NewPlace {
+                place_name: name,
+                slug: &slugify(name),
+            }).into(places).get_result::<Place>(db).expect("Insert new place")
+        }
+    };
     debug!("  place {:?}", place);
-    let mut q = Query::select();
-    q.from_table("public.photo_place");
-    q.filter_eq("photo", &photo.id);
-    q.filter_eq("place", &place.id);
-    if let Ok(Some(result)) = q.retrieve_one(db) {
+    use rphotos::schema::photo_places::dsl::*;
+    let q = photo_places.filter(photo_id.eq(photo.id)).filter(place_id.eq(place.id));
+    if let Ok(result) = q.first::<PhotoPlace>(db) {
         debug!("  match {:?}", result)
     } else {
-        println!("  new place {:?} on {:?}!", place, photo);
-        let mut q = Query::insert();
-        q.into_table("public.photo_place");
-        q.set("photo", &photo.id);
-        q.set("place", &place.id);
-        q.execute(db).unwrap();
+        debug!("  new place {:?} on {:?}!", place, photo);
+        diesel::insert(&NewPhotoPlace {
+            photo_id: photo.id,
+            place_id: place.id,
+        }).into(photo_places).execute(db).expect("Place a photo");
     }
-*/
 }
 
 fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) {
