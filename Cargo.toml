@@ -29,6 +29,10 @@ path = "src/readkpa.rs"
 name = "findphotos"
 path = "src/findphotos.rs"
 
+[[bin]]
+name = "setpassword"
+path = "src/setpassword.rs"
+
 [dependencies]
 nickel = ">= 0.8.1"
 nickel-jwt-session = "*"
@@ -50,6 +54,8 @@ dotenv_macros = { version = "0.8.0", optional = true }
 r2d2 = "*"
 nickel-diesel = "*"
 r2d2-diesel = "*"
+djangohashers = "*"
+rand = "*"
 
 [features]
 default = ["with-syntex"]

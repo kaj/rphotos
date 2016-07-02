@@ -427,3 +427,10 @@ pub fn get_or_create<'a, T: IsTable + IsDao>(db: &Database,
     }
 }
 */
+
+use super::schema::users;
+#[insertable_into(users)]
+pub struct NewUser<'a> {
+    pub username: &'a str,
+    pub password: &'a str,
+}

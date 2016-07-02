@@ -2,6 +2,7 @@
 extern crate nickel;
 #[macro_use]
 extern crate log;
+extern crate djangohashers;
 extern crate env_logger;
 extern crate nickel_jwt_session;
 extern crate rustc_serialize;
@@ -146,14 +147,25 @@ fn login<'mw>(_req: &mut Request,
 fn do_login<'mw>(req: &mut Request,
                  mut res: Response<'mw>)
                  -> MiddlewareResult<'mw> {
+    let connection = req.db_conn();
+    let c: &PgConnection = &connection;
     let form_data = try_with!(res, req.form_body());
-    if let (Some(user), Some(password)) = (form_data.get("user"),
-                                           form_data.get("password")) {
-        // TODO Actual password hashing and checking
-        if user == "kaj" && password == "kaj123" {
-            res.set_jwt_user(user);
-            return res.redirect("/");
-        }
+    if let (Some(user), Some(pw)) = (form_data.get("user"),
+                                     form_data.get("password")) {
+        use rphotos::schema::users::dsl::*;
+        if let Ok(hash) = users.filter(username.eq(user))
+            .select(password)
+            .first::<String>(c) {
+                debug!("Hash for {} is {}", user, hash);
+                if djangohashers::check_password_tolerant(pw, &hash) {
+                    info!("User {} logged in", user);
+                    res.set_jwt_user(user);
+                    return res.redirect("/");
+                }
+                debug!("Password verification failed");
+            } else {
+                debug!("No hash found for {}", user);
+            }
     }
     render!(res, "templates/login.tpl", {})
 }

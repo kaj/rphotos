@@ -21,10 +21,12 @@ pub fn require_var(name: &str, desc: &str) -> String {
     }
 }
 
+#[allow(dead_code)]
 pub fn photos_dir() -> PathBuf {
     PathBuf::from(&*env_or("RPHOTOS_DIR", "/home/kaj/Bilder/foto"))
 }
 
+#[allow(dead_code)]
 pub fn env_or(name: &str, default: &str) -> String {
     var(name).unwrap_or(default.to_string())
 }
