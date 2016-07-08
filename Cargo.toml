@@ -47,7 +47,7 @@ hyper = "0.8.1"
 time = "*"
 xml-rs = "*"
 rexif = "0.3.3"
-diesel = { version = "0.6.2", features = ["chrono"] }
+diesel = { version = "0.6.2", default-features = false, features = ["chrono", "postgres"] }
 diesel_codegen = { version = "0.6.2", default-features = false, features = ["postgres"] }
 dotenv = "0.8.0"
 dotenv_macros = { version = "0.8.0", optional = true }
