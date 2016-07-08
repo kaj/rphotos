@@ -1,6 +1,5 @@
 use chrono::naive::datetime::NaiveDateTime;
 use rustc_serialize::{Encodable, Encoder};
-use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 

@@ -30,8 +30,6 @@ use nickel::{FormBody, HttpRouter, MediaType, MiddlewareResult, Nickel,
 use nickel::extensions::response::Redirect;
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
-use plugin::Pluggable;
-use rustc_serialize::Encodable;
 use time::Duration;
 use nickel::status::StatusCode;
 use diesel::expression::sql_literal::SqlLiteral;
