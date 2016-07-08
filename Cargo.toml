@@ -52,7 +52,7 @@ diesel_codegen = { version = "0.6.2", default-features = false, features = ["pos
 dotenv = "0.8.0"
 dotenv_macros = { version = "0.8.0", optional = true }
 r2d2 = "*"
-nickel-diesel = "*"
+nickel-diesel = "0.2.0"
 r2d2-diesel = "*"
 djangohashers = "*"
 rand = "*"
