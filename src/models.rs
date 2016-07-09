@@ -319,6 +319,15 @@ pub struct NewPhotoPlace {
     pub place_id: i32,
 }
 
+use super::schema::positions;
+#[insertable_into(positions)]
+#[derive(Debug, Clone)]
+pub struct NewPosition {
+    pub photo_id: i32,
+    pub latitude: i32,
+    pub longitude: i32,
+}
+
 /*
 impl Entity for Place {
     fn id(&self) -> &ToValue {

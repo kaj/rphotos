@@ -81,6 +81,12 @@ struct Group {
     photo: Photo,
 }
 
+#[derive(Debug, Clone, RustcEncodable)]
+struct Coord {
+    x: f64,
+    y: f64,
+}
+
 fn monthname(n: u8) -> &'static str {
     match n {
         1 => "january",
@@ -360,6 +366,22 @@ fn photo_details<'mw>(req: &mut Request,
                         tags.filter(id.eq_any(photo_tags.select(tag_id)
                                                         .filter(photo_id.eq(tphoto.id))))
                             .load(c).unwrap()
+                    },
+                    position: Option<Coord> = {
+                        use rphotos::schema::positions::dsl::*;
+                        match positions.filter(photo_id.eq(tphoto.id))
+                            .select((latitude, longitude))
+                            .first::<(i32, i32)>(c) {
+                                Ok((tlat, tlong)) => Some(Coord {
+                                    x: tlat as f64 / 1e6,
+                                    y: tlong as f64 / 1e6,
+                                }),
+                                Err(diesel::NotFound) => None,
+                                Err(err) => {
+                                    error!("Failed to read position: {}", err);
+                                    None
+                                }
+                            }
                     },
                 time: String = match tphoto.date {
                     Some(d) => d.format("%T").to_string(),

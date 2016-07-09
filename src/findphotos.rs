@@ -60,13 +60,45 @@ fn save_photo(db: &PgConnection,
               file_path: &str,
               exif: &ExifData)
               -> Result<(), FindPhotoError> {
-    match try!(Photo::create_or_set_basics(db, file_path,
-                                           Some(try!(find_date(&exif))),
-                                           try!(find_rotation(&exif)))) {
-        Modification::Created(photo) => info!("Created {:?}", photo),
-        Modification::Updated(photo) => info!("Modified {:?}", photo),
-        Modification::Unchanged(photo) => debug!("No change for {:?}", photo),
-    };
+    let photo =
+        match try!(Photo::create_or_set_basics(db, file_path,
+                                               Some(try!(find_date(&exif))),
+                                               try!(find_rotation(&exif)))) {
+            Modification::Created(photo) => {
+                info!("Created {:?}", photo);
+                photo
+            },
+            Modification::Updated(photo) => {
+                info!("Modified {:?}", photo);
+                photo
+            },
+            Modification::Unchanged(photo) => {
+                debug!("No change for {:?}", photo);
+                photo
+            }
+        };
+    if let Some((lat, long)) = try!(find_position(&exif)) {
+        debug!("Position for {} is {} {}", file_path, lat, long);
+        use rphotos::schema::positions::dsl::*;
+        if let Ok((pos, clat, clong)) =
+            positions.filter(photo_id.eq(photo.id))
+                     .select((id, latitude, longitude))
+                     .first::<(i32, i32, i32)>(db)
+        {
+            if (clat != (lat * 1e6) as i32) || (clong != (long * 1e6) as i32) {
+                panic!("TODO Should update position #{} from {} {} to {} {}",
+                       pos, clat, clong, lat, long)
+            }
+        } else {
+            info!("Position for {} is {} {}", file_path, lat, long);
+            use rphotos::models::NewPosition;
+            diesel::insert(&NewPosition {
+                photo_id: photo.id,
+                latitude: (lat * 1e6) as i32,
+                longitude: (long * 1e6) as i32
+            }).into(positions).execute(db).expect("Insert image position");
+        }
+    }
     Ok(())
 }
 
@@ -120,6 +152,24 @@ fn find_date(exif: &ExifData) -> Result<NaiveDateTime, FindPhotoError> {
         }
     } else {
         Err(FindPhotoError::ExifTagMissing(ExifTag::DateTimeOriginal))
+    }
+}
+
+fn find_position(exif: &ExifData)
+                 -> Result<Option<(f64, f64)>, FindPhotoError>
+{
+    if let (Some(lat), Some(long)) = (find_entry(exif, &ExifTag::GPSLatitude),
+                                      find_entry(exif, &ExifTag::GPSLongitude)) {
+        return Ok(Some((rat2float(&lat.value), rat2float(&long.value))))
+    }
+    Ok(None)
+}
+
+fn rat2float(val: &rexif::TagValue) -> f64 {
+    if let rexif::TagValue::URational(ref v) = *val {
+        v[0].value() + (v[1].value() + v[2].value() / 60.0) / 60.0
+    } else {
+        0.0
     }
 }
 
