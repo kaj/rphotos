@@ -13,7 +13,7 @@
     <p><img src="/img/{{photo.id}}/m"></p>
 
     {{#position}}
-    <div id="map" style="height: 8em;width: 40%;float: right;border: solid 1px #666;"> </div>
+    <div id="map"></div>
     <link href="https://rasmus.krats.se/static/leaflet077c/leaflet.css" rel="stylesheet"/>
     <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript">
     </script>

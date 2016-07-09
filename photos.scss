@@ -55,3 +55,11 @@ ul.alltags, ul.allpeople, ul.allplaces {
     -moz-column-width: 13em;
     column-width: 13em;
 }
+
+#map {
+    border: 1px solid #333;
+    float: right;
+    height: 8em;
+    margin: 1ex;
+    width: 40%;
+}
