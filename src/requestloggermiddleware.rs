@@ -26,11 +26,12 @@ impl RequestLogger {
 
 impl Drop for RequestLogger {
     fn drop(&mut self) {
-        let status = self.status.lock().unwrap();
-        info!("{} {} after {}",
-              self.mu,
-              *status,
-              fmt_elapsed(get_time() - self.start));
+        if let Ok(status) = self.status.lock() {
+            info!("{:?} {} after {}",
+                  self.mu,
+                  *status,
+                  fmt_elapsed(get_time() - self.start));
+        }
     }
 }
 
@@ -57,17 +58,17 @@ impl Key for RequestLoggerMiddleware {
 impl<D> Middleware<D> for RequestLoggerMiddleware {
     fn invoke<'mw, 'conn>(&self,
                           req: &mut Request<'mw, 'conn, D>,
-                          res: Response<'mw, D>)
+                          mut res: Response<'mw, D>)
                           -> MiddlewareResult<'mw, D> {
-        let mu = format!("\"{} {}\"", req.origin.method, req.origin.uri);
+        let mu = format!("{} {}", req.origin.method, req.origin.uri);
         let status = Arc::new(Mutex::new(StatusCode::Continue));
-        let rl = RequestLogger::new(mu, status.clone());
-        req.extensions_mut().insert::<RequestLoggerMiddleware>(rl);
-        let mut r2 = res; // How strange is this?!?
-        r2.on_send(move |r| {
-            let mut sw = status.lock().unwrap();
-            *sw = r.status();
+        req.extensions_mut().insert::<RequestLoggerMiddleware>(
+            RequestLogger::new(mu, status.clone()));
+        res.on_send(move |r| {
+            if let Ok(mut sw) = status.lock() {
+                *sw = r.status();
+            }
         });
-        Ok(Continue(r2))
+        Ok(Continue(res))
     }
 }
