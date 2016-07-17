@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 
 build = "src/build.rs"
-# build = "src/sassify.rs"
 
 [build-dependencies]
 sass-rs = "*"
