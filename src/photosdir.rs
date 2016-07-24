@@ -65,6 +65,8 @@ impl PhotosDir {
                     if let Ok(exif) = rexif::parse_file(&p1.to_str().unwrap()) {
                         let path = p1.to_str().unwrap();
                         cb(&path[bl..], &exif);
+                    } else {
+                        debug!("'{:?}' has no exif data.", p1);
                     }
                 }
             }

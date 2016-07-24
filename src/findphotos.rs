@@ -28,7 +28,7 @@ fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
     let db = PgConnection::establish(&dburl())
-        .expect("Error connecting to database");
+                 .expect("Error connecting to database");
     let photos = PhotosDir::new(photos_dir());
 
     let args = std::env::args().skip(1);
@@ -53,38 +53,36 @@ fn do_find(db: &PgConnection, photos: &PhotosDir, only_in: &Path) {
                               }
                           }
                       })
-        .unwrap();
+          .unwrap();
 }
 
 fn save_photo(db: &PgConnection,
               file_path: &str,
               exif: &ExifData)
-              -> Result<(), FindPhotoError> {
-    let photo =
-        match try!(Photo::create_or_set_basics(db, file_path,
+              -> FindPhotoResult<()> {
+    let photo = match try!(Photo::create_or_set_basics(db, file_path,
                                                Some(try!(find_date(&exif))),
                                                try!(find_rotation(&exif)))) {
-            Modification::Created(photo) => {
-                info!("Created {:?}", photo);
-                photo
-            },
-            Modification::Updated(photo) => {
-                info!("Modified {:?}", photo);
-                photo
-            },
-            Modification::Unchanged(photo) => {
-                debug!("No change for {:?}", photo);
-                photo
-            }
-        };
+        Modification::Created(photo) => {
+            info!("Created {:?}", photo);
+            photo
+        }
+        Modification::Updated(photo) => {
+            info!("Modified {:?}", photo);
+            photo
+        }
+        Modification::Unchanged(photo) => {
+            debug!("No change for {:?}", photo);
+            photo
+        }
+    };
     if let Some((lat, long)) = try!(find_position(&exif)) {
         debug!("Position for {} is {} {}", file_path, lat, long);
         use rphotos::schema::positions::dsl::*;
         if let Ok((pos, clat, clong)) =
-            positions.filter(photo_id.eq(photo.id))
-                     .select((id, latitude, longitude))
-                     .first::<(i32, i32, i32)>(db)
-        {
+               positions.filter(photo_id.eq(photo.id))
+                        .select((id, latitude, longitude))
+                        .first::<(i32, i32, i32)>(db) {
             if (clat != (lat * 1e6) as i32) || (clong != (long * 1e6) as i32) {
                 panic!("TODO Should update position #{} from {} {} to {} {}",
                        pos, clat, clong, lat, long)
@@ -95,12 +93,17 @@ fn save_photo(db: &PgConnection,
             diesel::insert(&NewPosition {
                 photo_id: photo.id,
                 latitude: (lat * 1e6) as i32,
-                longitude: (long * 1e6) as i32
-            }).into(positions).execute(db).expect("Insert image position");
+                longitude: (long * 1e6) as i32,
+            })
+                .into(positions)
+                .execute(db)
+                .expect("Insert image position");
         }
     }
     Ok(())
 }
+
+type FindPhotoResult<T> = Result<T, FindPhotoError>;
 
 #[derive(Debug)]
 enum FindPhotoError {
@@ -109,6 +112,7 @@ enum FindPhotoError {
     ExifTagMissing(ExifTag),
     TimeFormat(ParseError),
     UnknownOrientation(u16),
+    BadLatLong(TagValue),
 }
 impl From<diesel::result::Error> for FindPhotoError {
     fn from(err: diesel::result::Error) -> FindPhotoError {
@@ -121,7 +125,7 @@ impl From<ParseError> for FindPhotoError {
     }
 }
 
-fn find_rotation(exif: &ExifData) -> Result<i16, FindPhotoError> {
+fn find_rotation(exif: &ExifData) -> FindPhotoResult<i16> {
     if let Some(ref value) = find_entry(exif, &ExifTag::Orientation) {
         if let TagValue::U16(ref v) = value.value {
             let n = v[0];
@@ -142,10 +146,13 @@ fn find_rotation(exif: &ExifData) -> Result<i16, FindPhotoError> {
     }
 }
 
-fn find_date(exif: &ExifData) -> Result<NaiveDateTime, FindPhotoError> {
-    if let Some(ref value) = find_entry(exif, &ExifTag::DateTimeOriginal) {
+fn find_date(exif: &ExifData) -> FindPhotoResult<NaiveDateTime> {
+    if let Some(ref value) = find_entry(exif, &ExifTag::DateTimeOriginal)
+                                 .or_else(|| {
+                                     find_entry(exif, &ExifTag::DateTime)
+                                 }) {
         if let TagValue::Ascii(ref str) = value.value {
-            debug!("Try to parse {:?} as datetime", str);
+            debug!("Try to parse {:?} (from {:?}) as datetime", str, value.tag);
             Ok(try!(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")))
         } else {
             Err(FindPhotoError::ExifOfUnexpectedType(value.value.clone()))
@@ -155,22 +162,24 @@ fn find_date(exif: &ExifData) -> Result<NaiveDateTime, FindPhotoError> {
     }
 }
 
-fn find_position(exif: &ExifData)
-                 -> Result<Option<(f64, f64)>, FindPhotoError>
-{
-    if let (Some(lat), Some(long)) = (find_entry(exif, &ExifTag::GPSLatitude),
-                                      find_entry(exif, &ExifTag::GPSLongitude)) {
-        return Ok(Some((rat2float(&lat.value), rat2float(&long.value))))
+fn find_position(exif: &ExifData) -> FindPhotoResult<Option<(f64, f64)>> {
+    if let Some(lat) = find_entry(exif, &ExifTag::GPSLatitude) {
+        if let Some(long) = find_entry(exif, &ExifTag::GPSLongitude) {
+            return Ok(Some((try!(rat2float(&lat.value)),
+                            try!(rat2float(&long.value)))));
+        }
     }
     Ok(None)
 }
 
-fn rat2float(val: &rexif::TagValue) -> f64 {
+fn rat2float(val: &rexif::TagValue) -> FindPhotoResult<f64> {
     if let rexif::TagValue::URational(ref v) = *val {
-        v[0].value() + (v[1].value() + v[2].value() / 60.0) / 60.0
-    } else {
-        0.0
+        if v.len() == 3 {
+            return Ok(v[0].value() +
+                      (v[1].value() + v[2].value() / 60.0) / 60.0);
+        }
     }
+    Err(FindPhotoError::BadLatLong(val.clone()))
 }
 
 fn find_entry<'a>(exif: &'a ExifData, tag: &ExifTag) -> Option<&'a ExifEntry> {
