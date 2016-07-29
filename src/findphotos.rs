@@ -147,19 +147,26 @@ fn find_rotation(exif: &ExifData) -> FindPhotoResult<i16> {
 }
 
 fn find_date(exif: &ExifData) -> FindPhotoResult<NaiveDateTime> {
-    if let Some(ref value) = find_entry(exif, &ExifTag::DateTimeOriginal)
-                                 .or_else(|| {
-                                     find_entry(exif, &ExifTag::DateTime)
-                                 }) {
-        if let TagValue::Ascii(ref str) = value.value {
-            debug!("Try to parse {:?} (from {:?}) as datetime", str, value.tag);
-            Ok(try!(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")))
-        } else {
-            Err(FindPhotoError::ExifOfUnexpectedType(value.value.clone()))
-        }
-    } else {
-        Err(FindPhotoError::ExifTagMissing(ExifTag::DateTimeOriginal))
-    }
+    find_entry(exif, &ExifTag::DateTimeOriginal)
+        .or_else(|| {
+            find_entry(exif, &ExifTag::DateTime)
+        })
+        .or_else(|| {
+            find_entry(exif, &ExifTag::DateTimeDigitized)
+        })
+        .map(|value| {
+            debug!("Found {:?}", value);
+            if let TagValue::Ascii(ref str) = value.value {
+                debug!("Try to parse {:?} (from {:?}) as datetime",
+                       str, value.tag);
+                Ok(try!(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")))
+            } else {
+                Err(FindPhotoError::ExifOfUnexpectedType(value.value.clone()))
+            }
+        })
+        .unwrap_or_else(|| {
+            Err(FindPhotoError::ExifTagMissing(ExifTag::DateTimeOriginal))
+        })
 }
 
 fn find_position(exif: &ExifData) -> FindPhotoResult<Option<(f64, f64)>> {
