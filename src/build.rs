@@ -4,14 +4,13 @@ extern crate md5;
 extern crate rustc_serialize as serialize;
 extern crate sass_rs;
 extern crate sass_sys;
+extern crate syntex;
 
 mod sassify;
 use sassify::main as do_sassify;
 
-#[cfg(feature = "with-syntex")]
 fn main() {
-    extern crate syntex;
-    extern crate diesel_codegen;
+    extern crate diesel_codegen_syntex as diesel_codegen;
     extern crate dotenv_codegen;
 
     use std::env;

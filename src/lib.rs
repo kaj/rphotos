@@ -8,5 +8,4 @@ extern crate dotenv;
 #[cfg(feature = "nightly")]
 include!("lib.in.rs");
 
-#[cfg(feature = "with-syntex")]
 include!(concat!(env!("OUT_DIR"), "/lib.rs"));
