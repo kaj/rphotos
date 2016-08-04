@@ -49,7 +49,8 @@ macro_rules! wrap {
         fn wrapped<'mw>(req: &mut Request,
                         res: Response<'mw>)
                         -> MiddlewareResult<'mw> {
-            if let ($(Some($param),)*) = ($(opt(req, stringify!($param)),)*) {
+            if let ($(Some($param),)*) =
+                ($(req.param(stringify!($param)).and_then(FromSlug::parse),)*) {
                 $handler(req, res, $($param),*)
             } else {
                 res.error(StatusCode::NotFound, "Parameter mismatch")
@@ -60,30 +61,30 @@ macro_rules! wrap {
 }
 
 pub trait FromSlug : Sized {
-    fn parse_slug(slug: &str) -> Option<Self>;
+    fn parse(slug: &str) -> Option<Self>;
 }
 impl FromSlug for String {
-    fn parse_slug(slug: &str) -> Option<Self> {
+    fn parse(slug: &str) -> Option<Self> {
         Some(slug.to_string())
     }
 }
 impl FromSlug for i32 {
-    fn parse_slug(slug: &str) -> Option<Self> {
+    fn parse(slug: &str) -> Option<Self> {
         slug.parse::<Self>().ok()
     }
 }
 impl FromSlug for u8 {
-    fn parse_slug(slug: &str) -> Option<Self> {
+    fn parse(slug: &str) -> Option<Self> {
         slug.parse::<Self>().ok()
     }
 }
 impl FromSlug for u16 {
-    fn parse_slug(slug: &str) -> Option<Self> {
+    fn parse(slug: &str) -> Option<Self> {
         slug.parse::<Self>().ok()
     }
 }
 impl FromSlug for u32 {
-    fn parse_slug(slug: &str) -> Option<Self> {
+    fn parse(slug: &str) -> Option<Self> {
         slug.parse::<Self>().ok()
     }
 }

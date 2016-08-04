@@ -204,7 +204,7 @@ impl SizeTag {
 }
 
 impl FromSlug for SizeTag {
-    fn parse_slug(slug: &str) -> Option<Self> {
+    fn parse(slug: &str) -> Option<Self> {
         match slug {
             "s" => Some(SizeTag::Small),
             "m" => Some(SizeTag::Medium),
@@ -213,11 +213,6 @@ impl FromSlug for SizeTag {
         }
     }
 }
-
-fn opt<T: FromSlug>(req: &Request, name: &str) -> Option<T> {
-    req.param(name).and_then(T::parse_slug)
-}
-
 
 fn show_image<'mw>(req: &Request,
                    mut res: Response<'mw>,
