@@ -262,11 +262,10 @@ fn tag_one<'mw>(req: &mut Request,
         use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         return render!(res, "templates/tag.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> = photos
+            photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))))
                 .load(c).unwrap(),
             // TODO
-            // .only_public(req.authorized_user().is_none())
             // .desc_nulls_last("grade")
             // .desc_nulls_last("date")
             tag: Tag = tag
@@ -298,11 +297,10 @@ fn place_one<'mw>(req: &mut Request,
         use rphotos::schema::photo_places::dsl::{photo_id, photo_places, place_id};
         return render!(res, "templates/place.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> = photos
+            photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_places.select(photo_id).filter(place_id.eq(place.id))))
                 .load(c).unwrap(),
             // TODO
-            // .only_public(req.authorized_user().is_none())
             // .desc_nulls_last("grade")
             // .desc_nulls_last("date")
             place: Place = place
@@ -334,12 +332,11 @@ fn person_one<'mw>(req: &mut Request,
         use rphotos::schema::photo_people::dsl::{photo_id, photo_people, person_id};
         return render!(res, "templates/person.tpl", {
             user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> = photos
+            photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_people.select(photo_id)
                                               .filter(person_id.eq(person.id))))
                 .load(c).unwrap(),
             // TODO
-            // .only_public(req.authorized_user().is_none())
             // .desc_nulls_last("grade")
             // .desc_nulls_last("date")
             person: Person = person
@@ -437,8 +434,7 @@ fn all_years<'mw>(req: &mut Request,
                                     }))
             .load::<(Option<f64>, i64)>(c).unwrap()
             .iter().map(|&(year, count)| {
-                let q = photos
-                    // .only_public(req.authorized_user().is_none())
+                let q = Photo::query(req.authorized_user().is_some())
                     // .filter(path.like("%.JPG"))
                     .order((grade.desc(), date.asc()))
                     .limit(1);
@@ -495,8 +491,7 @@ fn months_in_year<'mw>(req: &mut Request,
                     if month == 12 { NaiveDate::from_ymd(year + 1, 1, 1) }
                     else { NaiveDate::from_ymd(year, month + 1, 1) }
                     .and_hms(0, 0, 0);
-                let photo = photos
-                    // .only_public(req.authorized_user().is_none())
+                let photo = Photo::query(req.authorized_user().is_some())
                     .filter(date.ge(fromdate))
                     .filter(date.lt(todate))
                     // .filter(path.like("%.JPG"))
@@ -543,8 +538,7 @@ fn days_in_month<'mw>(req: &mut Request,
                 let day = day.map(|y| y as u32).unwrap_or(0);
                 let fromdate = NaiveDate::from_ymd(year, month as u32, day)
                     .and_hms(0, 0, 0);
-                let photo = photos
-                    // .only_public(req.authorized_user().is_none())
+                let photo = Photo::query(req.authorized_user().is_some())
                     .filter(date.ge(fromdate))
                     .filter(date.lt(fromdate + ChDuration::days(1)))
                     // .filter(path.like("%.JPG"))
@@ -623,8 +617,7 @@ fn on_this_day<'mw>(req: &mut Request,
             .iter().map(|&(year, count)| {
                 let year = year.map(|y| y as i32).unwrap_or(0);
                 let fromdate = NaiveDate::from_ymd(year, month as u32, day).and_hms(0, 0, 0);
-                let photo = photos
-                    // .only_public(req.authorized_user().is_none())
+                let photo = Photo::query(req.authorized_user().is_some())
                     .filter(date.ge(fromdate))
                     .filter(date.lt(fromdate + ChDuration::days(1)))
                     // .filter(path.like("%.JPG"))

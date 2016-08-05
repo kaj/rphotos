@@ -49,6 +49,7 @@ pub enum Modification<T> {
     Unchanged(T),
 }
 
+use diesel::pg::Pg;
 impl Photo {
     #[allow(dead_code)]
     pub fn is_public(&self) -> bool {
@@ -56,6 +57,18 @@ impl Photo {
             grade >= MIN_PUBLIC_GRADE
         } else {
             false
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn query<'a>(auth: bool) -> photos::BoxedQuery<'a, Pg> {
+        use super::schema::photos::dsl::{photos, grade};
+        use diesel::prelude::*;
+        let result = photos.into_boxed();
+        if !auth {
+            result.filter(grade.ge(MIN_PUBLIC_GRADE))
+        } else {
+            result
         }
     }
 
