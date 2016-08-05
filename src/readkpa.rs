@@ -46,7 +46,7 @@ fn slugify(val: &str) -> String {
 }
 
 fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
-    use rphotos::models::{NewTag, NewPhotoTag, PhotoTag};
+    use rphotos::models::{NewPhotoTag, NewTag, PhotoTag};
     let tag = {
         use rphotos::schema::tags::dsl::*;
         if let Ok(tag) = tags.filter(tag_name.eq(tagname)).first::<Tag>(db) {
@@ -55,12 +55,16 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
             diesel::insert(&NewTag {
                 tag_name: tagname,
                 slug: &slugify(tagname),
-            }).into(tags).get_result::<Tag>(db).expect("Insert new tag")
+            })
+                .into(tags)
+                .get_result::<Tag>(db)
+                .expect("Insert new tag")
         }
     };
     debug!("  tag {:?}", tag);
     use rphotos::schema::photo_tags::dsl::*;
-    let q = photo_tags.filter(photo_id.eq(thephoto.id)).filter(tag_id.eq(tag.id));
+    let q = photo_tags.filter(photo_id.eq(thephoto.id))
+                      .filter(tag_id.eq(tag.id));
     if let Ok(result) = q.first::<PhotoTag>(db) {
         debug!("  match {:?}", result)
     } else {
@@ -68,7 +72,10 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) {
         diesel::insert(&NewPhotoTag {
             photo_id: thephoto.id,
             tag_id: tag.id,
-        }).into(photo_tags).execute(db).expect("Tag a photo");
+        })
+            .into(photo_tags)
+            .execute(db)
+            .expect("Tag a photo");
     }
 }
 
@@ -76,18 +83,23 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {
     use rphotos::models::{NewPerson, NewPhotoPerson, PhotoPerson};
     let person = {
         use rphotos::schema::people::dsl::*;
-        if let Ok(person) = people.filter(person_name.eq(name)).first::<Person>(db) {
+        if let Ok(person) = people.filter(person_name.eq(name))
+                                  .first::<Person>(db) {
             person
         } else {
             diesel::insert(&NewPerson {
                 person_name: name,
                 slug: &slugify(name),
-            }).into(people).get_result::<Person>(db).expect("Insert new person")
+            })
+                .into(people)
+                .get_result::<Person>(db)
+                .expect("Insert new person")
         }
     };
     debug!("  person {:?}", person);
     use rphotos::schema::photo_people::dsl::*;
-    let q = photo_people.filter(photo_id.eq(photo.id)).filter(person_id.eq(person.id));
+    let q = photo_people.filter(photo_id.eq(photo.id))
+                        .filter(person_id.eq(person.id));
     if let Ok(result) = q.first::<PhotoPerson>(db) {
         debug!("  match {:?}", result)
     } else {
@@ -95,26 +107,34 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) {
         diesel::insert(&NewPhotoPerson {
             photo_id: photo.id,
             person_id: person.id,
-        }).into(photo_people).execute(db).expect("Person a photo");
+        })
+            .into(photo_people)
+            .execute(db)
+            .expect("Person a photo");
     }
 }
 
 fn place_photo(db: &PgConnection, photo: &Photo, name: &str) {
-    use rphotos::models::{NewPlace, NewPhotoPlace, PhotoPlace};
+    use rphotos::models::{NewPhotoPlace, NewPlace, PhotoPlace};
     let place = {
         use rphotos::schema::places::dsl::*;
-        if let Ok(place) = places.filter(place_name.eq(name)).first::<Place>(db) {
+        if let Ok(place) = places.filter(place_name.eq(name))
+                                 .first::<Place>(db) {
             place
         } else {
             diesel::insert(&NewPlace {
                 place_name: name,
                 slug: &slugify(name),
-            }).into(places).get_result::<Place>(db).expect("Insert new place")
+            })
+                .into(places)
+                .get_result::<Place>(db)
+                .expect("Insert new place")
         }
     };
     debug!("  place {:?}", place);
     use rphotos::schema::photo_places::dsl::*;
-    let q = photo_places.filter(photo_id.eq(photo.id)).filter(place_id.eq(place.id));
+    let q = photo_places.filter(photo_id.eq(photo.id))
+                        .filter(place_id.eq(place.id));
     if let Ok(result) = q.first::<PhotoPlace>(db) {
         debug!("  match {:?}", result)
     } else {
@@ -122,7 +142,10 @@ fn place_photo(db: &PgConnection, photo: &Photo, name: &str) {
         diesel::insert(&NewPhotoPlace {
             photo_id: photo.id,
             place_id: place.id,
-        }).into(photo_places).execute(db).expect("Place a photo");
+        })
+            .into(photo_places)
+            .execute(db)
+            .expect("Place a photo");
     }
 }
 
@@ -136,8 +159,9 @@ fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) {
     });
     use rphotos::schema::photos::dsl::*;
     let n = diesel::update(photos.find(photo.id))
-        .set(grade.eq(photo.grade))
-        .execute(db).expect(&format!("Update grade of {:?}", photo));
+                .set(grade.eq(photo.grade))
+                .execute(db)
+                .expect(&format!("Update grade of {:?}", photo));
     debug!("Graded {} photo", n);
 }
 
@@ -145,7 +169,7 @@ fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
     let db = PgConnection::establish(&dburl())
-        .expect("Error connecting to database");
+                 .expect("Error connecting to database");
     let file = File::open(photos_dir().join("index.xml")).unwrap();
     info!("Reading kphotoalbum data");
     let mut xml = EventReader::new(file);
@@ -201,16 +225,12 @@ fn main() {
                                     }
                                     "Personer" => {
                                         if let Some(ref photo) = photo {
-                                            person_photo(&db,
-                                                         &photo,
-                                                         &v);
+                                            person_photo(&db, &photo, &v);
                                         }
                                     }
                                     "Platser" => {
                                         if let Some(ref photo) = photo {
-                                            place_photo(&db,
-                                                        &photo,
-                                                        &v);
+                                            place_photo(&db, &photo, &v);
                                         }
                                     }
                                     "Betyg" => {

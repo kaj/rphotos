@@ -148,12 +148,8 @@ fn find_rotation(exif: &ExifData) -> FindPhotoResult<i16> {
 
 fn find_date(exif: &ExifData) -> FindPhotoResult<NaiveDateTime> {
     find_entry(exif, &ExifTag::DateTimeOriginal)
-        .or_else(|| {
-            find_entry(exif, &ExifTag::DateTime)
-        })
-        .or_else(|| {
-            find_entry(exif, &ExifTag::DateTimeDigitized)
-        })
+        .or_else(|| find_entry(exif, &ExifTag::DateTime))
+        .or_else(|| find_entry(exif, &ExifTag::DateTimeDigitized))
         .map(|value| {
             debug!("Found {:?}", value);
             if let TagValue::Ascii(ref str) = value.value {

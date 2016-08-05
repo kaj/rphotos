@@ -60,7 +60,7 @@ macro_rules! wrap {
     } }
 }
 
-pub trait FromSlug : Sized {
+pub trait FromSlug: Sized {
     fn parse(slug: &str) -> Option<Self>;
 }
 impl FromSlug for String {
@@ -88,4 +88,3 @@ impl FromSlug for u32 {
         slug.parse::<Self>().ok()
     }
 }
-
