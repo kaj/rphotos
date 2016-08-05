@@ -245,13 +245,12 @@ fn show_image<'mw>(req: &Request,
 fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
-    use rphotos::schema::tags::dsl::*;
+    use rphotos::schema::tags::dsl::{tags, tag_name};
     let connection = req.db_conn();
     let c: &PgConnection = &connection;
     return render!(res, "templates/tags.tpl", {
         user: Option<String> = req.authorized_user(),
-        // TODO order by tag name!
-        tags: Vec<Tag> = tags.load(c).unwrap()
+        tags: Vec<Tag> = tags.order(tag_name).load(c).expect("List tags")
     });
 }
 
@@ -283,13 +282,13 @@ fn tag_one<'mw>(req: &mut Request,
 fn place_all<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
-    use rphotos::schema::places::dsl::*;
+    use rphotos::schema::places::dsl::{places, place_name};
     let connection = req.db_conn();
     let c: &PgConnection = &connection;
     return render!(res, "templates/places.tpl", {
         user: Option<String> = req.authorized_user(),
-        // TODO order by place name!
-        places: Vec<Place> = places.load(c).unwrap()
+        places: Vec<Place> =
+            places.order(place_name).load(c).expect("List places")
     });
 }
 
@@ -321,13 +320,13 @@ fn place_one<'mw>(req: &mut Request,
 fn person_all<'mw>(req: &mut Request,
                    res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
-    use rphotos::schema::people::dsl::*;
+    use rphotos::schema::people::dsl::{people, person_name};
     let connection = req.db_conn();
     let c: &PgConnection = &connection;
     return render!(res, "templates/people.tpl", {
         user: Option<String> = req.authorized_user(),
-        // TODO order by name!
-        people: Vec<Person> = people.load(c).expect("list people")
+        people: Vec<Person> =
+            people.order(person_name).load(c).expect("list people")
     });
 }
 
