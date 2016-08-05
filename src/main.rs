@@ -158,8 +158,7 @@ fn login<'mw>(_req: &mut Request,
 fn do_login<'mw>(req: &mut Request,
                  mut res: Response<'mw>)
                  -> MiddlewareResult<'mw> {
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     let form_data = try_with!(res, req.form_body());
     if let (Some(user), Some(pw)) = (form_data.get("user"),
                                      form_data.get("password")) {
@@ -220,8 +219,7 @@ fn show_image<'mw>(req: &Request,
                    size: SizeTag)
                    -> MiddlewareResult<'mw> {
     use rphotos::schema::photos::dsl::*;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
             let size = size.px();
@@ -246,8 +244,7 @@ fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
     use rphotos::schema::tags::dsl::{tags, tag_name};
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     return render!(res, "templates/tags.tpl", {
         user: Option<String> = req.authorized_user(),
         tags: Vec<Tag> = tags.order(tag_name).load(c).expect("List tags")
@@ -259,8 +256,7 @@ fn tag_one<'mw>(req: &mut Request,
                 tslug: String)
                 -> MiddlewareResult<'mw> {
     use rphotos::schema::tags::dsl::*;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
         use rphotos::schema::photos::dsl::*;
         use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
@@ -283,8 +279,7 @@ fn place_all<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
     use rphotos::schema::places::dsl::{places, place_name};
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     return render!(res, "templates/places.tpl", {
         user: Option<String> = req.authorized_user(),
         places: Vec<Place> =
@@ -297,8 +292,7 @@ fn place_one<'mw>(req: &mut Request,
                   tslug: String)
                   -> MiddlewareResult<'mw> {
     use rphotos::schema::places::dsl::*;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
         use rphotos::schema::photos::dsl::*;
         use rphotos::schema::photo_places::dsl::{photo_id, photo_places, place_id};
@@ -321,8 +315,7 @@ fn person_all<'mw>(req: &mut Request,
                    res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
     use rphotos::schema::people::dsl::{people, person_name};
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     return render!(res, "templates/people.tpl", {
         user: Option<String> = req.authorized_user(),
         people: Vec<Person> =
@@ -335,8 +328,7 @@ fn person_one<'mw>(req: &mut Request,
                    tslug: String)
                    -> MiddlewareResult<'mw> {
     use rphotos::schema::people::dsl::*;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
         use rphotos::schema::photos::dsl::*;
         use rphotos::schema::photo_people::dsl::{photo_id, photo_people, person_id};
@@ -361,8 +353,7 @@ fn photo_details<'mw>(req: &mut Request,
                       id: i32)
                       -> MiddlewareResult<'mw> {
     use rphotos::schema::photos::dsl::photos;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
             return render!(res, "templates/details.tpl", {
@@ -429,8 +420,7 @@ fn all_years<'mw>(req: &mut Request,
                   -> MiddlewareResult<'mw> {
 
     use rphotos::schema::photos::dsl::*;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
 
     return render!(res, "templates/groups.tpl", {
         user: Option<String> = req.authorized_user(),
@@ -480,8 +470,7 @@ fn months_in_year<'mw>(req: &mut Request,
                        year: i32)
                        -> MiddlewareResult<'mw> {
     use rphotos::schema::photos::dsl::*;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     
     render!(res, "templates/groups.tpl", {
         user: Option<String> = req.authorized_user(),
@@ -531,8 +520,7 @@ fn days_in_month<'mw>(req: &mut Request,
                       month: u8)
                       -> MiddlewareResult<'mw> {
     use rphotos::schema::photos::dsl::*;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
 
     render!(res, "templates/groups.tpl", {
         user: Option<String> = req.authorized_user(),
@@ -590,8 +578,7 @@ fn all_for_day<'mw>(req: &mut Request,
         .order((grade.desc(), date.asc()))
         .limit(500);
 
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
     render!(res, "templates/index.tpl", {
         user: Option<String> = req.authorized_user(),
         lpath: Vec<Link> = vec![Link::year(year),
@@ -612,8 +599,7 @@ fn on_this_day<'mw>(req: &mut Request,
                     res: Response<'mw>)
                       -> MiddlewareResult<'mw> {
     use rphotos::schema::photos::dsl::*;
-    let connection = req.db_conn();
-    let c: &PgConnection = &connection;
+    let c: &PgConnection = &req.db_conn();
 
     let (month, day) = {
         let now = time::now();
