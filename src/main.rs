@@ -431,7 +431,7 @@ fn all_years<'mw>(req: &mut Request,
                 "select extract(year from date) y, count(*) c",
                 " from photos{} group by y order by y"),
                                     if req.authorized_user().is_none() {
-                                        " where grade >= 4"
+                                        " where is_public"
                                     } else {
                                         ""
                                     }))
@@ -480,7 +480,7 @@ fn months_in_year<'mw>(req: &mut Request,
                 "group by m order by m"),
                                     year,
                                     if req.authorized_user().is_none() {
-                                        " and grade >= 4"
+                                        " and is_public"
                                     } else {
                                         ""
                                     }))
@@ -528,7 +528,7 @@ fn days_in_month<'mw>(req: &mut Request,
                 "and extract(month from date)={}{} group by d order by d"),
                                     year, month,
                                     if req.authorized_user().is_none() {
-                                        " and grade >= 4"
+                                        " and is_public"
                                     } else {
                                         ""
                                     }))
@@ -599,7 +599,7 @@ fn on_this_day<'mw>(req: &mut Request,
                 "and extract(day from date)={}{} group by y order by y desc"),
                                     month, day,
                                     if req.authorized_user().is_none() {
-                                        " and grade >= 4"
+                                        " and is_public"
                                     } else {
                                         ""
                                     }))

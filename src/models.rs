@@ -3,8 +3,6 @@ use rustc_serialize::{Encodable, Encoder};
 use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 
-pub const MIN_PUBLIC_GRADE: i16 = 4;
-
 #[derive(Debug, Clone, Queryable)]
 pub struct Photo {
     pub id: i32,
@@ -12,6 +10,7 @@ pub struct Photo {
     pub date: Option<NaiveDateTime>,
     pub grade: Option<i16>,
     pub rotation: i16,
+    pub is_public: bool,
 }
 
 // NaiveDateTime isn't Encodable, so we have to implement this by hand.
@@ -54,22 +53,18 @@ use diesel::pg::Pg;
 impl Photo {
     #[allow(dead_code)]
     pub fn is_public(&self) -> bool {
-        if let Some(grade) = self.grade {
-            grade >= MIN_PUBLIC_GRADE
-        } else {
-            false
-        }
+        self.is_public
     }
 
     #[allow(dead_code)]
     pub fn query<'a>(auth: bool) -> photos::BoxedQuery<'a, Pg> {
-        use super::schema::photos::dsl::{grade, photos, path};
+        use super::schema::photos::dsl::{is_public, photos, path};
         use diesel::prelude::*;
         let result = photos
             .filter(path.not_like("%.CR2"))
             .into_boxed();
         if !auth {
-            result.filter(grade.ge(MIN_PUBLIC_GRADE))
+            result.filter(is_public)
         } else {
             result
         }

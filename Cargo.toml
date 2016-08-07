@@ -29,6 +29,10 @@ name = "findphotos"
 path = "src/findphotos.rs"
 
 [[bin]]
+name = "public_from_list"
+path = "src/public_from_list.rs"
+
+[[bin]]
 name = "setpassword"
 path = "src/setpassword.rs"
 
