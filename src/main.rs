@@ -243,11 +243,27 @@ fn show_image<'mw>(req: &Request,
 fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
-    use rphotos::schema::tags::dsl::{tag_name, tags};
+    use rphotos::schema::tags::dsl::{tag_name, id, tags};
     let c: &PgConnection = &req.db_conn();
+    let query = tags.into_boxed();
+    let query = if req.authorized_user().is_some() {
+        query
+    } else {
+        use rphotos::schema::photo_tags::dsl as tp;
+        use rphotos::schema::photos::dsl as p;
+        query.filter(id.eq_any(tp::photo_tags
+                               .select(tp::tag_id)
+                               .filter(tp::photo_id
+                                       .eq_any(p::photos
+                                               .select(p::id)
+                                               .filter(p::is_public)))))
+    };
     return render!(res, "templates/tags.tpl", {
         user: Option<String> = req.authorized_user(),
-        tags: Vec<Tag> = tags.order(tag_name).load(c).expect("List tags")
+        tags: Vec<Tag> = query
+            .order(tag_name)
+            .load(c)
+            .expect("List tags")
     });
 }
 
@@ -278,12 +294,25 @@ fn tag_one<'mw>(req: &mut Request,
 fn place_all<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
-    use rphotos::schema::places::dsl::{place_name, places};
+    use rphotos::schema::places::dsl::{id, place_name, places};
+    let query = places.into_boxed();
+    let query = if req.authorized_user().is_some() {
+        query
+    } else {
+        use rphotos::schema::photo_places::dsl as pp;
+        use rphotos::schema::photos::dsl as p;
+        query.filter(id.eq_any(pp::photo_places
+                               .select(pp::place_id)
+                               .filter(pp::photo_id
+                                       .eq_any(p::photos
+                                               .select(p::id)
+                                               .filter(p::is_public)))))
+    };
     let c: &PgConnection = &req.db_conn();
     return render!(res, "templates/places.tpl", {
         user: Option<String> = req.authorized_user(),
-        places: Vec<Place> =
-            places.order(place_name).load(c).expect("List places")
+        places: Vec<Place> = query
+            .order(place_name).load(c).expect("List places")
     });
 }
 
@@ -315,12 +344,25 @@ fn place_one<'mw>(req: &mut Request,
 fn person_all<'mw>(req: &mut Request,
                    res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
-    use rphotos::schema::people::dsl::{people, person_name};
+    use rphotos::schema::people::dsl::{id, people, person_name};
+    let query = people.into_boxed();
+    let query = if req.authorized_user().is_some() {
+        query
+    } else {
+        use rphotos::schema::photo_people::dsl as pp;
+        use rphotos::schema::photos::dsl as p;
+        query.filter(id.eq_any(pp::photo_people
+                               .select(pp::person_id)
+                               .filter(pp::photo_id
+                                       .eq_any(p::photos
+                                               .select(p::id)
+                                               .filter(p::is_public)))))
+    };
     let c: &PgConnection = &req.db_conn();
     return render!(res, "templates/people.tpl", {
         user: Option<String> = req.authorized_user(),
-        people: Vec<Person> =
-            people.order(person_name).load(c).expect("list people")
+        people: Vec<Person> = query
+            .order(person_name).load(c).expect("list people")
     });
 }
 
