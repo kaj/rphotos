@@ -218,7 +218,7 @@ fn show_image<'mw>(req: &Request,
                    the_id: i32,
                    size: SizeTag)
                    -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::*;
+    use rphotos::schema::photos::dsl::photos;
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
@@ -255,10 +255,10 @@ fn tag_one<'mw>(req: &mut Request,
                 res: Response<'mw>,
                 tslug: String)
                 -> MiddlewareResult<'mw> {
-    use rphotos::schema::tags::dsl::*;
+    use rphotos::schema::tags::dsl::{slug, tags};
     let c: &PgConnection = &req.db_conn();
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
-        use rphotos::schema::photos::dsl::*;
+        use rphotos::schema::photos::dsl::id;
         use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         return render!(res, "templates/tag.tpl", {
             user: Option<String> = req.authorized_user(),
@@ -291,10 +291,10 @@ fn place_one<'mw>(req: &mut Request,
                   res: Response<'mw>,
                   tslug: String)
                   -> MiddlewareResult<'mw> {
-    use rphotos::schema::places::dsl::*;
+    use rphotos::schema::places::dsl::{places, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
-        use rphotos::schema::photos::dsl::*;
+        use rphotos::schema::photos::dsl::id;
         use rphotos::schema::photo_places::dsl::{photo_id, photo_places,
                                                  place_id};
         return render!(res, "templates/place.tpl", {
@@ -328,10 +328,10 @@ fn person_one<'mw>(req: &mut Request,
                    res: Response<'mw>,
                    tslug: String)
                    -> MiddlewareResult<'mw> {
-    use rphotos::schema::people::dsl::*;
+    use rphotos::schema::people::dsl::{people, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
-        use rphotos::schema::photos::dsl::*;
+        use rphotos::schema::photos::dsl::id;
         use rphotos::schema::photo_people::dsl::{person_id, photo_id,
                                                  photo_people};
         return render!(res, "templates/person.tpl", {
@@ -420,7 +420,7 @@ fn all_years<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
 
-    use rphotos::schema::photos::dsl::*;
+    use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     return render!(res, "templates/groups.tpl", {
@@ -438,7 +438,6 @@ fn all_years<'mw>(req: &mut Request,
             .load::<(Option<f64>, i64)>(c).unwrap()
             .iter().map(|&(year, count)| {
                 let q = Photo::query(req.authorized_user().is_some())
-                    // .filter(path.like("%.JPG"))
                     .order((grade.desc(), date.asc()))
                     .limit(1);
                 let photo =
@@ -468,7 +467,7 @@ fn months_in_year<'mw>(req: &mut Request,
                        res: Response<'mw>,
                        year: i32)
                        -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::*;
+    use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     render!(res, "templates/groups.tpl", {
@@ -496,7 +495,6 @@ fn months_in_year<'mw>(req: &mut Request,
                 let photo = Photo::query(req.authorized_user().is_some())
                     .filter(date.ge(fromdate))
                     .filter(date.lt(todate))
-        // .filter(path.like("%.JPG"))
                     .order((grade.desc(), date.asc()))
                     .limit(1)
                     .first::<Photo>(c).unwrap();
@@ -516,7 +514,7 @@ fn days_in_month<'mw>(req: &mut Request,
                       year: i32,
                       month: u32)
                       -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::*;
+    use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     render!(res, "templates/groups.tpl", {
@@ -542,7 +540,6 @@ fn days_in_month<'mw>(req: &mut Request,
                 let photo = Photo::query(req.authorized_user().is_some())
                     .filter(date.ge(fromdate))
                     .filter(date.lt(fromdate + ChDuration::days(1)))
-        // .filter(path.like("%.JPG"))
                     .order((grade.desc(), date.asc()))
                     .limit(1)
                     .first::<Photo>(c).unwrap();
@@ -564,13 +561,7 @@ fn all_for_day<'mw>(req: &mut Request,
                     day: u32)
                     -> MiddlewareResult<'mw> {
     let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
-    use rphotos::schema::photos::dsl::*;
-    let pq = photos
-        .filter(date.ge(thedate))
-        .filter(date.lt(thedate + ChDuration::days(1)))
-        // .filter(path.like("%.JPG"))
-        .order((grade.desc(), date.asc()))
-        .limit(500);
+    use rphotos::schema::photos::dsl::{date, grade};
 
     let c: &PgConnection = &req.db_conn();
     render!(res, "templates/index.tpl", {
@@ -579,20 +570,19 @@ fn all_for_day<'mw>(req: &mut Request,
                                 Link::month(year, month)],
         title: String = format!("Photos from {} {} {}",
                                 day, monthname(month), year),
-        photos: Vec<Photo> =
-            if req.authorized_user().is_none() {
-                pq.filter(grade.ge(&rphotos::models::MIN_PUBLIC_GRADE))
-                    .load(c).unwrap()
-            } else {
-                pq.load(c).unwrap()
-            }
+        photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
+            .filter(date.ge(thedate))
+            .filter(date.lt(thedate + ChDuration::days(1)))
+            .order((grade.desc(), date.asc()))
+            .limit(500)
+            .load(c).unwrap()
     })
 }
 
 fn on_this_day<'mw>(req: &mut Request,
                     res: Response<'mw>)
                     -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::*;
+    use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     let (month, day) = {
@@ -621,7 +611,6 @@ fn on_this_day<'mw>(req: &mut Request,
                 let photo = Photo::query(req.authorized_user().is_some())
                     .filter(date.ge(fromdate))
                     .filter(date.lt(fromdate + ChDuration::days(1)))
-        // .filter(path.like("%.JPG"))
                     .order((grade.desc(), date.asc()))
                     .limit(1)
                     .first::<Photo>(c).unwrap();

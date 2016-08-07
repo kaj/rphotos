@@ -63,9 +63,11 @@ impl Photo {
 
     #[allow(dead_code)]
     pub fn query<'a>(auth: bool) -> photos::BoxedQuery<'a, Pg> {
-        use super::schema::photos::dsl::{grade, photos};
+        use super::schema::photos::dsl::{grade, photos, path};
         use diesel::prelude::*;
-        let result = photos.into_boxed();
+        let result = photos
+            .filter(path.not_like("%.CR2"))
+            .into_boxed();
         if !auth {
             result.filter(grade.ge(MIN_PUBLIC_GRADE))
         } else {
