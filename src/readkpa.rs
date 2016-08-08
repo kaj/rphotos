@@ -194,7 +194,7 @@ fn main() {
                                             .unwrap();
                             let date = find_image_date(attributes);
                             photo = Some(match Photo::create_or_set_basics
-                                (&db, &file, date, angle)
+                                (&db, &file, date, angle, None)
                                 .expect("Create or update photo") {
                                     Modification::Created(photo) => {
                                         info!("Created {:?}", photo);

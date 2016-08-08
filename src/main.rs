@@ -39,7 +39,7 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use chrono::naive::date::NaiveDate;
 
-use rphotos::models::{Person, Photo, Place, Tag};
+use rphotos::models::{Camera, Person, Photo, Place, Tag};
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -443,6 +443,12 @@ fn photo_details<'mw>(req: &mut Request,
                                 None
                             }
                         }
+                },
+                camera: Option<Camera> = {
+                    use rphotos::schema::cameras::dsl::*;
+                    tphoto.camera_id.map(|i| {
+                        cameras.find(i).first(c).unwrap()
+                    })
                 },
                 time: String = match tphoto.date {
                     Some(d) => d.format("%T").to_string(),

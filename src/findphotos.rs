@@ -16,7 +16,7 @@ use std::path::Path;
 use dotenv::dotenv;
 use diesel::pg::PgConnection;
 use self::diesel::prelude::*;
-use rphotos::models::{Modification, Photo};
+use rphotos::models::{Modification, Photo, Camera};
 
 mod env;
 use env::{dburl, photos_dir};
@@ -61,8 +61,9 @@ fn save_photo(db: &PgConnection,
               exif: &ExifData)
               -> FindPhotoResult<()> {
     let photo = match try!(Photo::create_or_set_basics(db, file_path,
-                                               Some(try!(find_date(&exif))),
-                                               try!(find_rotation(&exif)))) {
+                                                       Some(try!(find_date(&exif))),
+                                                       try!(find_rotation(&exif)),
+                                                       try!(find_camera(db, exif)))) {
         Modification::Created(photo) => {
             info!("Created {:?}", photo);
             photo
@@ -101,6 +102,19 @@ fn save_photo(db: &PgConnection,
         }
     }
     Ok(())
+}
+
+fn find_camera(db: &PgConnection, exif: &ExifData) -> FindPhotoResult<Option<Camera>> {
+    if let (Some(maketag), Some(modeltag)) = (find_entry(exif, &ExifTag::Make),
+                                              find_entry(exif, &ExifTag::Model)) {
+        if let (TagValue::Ascii(make), TagValue::Ascii(model)) =
+               (maketag.clone().value, modeltag.clone().value) {
+            let cam = try!(Camera::get_or_create(db, &make, &model));
+            return Ok(Some(cam));
+        }
+        // TODO else Err(...?)
+    }
+    Ok(None)
 }
 
 type FindPhotoResult<T> = Result<T, FindPhotoError>;

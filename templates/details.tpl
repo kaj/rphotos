@@ -35,5 +35,6 @@
     <p>Places: {{#places}}<a href="/place/{{slug}}">{{place_name}}</a>, {{/places}}</p>
     <p>Tags: {{#tags}}<a href="/tag/{{slug}}">{{tag_name}}</a>, {{/tags}}</p>
     {{#position}}<p>Position: {{x}} {{y}}</p>{{/position}}
+    {{#camera}}<p>Camera: {{model}} ({{manufacturer}})</p>{{/camera}}
   </body>
 </html>

@@ -4,6 +4,7 @@ use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 
 #[derive(Debug, Clone, Queryable)]
+#[belongs_to(Camera)]
 pub struct Photo {
     pub id: i32,
     pub path: String,
@@ -11,6 +12,7 @@ pub struct Photo {
     pub grade: Option<i16>,
     pub rotation: i16,
     pub is_public: bool,
+    pub camera_id: Option<i32>,
 }
 
 // NaiveDateTime isn't Encodable, so we have to implement this by hand.
@@ -40,6 +42,7 @@ pub struct NewPhoto<'a> {
     pub path: &'a str,
     pub date: Option<NaiveDateTime>,
     pub rotation: i16,
+    pub camera_id: Option<i32>,
 }
 
 #[derive(Debug)]
@@ -73,16 +76,19 @@ impl Photo {
     pub fn create_or_set_basics(db: &PgConnection,
                                 file_path: &str,
                                 exifdate: Option<NaiveDateTime>,
-                                exifrotation: i16)
+                                exifrotation: i16,
+                                camera: Option<Camera>)
                                 -> Result<Modification<Photo>, DieselError> {
         use diesel;
         use diesel::prelude::*;
         use schema::photos::dsl::*;
+        let cameraid = camera.map(|c| c.id);
         if let Some(mut pic) =
                try!(photos.filter(path.eq(&file_path.to_string()))
                           .first::<Photo>(db)
                           .optional()) {
             let mut change = false;
+            // TODO Merge updates to one update statement!
             if exifdate.is_some() && exifdate != pic.date {
                 change = true;
                 pic = try!(diesel::update(photos.find(pic.id))
@@ -95,6 +101,12 @@ impl Photo {
                                .set(rotation.eq(exifrotation))
                                .get_result::<Photo>(db));
             }
+            if cameraid != pic.camera_id {
+                change = true;
+                pic = try!(diesel::update(photos.find(pic.id))
+                               .set(camera_id.eq(cameraid))
+                               .get_result::<Photo>(db));
+            }
             Ok(if change {
                 Modification::Updated(pic)
             } else {
@@ -105,6 +117,7 @@ impl Photo {
                 path: &file_path,
                 date: exifdate,
                 rotation: exifrotation,
+                camera_id: cameraid,
             };
             let pic = try!(diesel::insert(&pic)
                                .into(photos)
@@ -220,4 +233,43 @@ use super::schema::users;
 pub struct NewUser<'a> {
     pub username: &'a str,
     pub password: &'a str,
+}
+
+#[derive(Debug, Clone, Identifiable, RustcEncodable, Queryable)]
+#[has_many(photos)]
+pub struct Camera {
+    pub id: i32,
+    pub manufacturer: String,
+    pub model: String,
+}
+use super::schema::cameras;
+#[insertable_into(cameras)]
+pub struct NewCamera {
+    pub manufacturer: String,
+    pub model: String,
+}
+
+impl Camera {
+    pub fn get_or_create(db: &PgConnection,
+                         make: &str,
+                         modl: &str)
+                         -> Result<Camera, DieselError> {
+        use diesel;
+        use diesel::prelude::*;
+        use schema::cameras::dsl::*;
+        if let Some(camera) = try!(cameras.filter(manufacturer.eq(make))
+                                   .filter(model.eq(modl))
+                                   .first::<Camera>(db)
+                                   .optional()) {
+            Ok(camera)
+        } else {
+            let camera = NewCamera {
+                manufacturer: make.to_string(),
+                model: modl.to_string(),
+            };
+            diesel::insert(&camera)
+                .into(cameras)
+                .get_result(db)
+        }
+    }
 }
