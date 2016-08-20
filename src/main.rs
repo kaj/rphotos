@@ -140,6 +140,7 @@ fn main() {
     wrap2!(server.get /person/,            person_all);
     wrap2!(server.get /person/:slug,       person_one);
     wrap2!(server.get /details/:id,        photo_details);
+    server.get("/0/",                      all_null_date);
     wrap2!(server.get /:year/,             months_in_year);
     wrap2!(server.get /:year/:month/,      days_in_month);
     wrap2!(server.get /:year/:month/:day/, all_for_day);
@@ -599,6 +600,24 @@ fn days_in_month<'mw>(req: &mut Request,
                     photo: photo
                 }
             }).collect()
+    })
+}
+
+fn all_null_date<'mw>(req: &mut Request,
+                      res: Response<'mw>)
+                      -> MiddlewareResult<'mw> {
+    use rphotos::schema::photos::dsl::{date, path};
+
+    let c: &PgConnection = &req.db_conn();
+    render!(res, "templates/index.tpl", {
+        user: Option<String> = req.authorized_user(),
+        lpath: Vec<Link> = vec![],
+        title: &'static str = "Photos without a date",
+        photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
+            .filter(date.is_null())
+            .order(path.asc())
+            .limit(500)
+            .load(c).unwrap()
     })
 }
 
