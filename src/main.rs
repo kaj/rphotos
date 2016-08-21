@@ -244,7 +244,7 @@ fn show_image<'mw>(req: &Request,
 fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
-    use rphotos::schema::tags::dsl::{tag_name, id, tags};
+    use rphotos::schema::tags::dsl::{id, tag_name, tags};
     let c: &PgConnection = &req.db_conn();
     let query = tags.into_boxed();
     let query = if req.authorized_user().is_some() {
@@ -476,22 +476,21 @@ fn all_years<'mw>(req: &mut Request,
         user: Option<String> = req.authorized_user(),
         title: &'static str = "All photos",
         groups: Vec<Group> =
-            SqlLiteral::new(format!(concat!(
-                "select extract(year from date) y, count(*) c",
-                " from photos{} group by y order by y"),
-                                    if req.authorized_user().is_none() {
-                                        " where is_public"
-                                    } else {
-                                        ""
-                                    }))
-            .load::<(Option<f64>, i64)>(c).unwrap()
+            SqlLiteral::new(format!(
+                "select cast(extract(year from date) as int) y, count(*) c \
+                 from photos{} group by y order by y",
+                if req.authorized_user().is_none() {
+                    " where is_public"
+                } else {
+                    ""
+                }))
+            .load::<(Option<i32>, i64)>(c).unwrap()
             .iter().map(|&(year, count)| {
                 let q = Photo::query(req.authorized_user().is_some())
                     .order((grade.desc(), date.asc()))
                     .limit(1);
                 let photo =
                     if let Some(year) = year {
-                        let year = year as i32;
                         q.filter(date.ge(NaiveDate::from_ymd(year, 1, 1)
                                          .and_hms(0, 0, 0)))
                          .filter(date.lt(NaiveDate::from_ymd(year + 1, 1, 1)
@@ -504,7 +503,7 @@ fn all_years<'mw>(req: &mut Request,
                 Group {
                     title: year.map(|y|format!("{}", y))
                                .unwrap_or("-".to_string()),
-                    url: format!("/{}/", year.unwrap_or(0f64)),
+                    url: format!("/{}/", year.unwrap_or(0)),
                     count: count,
                     photo: photo
                 }
@@ -523,17 +522,17 @@ fn months_in_year<'mw>(req: &mut Request,
         user: Option<String> = req.authorized_user(),
         title: String = format!("Photos from {}", year),
         groups: Vec<Group> =
-            SqlLiteral::new(format!(concat!(
-                "select extract(month from date) m, count(*) c ",
-                "from photos where extract(year from date)={}{} ",
-                "group by m order by m"),
-                                    year,
-                                    if req.authorized_user().is_none() {
-                                        " and is_public"
-                                    } else {
-                                        ""
-                                    }))
-            .load::<(Option<f64>, i64)>(c).unwrap()
+            SqlLiteral::new(format!(
+                "select cast(extract(month from date) as int) m, count(*) c \
+                 from photos where extract(year from date)={}{} \
+                 group by m order by m",
+                year,
+                if req.authorized_user().is_none() {
+                    " and is_public"
+                } else {
+                    ""
+                }))
+            .load::<(Option<i32>, i64)>(c).unwrap()
             .iter().map(|&(month, count)| {
                 let month = month.map(|y| y as u32).unwrap_or(0);
                 let fromdate = NaiveDate::from_ymd(year, month, 1).and_hms(0, 0, 0);
@@ -571,17 +570,17 @@ fn days_in_month<'mw>(req: &mut Request,
         lpath: Vec<Link> = vec![Link::year(year)],
         title: String = format!("Photos from {} {}", monthname(month), year),
         groups: Vec<Group> =
-            SqlLiteral::new(format!(concat!(
-                "select extract(day from date) d, count(*) c ",
-                "from photos where extract(year from date)={} ",
-                "and extract(month from date)={}{} group by d order by d"),
-                                    year, month,
-                                    if req.authorized_user().is_none() {
-                                        " and is_public"
-                                    } else {
-                                        ""
-                                    }))
-            .load::<(Option<f64>, i64)>(c).unwrap()
+            SqlLiteral::new(format!(
+                "select cast(extract(day from date) as int) d, count(*) c \
+                 from photos where extract(year from date)={} \
+                 and extract(month from date)={}{} group by d order by d",
+                year, month,
+                if req.authorized_user().is_none() {
+                    " and is_public"
+                } else {
+                    ""
+                }))
+            .load::<(Option<i32>, i64)>(c).unwrap()
             .iter().map(|&(day, count)| {
                 let day = day.map(|y| y as u32).unwrap_or(0);
                 let fromdate = NaiveDate::from_ymd(year, month, day)
@@ -660,16 +659,16 @@ fn on_this_day<'mw>(req: &mut Request,
         user: Option<String> = req.authorized_user(),
         title: String = format!("Photos from {} {}", day, monthname(month)),
         groups: Vec<Group> =
-            SqlLiteral::new(format!(concat!(
-                "select extract(year from date) y, count(*) c ",
-                "from photos where extract(month from date)={} ",
-                "and extract(day from date)={}{} group by y order by y desc"),
-                                    month, day,
-                                    if req.authorized_user().is_none() {
-                                        " and is_public"
-                                    } else {
-                                        ""
-                                    }))
+            SqlLiteral::new(format!(
+                "select extract(year from date) y, count(*) c \
+                 from photos where extract(month from date)={} \
+                 and extract(day from date)={}{} group by y order by y desc",
+                month, day,
+                if req.authorized_user().is_none() {
+                    " and is_public"
+                } else {
+                    ""
+                }))
             .load::<(Option<f64>, i64)>(c).unwrap()
             .iter().map(|&(year, count)| {
                 let year = year.map(|y| y as i32).unwrap_or(0);
