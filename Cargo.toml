@@ -12,9 +12,9 @@ md5 = "*"
 rustc-serialize = "*"
 flate2 = "*"
 brotli2 = "*"
-syntex = { version = "<0.39.0" }
+syntex = "^0.42"
 diesel_codegen_syntex = { version = "0.7", features = ["postgres", "syntex"] }
-dotenv_codegen = { version = "<0.9.1" }
+dotenv_codegen = "^0.9"
 
 [[bin]]
 name = "rphotoserver"
