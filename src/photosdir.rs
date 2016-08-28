@@ -4,6 +4,7 @@ use std::io;
 use image::open as image_open;
 use image::{FilterType, GenericImage, ImageError, ImageFormat};
 use rexif::{self, ExifData};
+use std::ffi::OsStr;
 
 use rphotos::models::Photo;
 
@@ -45,6 +46,11 @@ impl PhotosDir {
         let mut buf = Vec::new();
         try!(img.save(&mut buf, ImageFormat::JPEG));
         Ok(buf)
+    }
+
+    #[allow(dead_code)]
+    pub fn has_file<S: AsRef<OsStr> + ?Sized>(&self, path: &S) -> bool {
+        self.basedir.join(Path::new(path)).is_file()
     }
 
     #[allow(dead_code)]
