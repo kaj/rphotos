@@ -21,6 +21,10 @@ name = "rphotoserver"
 path = "src/main.rs"
 
 [[bin]]
+name = "listyears"
+path = "src/listyears.rs"
+
+[[bin]]
 name = "readkpa"
 path = "src/readkpa.rs"
 
