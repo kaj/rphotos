@@ -152,7 +152,7 @@ fn main() {
 fn login<'mw>(_req: &mut Request,
               mut res: Response<'mw>)
               -> MiddlewareResult<'mw> {
-    res.clear_jwt_user();
+    res.clear_jwt();
     render!(res, "templates/login.tpl", {})
 }
 
@@ -184,7 +184,7 @@ fn do_login<'mw>(req: &mut Request,
 fn logout<'mw>(_req: &mut Request,
                mut res: Response<'mw>)
                -> MiddlewareResult<'mw> {
-    res.clear_jwt_user();
+    res.clear_jwt();
     res.redirect("/")
 }
 
