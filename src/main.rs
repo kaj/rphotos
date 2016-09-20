@@ -27,7 +27,7 @@ use chrono::Duration as ChDuration;
 use chrono::Datelike;
 use dotenv::dotenv;
 use hyper::header::{Expires, HttpDate};
-use nickel::{FormBody, HttpRouter, MediaType, MiddlewareResult, Nickel,
+use nickel::{FormBody, Halt, HttpRouter, MediaType, MiddlewareResult, Nickel,
              Request, Response, StaticFilesHandler};
 use nickel::extensions::response::Redirect;
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
@@ -38,6 +38,7 @@ use diesel::expression::sql_literal::SqlLiteral;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use chrono::naive::date::NaiveDate;
+use std::str::from_utf8;
 
 use rphotos::models::{Camera, Person, Photo, Place, Tag};
 
@@ -55,6 +56,10 @@ use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
 #[macro_use]
 mod nickelext;
 use nickelext::FromSlug;
+
+use templates::Html;
+pub static CSSLINK: Html<&'static str> =
+    Html(include!(concat!(env!("OUT_DIR"), "/stylelink")));
 
 macro_rules! render {
     ($res:expr, $template:expr, { $($param:ident : $ptype:ty = $value:expr),* })
@@ -79,7 +84,7 @@ macro_rules! render {
 }
 
 #[derive(Debug, Clone, RustcEncodable)]
-struct Group {
+pub struct Group {
     title: String,
     url: String,
     count: i64,
@@ -472,10 +477,8 @@ fn all_years<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    return render!(res, "templates/groups.tpl", {
-        user: Option<String> = req.authorized_user(),
-        title: &'static str = "All photos",
-        groups: Vec<Group> =
+    let user: Option<String> = req.authorized_user();
+    let groups: Vec<Group> =
             SqlLiteral::new(format!(
                 "select cast(extract(year from date) as int) y, count(*) c \
                  from photos{} group by y order by y",
@@ -507,8 +510,16 @@ fn all_years<'mw>(req: &mut Request,
                     count: count,
                     photo: photo
                 }
-            }).collect()
-    });
+            }).collect();
+
+    let mut stream = try!(res.start());
+    // TODO Use a proper sub-template
+    let mut headvec = Vec::new();
+    templates::head(&mut headvec, Vec::new()).unwrap();
+    match templates::groups(&mut stream, "All photos", Html(from_utf8(&headvec).unwrap()), groups) {
+        Ok(()) => Ok(Halt(stream)),
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
+    }
 }
 
 fn months_in_year<'mw>(req: &mut Request,
@@ -518,10 +529,9 @@ fn months_in_year<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    render!(res, "templates/groups.tpl", {
-        user: Option<String> = req.authorized_user(),
-        title: String = format!("Photos from {}", year),
-        groups: Vec<Group> =
+    let user: Option<String> = req.authorized_user();
+    let title: String = format!("Photos from {}", year);
+    let groups: Vec<Group> =
             SqlLiteral::new(format!(
                 "select cast(extract(month from date) as int) m, count(*) c \
                  from photos where extract(year from date)={}{} \
@@ -553,8 +563,16 @@ fn months_in_year<'mw>(req: &mut Request,
                     count: count,
                     photo: photo
                 }
-            }).collect()
-    })
+            }).collect();
+
+    let mut stream = try!(res.start());
+    // TODO Use a proper sub-template
+    let mut headvec = Vec::new();
+    templates::head(&mut headvec, Vec::new()).unwrap();
+    match templates::groups(&mut stream, &title, Html(from_utf8(&headvec).unwrap()), groups) {
+        Ok(()) => Ok(Halt(stream)),
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
+    }
 }
 
 fn days_in_month<'mw>(req: &mut Request,
@@ -692,7 +710,7 @@ fn on_this_day<'mw>(req: &mut Request,
 }
 
 #[derive(Debug, Clone, RustcEncodable)]
-struct Link {
+pub struct Link {
     pub url: String,
     pub name: String,
 }
@@ -717,3 +735,5 @@ impl Link {
         }
     }
 }
+
+include!(concat!(env!("OUT_DIR"), "/templates.rs"));

@@ -1,0 +1,18 @@
+@use ::Link;
+
+@(lpath: Vec<Link>)
+
+<header>
+<span><a href="/">Bilder</a>
+@for p in lpath { - <a href="@p.url">@p.name</a>}
+</span>
+<span>· <a href="/tag/">Taggar</a></span>
+<span>· <a href="/person/">Personer</a></span>
+<span>· <a href="/place/">Platser</a></span>
+<span>· <a href="/thisday">Denna dag</a></span>
+@* {{#user}}<span class="user">{{.}}
+(<a href="/logout">log out</a>)
+</span>{{/user}}
+{{^user}}<span class="user">(<a href="/login">log in</a>)</span>{{/user}}
+*@
+</header>

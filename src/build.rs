@@ -7,9 +7,11 @@ extern crate rustc_serialize as serialize;
 extern crate sass_rs;
 extern crate sass_sys;
 extern crate syntex;
+extern crate ructe;
 
 use brotli2::write::BrotliEncoder;
 use flate2::{Compression, FlateWriteExt};
+use ructe::compile_templates;
 use sass_rs::dispatcher::Dispatcher;
 use sass_rs::sass_context::SassFileContext;
 use serialize::base64::{self, ToBase64};
@@ -23,6 +25,9 @@ fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     prepare_diesel(&out_dir);
     do_sassify(&out_dir);
+    let template_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
+        .join("templates");
+    compile_templates(&template_dir, &out_dir).unwrap();
 }
 
 pub fn prepare_diesel(out_dir: &Path) {
