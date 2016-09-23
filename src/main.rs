@@ -38,7 +38,6 @@ use diesel::expression::sql_literal::SqlLiteral;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use chrono::naive::date::NaiveDate;
-use std::str::from_utf8;
 
 use rphotos::models::{Camera, Person, Photo, Place, Tag};
 
@@ -513,10 +512,7 @@ fn all_years<'mw>(req: &mut Request,
             }).collect();
 
     let mut stream = try!(res.start());
-    // TODO Use a proper sub-template
-    let mut headvec = Vec::new();
-    templates::head(&mut headvec, Vec::new()).unwrap();
-    match templates::groups(&mut stream, "All photos", Html(from_utf8(&headvec).unwrap()), groups) {
+    match templates::groups(&mut stream, "All photos", Vec::new(), user, groups) {
         Ok(()) => Ok(Halt(stream)),
         Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
     }
@@ -566,10 +562,7 @@ fn months_in_year<'mw>(req: &mut Request,
             }).collect();
 
     let mut stream = try!(res.start());
-    // TODO Use a proper sub-template
-    let mut headvec = Vec::new();
-    templates::head(&mut headvec, Vec::new()).unwrap();
-    match templates::groups(&mut stream, &title, Html(from_utf8(&headvec).unwrap()), groups) {
+    match templates::groups(&mut stream, &title, Vec::new(), user, groups) {
         Ok(()) => Ok(Halt(stream)),
         Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
     }
@@ -583,11 +576,10 @@ fn days_in_month<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    render!(res, "templates/groups.tpl", {
-        user: Option<String> = req.authorized_user(),
-        lpath: Vec<Link> = vec![Link::year(year)],
-        title: String = format!("Photos from {} {}", monthname(month), year),
-        groups: Vec<Group> =
+    let user: Option<String> = req.authorized_user();
+    let lpath: Vec<Link> = vec![Link::year(year)];
+    let title: String = format!("Photos from {} {}", monthname(month), year);
+    let groups: Vec<Group> =
             SqlLiteral::new(format!(
                 "select cast(extract(day from date) as int) d, count(*) c \
                  from photos where extract(year from date)={} \
@@ -616,8 +608,13 @@ fn days_in_month<'mw>(req: &mut Request,
                     count: count,
                     photo: photo
                 }
-            }).collect()
-    })
+            }).collect();
+
+    let mut stream = try!(res.start());
+    match templates::groups(&mut stream, &title, lpath, user, groups) {
+        Ok(()) => Ok(Halt(stream)),
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
+    }
 }
 
 fn all_null_date<'mw>(req: &mut Request,
@@ -626,16 +623,19 @@ fn all_null_date<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, path};
 
     let c: &PgConnection = &req.db_conn();
-    render!(res, "templates/index.tpl", {
-        user: Option<String> = req.authorized_user(),
-        lpath: Vec<Link> = vec![],
-        title: &'static str = "Photos without a date",
-        photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
-            .filter(date.is_null())
-            .order(path.asc())
-            .limit(500)
-            .load(c).unwrap()
-    })
+    let mut stream = try!(res.start());
+    match templates::index(&mut stream,
+                           &"Photos without a date",
+                           vec![],
+                           req.authorized_user(),
+                           Photo::query(req.authorized_user().is_some())
+                               .filter(date.is_null())
+                               .order(path.asc())
+                               .limit(500)
+                               .load(c).unwrap()) {
+        Ok(()) => Ok(Halt(stream)),
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
+    }
 }
 
 fn all_for_day<'mw>(req: &mut Request,
@@ -648,19 +648,24 @@ fn all_for_day<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, grade};
 
     let c: &PgConnection = &req.db_conn();
-    render!(res, "templates/index.tpl", {
-        user: Option<String> = req.authorized_user(),
-        lpath: Vec<Link> = vec![Link::year(year),
-                                Link::month(year, month)],
-        title: String = format!("Photos from {} {} {}",
-                                day, monthname(month), year),
-        photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
+
+    let user: Option<String> = req.authorized_user();
+    let lpath: Vec<Link> = vec![Link::year(year),
+                                Link::month(year, month)];
+    let title: String = format!("Photos from {} {} {}",
+                                day, monthname(month), year);
+    let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
             .filter(date.ge(thedate))
             .filter(date.lt(thedate + ChDuration::days(1)))
             .order((grade.desc(), date.asc()))
             .limit(500)
-            .load(c).unwrap()
-    })
+            .load(c).unwrap();
+
+    let mut stream = try!(res.start());
+    match templates::index(&mut stream, &title, lpath, user, photos) {
+        Ok(()) => Ok(Halt(stream)),
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
+    }
 }
 
 fn on_this_day<'mw>(req: &mut Request,
@@ -673,11 +678,12 @@ fn on_this_day<'mw>(req: &mut Request,
         let now = time::now();
         (now.tm_mon as u32 + 1, now.tm_mday as u32)
     };
-    render!(res, "templates/groups.tpl", {
-        user: Option<String> = req.authorized_user(),
-        title: String = format!("Photos from {} {}", day, monthname(month)),
-        groups: Vec<Group> =
-            SqlLiteral::new(format!(
+    let mut stream = try!(res.start());
+    match templates::groups(&mut stream,
+                            &format!("Photos from {} {}", day, monthname(month)),
+                            vec![],
+                            req.authorized_user(),
+                            SqlLiteral::new(format!(
                 "select extract(year from date) y, count(*) c \
                  from photos where extract(month from date)={} \
                  and extract(day from date)={}{} group by y order by y desc",
@@ -706,7 +712,10 @@ fn on_this_day<'mw>(req: &mut Request,
                     photo: photo
                 }
             }).collect()
-    })
+                            ) {
+        Ok(()) => Ok(Halt(stream)),
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
+    }
 }
 
 #[derive(Debug, Clone, RustcEncodable)]

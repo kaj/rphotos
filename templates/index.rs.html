@@ -1,7 +1,8 @@
-@use ::{CSSLINK, Group, Link};
+@use ::{CSSLINK, Link};
+@use rphotos::models::Photo;
 @use templates::head;
 
-@(title: &str, lpath: Vec<Link>, user: Option<String>, groups: Vec<Group>)
+@(title: &str, lpath: Vec<Link>, user: Option<String>, photos: Vec<Photo>)
 
 <!doctype html>
 <html>
@@ -15,16 +16,13 @@
     <h1>@title</h1>
 
     <div class="group">
-      @for g in groups {
-      <div class="item"><h2>@g.title</h2>
-	<p><a href="@g.url"><img src="/img/@g.photo.id/s"></a></p>
-	<p>@g.count pictures</p>
-      </div>
+      @for p in photos {
+      <p class="item"><a href="/details/@p.id"><img src="/img/@p.id/s"></a></p>
       }
       @*
-    {{^groups}}
+    {{^photos}}
       <p>Inga bilder.</p>
-      {{/groups}}
+      {{/photos}}
       *@
     </div>
   </body>
