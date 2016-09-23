@@ -531,7 +531,11 @@ fn months_in_year<'mw>(req: &mut Request,
                 }
             }).collect();
 
-    render(res, |o| templates::groups(o, &title, Vec::new(), user, groups))
+    if groups.is_empty() {
+        res.error(StatusCode::NotFound, "No such image")
+    } else {
+        render(res, |o| templates::groups(o, &title, Vec::new(), user, groups))
+    }
 }
 
 fn days_in_month<'mw>(req: &mut Request,
@@ -576,7 +580,11 @@ fn days_in_month<'mw>(req: &mut Request,
                 }
             }).collect();
 
-    render(res, |o| templates::groups(o, &title, lpath, user, groups))
+    if groups.is_empty() {
+        res.error(StatusCode::NotFound, "No such image")
+    } else {
+        render(res, |o| templates::groups(o, &title, lpath, user, groups))
+    }
 }
 
 fn all_null_date<'mw>(req: &mut Request,
@@ -608,11 +616,6 @@ fn all_for_day<'mw>(req: &mut Request,
 
     let c: &PgConnection = &req.db_conn();
 
-    let user: Option<String> = req.authorized_user();
-    let lpath: Vec<Link> = vec![Link::year(year),
-                                Link::month(year, month)];
-    let title: String = format!("Photos from {} {} {}",
-                                day, monthname(month), year);
     let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
             .filter(date.ge(thedate))
             .filter(date.lt(thedate + ChDuration::days(1)))
@@ -620,7 +623,16 @@ fn all_for_day<'mw>(req: &mut Request,
             .limit(500)
             .load(c).unwrap();
 
-    render(res, |o| templates::index(o, &title, lpath, user, photos))
+    if photos.is_empty() {
+        res.error(StatusCode::NotFound, "No such image")
+    } else {
+        render(res, |o| templates::index(
+            o,
+            &format!("Photos from {} {} {}", day, monthname(month), year),
+            vec![Link::year(year), Link::month(year, month)],
+            req.authorized_user(),
+            photos))
+    }
 }
 
 fn on_this_day<'mw>(req: &mut Request,

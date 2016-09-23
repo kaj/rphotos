@@ -15,17 +15,15 @@
     <h1>@title</h1>
 
     <div class="group">
+      @if groups.is_empty() {
+      <p>Inga bilder.</p>
+      }
       @for g in groups {
       <div class="item"><h2>@g.title</h2>
 	<p><a href="@g.url"><img src="/img/@g.photo.id/s"></a></p>
 	<p>@g.count pictures</p>
       </div>
       }
-      @*
-    {{^groups}}
-      <p>Inga bilder.</p>
-      {{/groups}}
-      *@
     </div>
   </body>
 </html>
