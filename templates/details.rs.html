@@ -1,0 +1,46 @@
+@use ::{CSSLINK, Coord, Link};
+@use rphotos::models::{Photo, Person, Place, Tag, Camera};
+@use templates::head;
+
+@(lpath: Vec<Link>, user: Option<String>, people: Vec<Person>, places: Vec<Place>, tags: Vec<Tag>, position: Option<Coord>, camera: Option<Camera>, time: String, photo: Photo)
+
+<!doctype html>
+<html>
+  <head>
+    <title>Photo details</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    @CSSLINK
+  </head>
+  <body>
+    @:head(lpath, user)
+    <h1>Photo details</h1>
+
+    <p><a href="/img/@photo.id/l">@photo.path</a></p>
+    <p><img src="/img/@photo.id/m"></p>
+
+    @if let Some(pos) = position {
+    <div id="map"></div>
+    <link href="https://rasmus.krats.se/static/leaflet077c/leaflet.css" rel="stylesheet"/>
+    <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript">
+    </script>
+    <script language="javascript" type="text/javascript">
+    var pos = [@pos.x, @pos.y];
+    var map = document.getElementById('map');
+    map.style.height = 3 * map.clientWidth / 4 + "px";
+    var map = L.map('map').setView(pos, 16);
+    L.tileLayer('//@{s@}.tile.openstreetmap.org/@{z@}/@{x@}/@{y@}.png', @{
+    attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    @}).addTo(map);
+    L.marker(pos).addTo(map);
+    </script>
+    }
+
+    @if let Some(g) = photo.grade {<p>Betyg: @g</p>}
+    <p>Tid: @time</p>
+    <p>People: @for p in people{<a href="/person/@p.slug">@p.person_name</a>, }</p>
+    <p>Places: @for p in places{<a href="/place/@p.slug">@p.place_name</a>, }</p>
+    <p>Tags: @for t in tags{<a href="/tag/@t.slug">@t.tag_name</a>, }</p>
+    @* if let Some(pos) = position {<p>Position: @pos.x @pos.y</p>} *@
+    @if let Some(c) = camera{<p>Camera: @c.model (@c.manufacturer)</p>}
+  </body>
+</html>

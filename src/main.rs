@@ -39,7 +39,8 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use chrono::naive::date::NaiveDate;
 
-use rphotos::models::{Camera, Person, Photo, Place, Tag};
+use rphotos::models::{Person, Photo, Place, Tag};
+use std::io::{self, Write};
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -60,28 +61,6 @@ use templates::Html;
 pub static CSSLINK: Html<&'static str> =
     Html(include!(concat!(env!("OUT_DIR"), "/stylelink")));
 
-macro_rules! render {
-    ($res:expr, $template:expr, { $($param:ident : $ptype:ty = $value:expr),* })
-        =>
-    {
-        {
-        #[derive(Debug, Clone, RustcEncodable)]
-        struct ParamData {
-            csslink: String,
-            $(
-                $param: $ptype,
-                )*
-        }
-        $res.render($template, &ParamData {
-            csslink: include!(concat!(env!("OUT_DIR"), "/stylelink")).into(),
-            $(
-                $param: $value,
-                )*
-        })
-        }
-    }
-}
-
 #[derive(Debug, Clone, RustcEncodable)]
 pub struct Group {
     title: String,
@@ -91,7 +70,7 @@ pub struct Group {
 }
 
 #[derive(Debug, Clone, RustcEncodable)]
-struct Coord {
+pub struct Coord {
     x: f64,
     y: f64,
 }
@@ -157,7 +136,7 @@ fn login<'mw>(_req: &mut Request,
               mut res: Response<'mw>)
               -> MiddlewareResult<'mw> {
     res.clear_jwt();
-    render!(res, "templates/login.tpl", {})
+    render(res, |o| templates::login(o))
 }
 
 fn do_login<'mw>(req: &mut Request,
@@ -182,7 +161,7 @@ fn do_login<'mw>(req: &mut Request,
             debug!("No hash found for {}", user);
         }
     }
-    render!(res, "templates/login.tpl", {})
+    render(res, |o| templates::login(o))
 }
 
 fn logout<'mw>(_req: &mut Request,
@@ -263,13 +242,13 @@ fn tag_all<'mw>(req: &mut Request,
                                                .select(p::id)
                                                .filter(p::is_public)))))
     };
-    return render!(res, "templates/tags.tpl", {
-        user: Option<String> = req.authorized_user(),
-        tags: Vec<Tag> = query
+    render(res, |o| templates::tags(
+        o,
+        req.authorized_user(),
+        query
             .order(tag_name)
             .load(c)
-            .expect("List tags")
-    });
+            .expect("List tags")))
 }
 
 fn tag_one<'mw>(req: &mut Request,
@@ -281,17 +260,17 @@ fn tag_one<'mw>(req: &mut Request,
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
         use rphotos::schema::photos::dsl::id;
         use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
-        return render!(res, "templates/tag.tpl", {
-            user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
+        return render(res, |o| templates::tag(
+            o,
+            req.authorized_user(),
+            Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_tags.select(photo_id)
                                             .filter(tag_id.eq(tag.id))))
                 .load(c).unwrap(),
             // TODO
             // .desc_nulls_last("grade")
             // .desc_nulls_last("date")
-            tag: Tag = tag
-        });
+            tag));
     }
     res.error(StatusCode::NotFound, "Not a tag")
 }
@@ -314,11 +293,10 @@ fn place_all<'mw>(req: &mut Request,
                                                .filter(p::is_public)))))
     };
     let c: &PgConnection = &req.db_conn();
-    return render!(res, "templates/places.tpl", {
-        user: Option<String> = req.authorized_user(),
-        places: Vec<Place> = query
-            .order(place_name).load(c).expect("List places")
-    });
+    render(res, |o| templates::places(
+        o,
+        req.authorized_user(),
+        query.order(place_name).load(c).expect("List places")))
 }
 
 fn place_one<'mw>(req: &mut Request,
@@ -331,17 +309,17 @@ fn place_one<'mw>(req: &mut Request,
         use rphotos::schema::photos::dsl::id;
         use rphotos::schema::photo_places::dsl::{photo_id, photo_places,
                                                  place_id};
-        return render!(res, "templates/place.tpl", {
-            user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
+        return render(res, |o| templates::place(
+            o,
+            req.authorized_user(),
+            Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_places.select(photo_id)
                                               .filter(place_id.eq(place.id))))
                 .load(c).unwrap(),
             // TODO
             // .desc_nulls_last("grade")
             // .desc_nulls_last("date")
-            place: Place = place
-        });
+            place));
     }
     res.error(StatusCode::NotFound, "Not a place")
 }
@@ -364,11 +342,10 @@ fn person_all<'mw>(req: &mut Request,
                                                .filter(p::is_public)))))
     };
     let c: &PgConnection = &req.db_conn();
-    return render!(res, "templates/people.tpl", {
-        user: Option<String> = req.authorized_user(),
-        people: Vec<Person> = query
-            .order(person_name).load(c).expect("list people")
-    });
+    render(res, |o| templates::people(
+        o,
+        req.authorized_user(),
+        query.order(person_name).load(c).expect("list people")))
 }
 
 fn person_one<'mw>(req: &mut Request,
@@ -381,17 +358,17 @@ fn person_one<'mw>(req: &mut Request,
         use rphotos::schema::photos::dsl::id;
         use rphotos::schema::photo_people::dsl::{person_id, photo_id,
                                                  photo_people};
-        return render!(res, "templates/person.tpl", {
-            user: Option<String> = req.authorized_user(),
-            photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
+        return render(res, |o| templates::person(
+            o,
+            req.authorized_user(),
+            Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_people.select(photo_id)
                                               .filter(person_id.eq(person.id))))
                 .load(c).unwrap(),
             // TODO
             // .desc_nulls_last("grade")
             // .desc_nulls_last("date")
-            person: Person = person
-        });
+            person));
     }
     res.error(StatusCode::NotFound, "Not a person")
 }
@@ -404,36 +381,36 @@ fn photo_details<'mw>(req: &mut Request,
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
-            return render!(res, "templates/details.tpl", {
-                user: Option<String> = req.authorized_user(),
-                lpath: Vec<Link> =
-                    tphoto.date
+            return render(res, |o| templates::details(
+                o,
+                tphoto.date
                     .map(|d| vec![Link::year(d.year()),
                                   Link::month(d.year(), d.month()),
                                   Link::day(d.year(), d.month(), d.day())])
                     .unwrap_or_else(|| vec![]),
-                people: Vec<Person> = {
+                req.authorized_user(),
+                {
                     use rphotos::schema::people::dsl::{people, id};
                     use rphotos::schema::photo_people::dsl::{photo_people, photo_id, person_id};
                     people.filter(id.eq_any(photo_people.select(person_id)
                                             .filter(photo_id.eq(tphoto.id))))
                         .load(c).unwrap()
                 },
-                places: Vec<Place> = {
+                {
                     use rphotos::schema::places::dsl::{places, id};
                     use rphotos::schema::photo_places::dsl::{photo_places, photo_id, place_id};
                     places.filter(id.eq_any(photo_places.select(place_id)
                                             .filter(photo_id.eq(tphoto.id))))
                         .load(c).unwrap()
                 },
-                tags: Vec<Tag> = {
+                {
                     use rphotos::schema::tags::dsl::{tags, id};
                     use rphotos::schema::photo_tags::dsl::{photo_tags, photo_id, tag_id};
                     tags.filter(id.eq_any(photo_tags.select(tag_id)
                                           .filter(photo_id.eq(tphoto.id))))
                         .load(c).unwrap()
                 },
-                position: Option<Coord> = {
+                {
                     use rphotos::schema::positions::dsl::*;
                     match positions.filter(photo_id.eq(tphoto.id))
                         .select((latitude, longitude))
@@ -449,21 +426,17 @@ fn photo_details<'mw>(req: &mut Request,
                             }
                         }
                 },
-                camera: Option<Camera> = {
+                {
                     use rphotos::schema::cameras::dsl::*;
                     tphoto.camera_id.map(|i| {
                         cameras.find(i).first(c).unwrap()
                     })
                 },
-                time: String = match tphoto.date {
+                match tphoto.date {
                     Some(d) => d.format("%T").to_string(),
                     None => "".to_string()
                 },
-                year: Option<i32> = tphoto.date.map(|d| d.year()),
-                month: Option<u32> = tphoto.date.map(|d| d.month()),
-                day: Option<u32> = tphoto.date.map(|d| d.day()),
-                photo: Photo = tphoto
-            });
+                tphoto));
         }
     }
     res.error(StatusCode::NotFound, "Photo not found")
@@ -511,11 +484,8 @@ fn all_years<'mw>(req: &mut Request,
                 }
             }).collect();
 
-    let mut stream = try!(res.start());
-    match templates::groups(&mut stream, "All photos", Vec::new(), user, groups) {
-        Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
-    }
+    render(res,
+           |o| templates::groups(o, "All photos", Vec::new(), user, groups))
 }
 
 fn months_in_year<'mw>(req: &mut Request,
@@ -561,11 +531,7 @@ fn months_in_year<'mw>(req: &mut Request,
                 }
             }).collect();
 
-    let mut stream = try!(res.start());
-    match templates::groups(&mut stream, &title, Vec::new(), user, groups) {
-        Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
-    }
+    render(res, |o| templates::groups(o, &title, Vec::new(), user, groups))
 }
 
 fn days_in_month<'mw>(req: &mut Request,
@@ -610,11 +576,7 @@ fn days_in_month<'mw>(req: &mut Request,
                 }
             }).collect();
 
-    let mut stream = try!(res.start());
-    match templates::groups(&mut stream, &title, lpath, user, groups) {
-        Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
-    }
+    render(res, |o| templates::groups(o, &title, lpath, user, groups))
 }
 
 fn all_null_date<'mw>(req: &mut Request,
@@ -623,19 +585,16 @@ fn all_null_date<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, path};
 
     let c: &PgConnection = &req.db_conn();
-    let mut stream = try!(res.start());
-    match templates::index(&mut stream,
-                           &"Photos without a date",
-                           vec![],
-                           req.authorized_user(),
-                           Photo::query(req.authorized_user().is_some())
-                               .filter(date.is_null())
-                               .order(path.asc())
-                               .limit(500)
-                               .load(c).unwrap()) {
-        Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
-    }
+    render(res, |o| templates::index(
+        o,
+        &"Photos without a date",
+        vec![],
+        req.authorized_user(),
+        Photo::query(req.authorized_user().is_some())
+            .filter(date.is_null())
+            .order(path.asc())
+            .limit(500)
+            .load(c).unwrap()))
 }
 
 fn all_for_day<'mw>(req: &mut Request,
@@ -661,11 +620,7 @@ fn all_for_day<'mw>(req: &mut Request,
             .limit(500)
             .load(c).unwrap();
 
-    let mut stream = try!(res.start());
-    match templates::index(&mut stream, &title, lpath, user, photos) {
-        Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
-    }
+    render(res, |o| templates::index(o, &title, lpath, user, photos))
 }
 
 fn on_this_day<'mw>(req: &mut Request,
@@ -678,12 +633,12 @@ fn on_this_day<'mw>(req: &mut Request,
         let now = time::now();
         (now.tm_mon as u32 + 1, now.tm_mday as u32)
     };
-    let mut stream = try!(res.start());
-    match templates::groups(&mut stream,
-                            &format!("Photos from {} {}", day, monthname(month)),
-                            vec![],
-                            req.authorized_user(),
-                            SqlLiteral::new(format!(
+    render(res, |o| templates::groups(
+        o,
+        &format!("Photos from {} {}", day, monthname(month)),
+        vec![],
+        req.authorized_user(),
+        SqlLiteral::new(format!(
                 "select extract(year from date) y, count(*) c \
                  from photos where extract(month from date)={} \
                  and extract(day from date)={}{} group by y order by y desc",
@@ -711,11 +666,7 @@ fn on_this_day<'mw>(req: &mut Request,
                     count: count,
                     photo: photo
                 }
-            }).collect()
-                            ) {
-        Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
-    }
+            }).collect()))
 }
 
 #[derive(Debug, Clone, RustcEncodable)]
@@ -742,6 +693,17 @@ impl Link {
             url: format!("/{}/{}/{}", year, month, day),
             name: format!("{}", day),
         }
+    }
+}
+
+fn render<'mw, F>(res: Response<'mw>, do_render: F)
+                     ->MiddlewareResult<'mw>
+    where F: FnOnce(&mut Write) -> io::Result<()>
+{
+    let mut stream = try!(res.start());
+    match do_render(&mut stream) {
+        Ok(()) => Ok(Halt(stream)),
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
     }
 }
 

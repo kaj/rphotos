@@ -1,0 +1,24 @@
+@use ::CSSLINK;
+@use rphotos::models::Tag;
+@use templates::head;
+
+@(user: Option<String>, tags: Vec<Tag>)
+
+<!doctype html>
+<html>
+  <head>
+    <title>Photo tags</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    @CSSLINK
+  </head>
+  <body>
+    @:head(vec![], user)
+    <h1>Photo tags</h1>
+
+    <ul class="alltags">
+    @for tag in tags {
+      <li><a href="/tag/@tag.slug">@tag.tag_name</a>
+    }</ul>
+    </div>
+  </body>
+</html>
