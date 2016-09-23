@@ -41,7 +41,7 @@ name = "setpassword"
 path = "src/setpassword.rs"
 
 [dependencies]
-nickel = ">= 0.8.1"
+nickel = "^0.8.1"
 nickel-jwt-session = "^0.4"
 env_logger = "*"
 log = "*"
