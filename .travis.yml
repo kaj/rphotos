@@ -1,7 +1,9 @@
 language: rust
+cache: cargo
 services:
  - postgresql
 before_script:
+ - cargo update || true
  - echo "DATABASE_URL=postgres://localhost/rphotos" > .env
- - cargo install -v diesel_cli --no-default-features --features postgres
+ - cargo install -v diesel_cli --no-default-features --features postgres || true
  - $HOME/.cargo/bin/diesel setup
