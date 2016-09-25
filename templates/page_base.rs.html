@@ -1,0 +1,19 @@
+@use ::{CSSLINK, Link};
+@use templates::head;
+
+@(title: &str, lpath: Vec<Link>, user: Option<String>, content: Content)
+
+<!doctype html>
+<html>
+  <head>
+    <title>@title</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    @CSSLINK
+  </head>
+  <body>
+    @:head(lpath, user)
+    <h1>@title</h1>
+
+    @:content()
+  </body>
+</html>

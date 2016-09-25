@@ -1,29 +1,18 @@
-@use ::{CSSLINK, Group, Link};
-@use templates::head;
+@use ::{Group, Link};
+@use templates::page_base;
 
 @(title: &str, lpath: Vec<Link>, user: Option<String>, groups: Vec<Group>)
 
-<!doctype html>
-<html>
-  <head>
-    <title>@title</title>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-    @CSSLINK
-  </head>
-  <body>
-    @:head(lpath, user)
-    <h1>@title</h1>
-
-    <div class="group">
-      @if groups.is_empty() {
+@:page_base(title, lpath, user, {
+  <div class="group">
+    @if groups.is_empty() {
       <p>Inga bilder.</p>
-      }
-      @for g in groups {
+    }
+    @for g in groups {
       <div class="item"><h2>@g.title</h2>
 	<p><a href="@g.url"><img src="/img/@g.photo.id/s"></a></p>
 	<p>@g.count pictures</p>
       </div>
-      }
-    </div>
-  </body>
-</html>
+    }
+  </div>
+})

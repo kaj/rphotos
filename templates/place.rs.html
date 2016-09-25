@@ -1,24 +1,11 @@
-@use ::CSSLINK;
 @use rphotos::models::{Photo, Place};
-@use templates::head;
+@use templates::page_base;
 
 @(user: Option<String>, photos: Vec<Photo>, place: Place)
-
-<!doctype html>
-<html>
-  <head>
-    <title>Photos with @place.place_name</title>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-    @CSSLINK
-  </head>
-  <body>
-    @:head(vec![], user)
-    <h1>@place.place_name</h1>
-
-    <div class="group">
+@:page_base(&format!("Photos from {}", place.place_name), vec![], user, {
+  <div class="group">
     @for p in photos {
     <p class="item"><a href="/details/@p.id"><img src="/img/@p.id/s"></a></p>
     }
-    </div>
-  </body>
-</html>
+  </div>
+})
