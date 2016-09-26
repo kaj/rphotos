@@ -101,7 +101,7 @@ impl Photo {
                                .set(rotation.eq(exifrotation))
                                .get_result::<Photo>(db));
             }
-            if cameraid != pic.camera_id {
+            if cameraid.is_some() && cameraid != pic.camera_id {
                 change = true;
                 pic = try!(diesel::update(photos.find(pic.id))
                                .set(camera_id.eq(cameraid))
