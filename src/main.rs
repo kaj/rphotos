@@ -179,9 +179,9 @@ enum SizeTag {
 impl SizeTag {
     fn px(&self) -> u32 {
         match *self {
-            SizeTag::Small => 200,
-            SizeTag::Medium => 800,
-            SizeTag::Large => 1200,
+            SizeTag::Small => 240,
+            SizeTag::Medium => 960,
+            SizeTag::Large => 1900,
         }
     }
 }
