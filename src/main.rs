@@ -129,7 +129,7 @@ fn main() {
     wrap2!(server.get /:year/:month/:day/, all_for_day);
     wrap2!(server.get /thisday,            on_this_day);
 
-    server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"));
+    server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767")).expect("listen");
 }
 
 fn login<'mw>(_req: &mut Request,

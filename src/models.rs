@@ -36,8 +36,8 @@ impl Encodable for Photo {
 }
 
 use super::schema::photos;
-#[insertable_into(photos)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="photos"]
 pub struct NewPhoto<'a> {
     pub path: &'a str,
     pub date: Option<NaiveDateTime>,
@@ -143,16 +143,16 @@ pub struct PhotoTag {
 }
 
 use super::schema::tags;
-#[insertable_into(tags)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="tags"]
 pub struct NewTag<'a> {
     pub tag_name: &'a str,
     pub slug: &'a str,
 }
 
 use super::schema::photo_tags;
-#[insertable_into(photo_tags)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="photo_tags"]
 pub struct NewPhotoTag {
     pub photo_id: i32,
     pub tag_id: i32,
@@ -174,16 +174,16 @@ pub struct PhotoPerson {
 }
 
 use super::schema::people;
-#[insertable_into(people)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="people"]
 pub struct NewPerson<'a> {
     pub person_name: &'a str,
     pub slug: &'a str,
 }
 
 use super::schema::photo_people;
-#[insertable_into(photo_people)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="photo_people"]
 pub struct NewPhotoPerson {
     pub photo_id: i32,
     pub person_id: i32,
@@ -204,24 +204,24 @@ pub struct PhotoPlace {
 }
 
 use super::schema::places;
-#[insertable_into(places)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="places"]
 pub struct NewPlace<'a> {
     pub slug: &'a str,
     pub place_name: &'a str,
 }
 
 use super::schema::photo_places;
-#[insertable_into(photo_places)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="photo_places"]
 pub struct NewPhotoPlace {
     pub photo_id: i32,
     pub place_id: i32,
 }
 
 use super::schema::positions;
-#[insertable_into(positions)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="positions"]
 pub struct NewPosition {
     pub photo_id: i32,
     pub latitude: i32,
@@ -229,7 +229,8 @@ pub struct NewPosition {
 }
 
 use super::schema::users;
-#[insertable_into(users)]
+#[derive(Insertable)]
+#[table_name="users"]
 pub struct NewUser<'a> {
     pub username: &'a str,
     pub password: &'a str,
@@ -243,7 +244,8 @@ pub struct Camera {
     pub model: String,
 }
 use super::schema::cameras;
-#[insertable_into(cameras)]
+#[derive(Debug, Clone, Insertable)]
+#[table_name="cameras"]
 pub struct NewCamera {
     pub manufacturer: String,
     pub model: String,
