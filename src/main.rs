@@ -20,7 +20,10 @@ extern crate nickel_diesel;
 extern crate diesel;
 extern crate r2d2_diesel;
 extern crate dotenv;
+extern crate memcached;
 
+use memcached::Client;
+use memcached::proto::{Operation, MultiOperation, NoReplyOperation, CasOperation, ProtoType};
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use r2d2::NopErrorHandler;
 use chrono::Duration as ChDuration;
@@ -171,6 +174,7 @@ fn logout<'mw>(_req: &mut Request,
     res.redirect("/")
 }
 
+#[derive(Debug)]
 enum SizeTag {
     Small,
     Medium,
@@ -206,8 +210,7 @@ fn show_image<'mw>(req: &Request,
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
-            let size = size.px();
-            match req.photos().get_scaled_image(tphoto, size, size) {
+            match get_image_data(req, tphoto, size) {
                 Ok(buf) => {
                     res.set(MediaType::Jpeg);
                     res.set(Expires(HttpDate(time::now() +
@@ -223,6 +226,37 @@ fn show_image<'mw>(req: &Request,
     }
     res.error(StatusCode::NotFound, "No such image")
 }
+
+fn get_image_data(req: &Request, photo: Photo, size: SizeTag)
+                  -> Result<Vec<u8>, image::ImageError>
+{
+    let servers = [
+        ("tcp://127.0.0.1:11211", 1),
+    ];
+    let mut client = Client::connect(&servers, ProtoType::Binary)
+        .expect("Connect to memcached");
+
+    let key = format!("rp{}{:?}", photo.id, size);
+    debug!("Cache key is {}", key);
+    match client.get(&key.as_bytes()) {
+        Ok((data, _flags)) => {
+            debug!("Cached image {} found", key);
+            return Ok(data);
+        },
+        //Err(BMemcachedError::Status(Status::KeyNotFound)) => {
+        //    debug!("Cached image {} not found", key);
+        //},
+        Err(err) => {
+            warn!("Error fetching {} from memcached: {:?}", key, err);
+        }
+    }
+    let size = size.px();
+    let buf = try!(req.photos().get_scaled_image(photo, size, size));
+    let r = client.set(key.as_bytes(), &buf, 0, 24 * 60 * 60);
+    info!("Stored {} to memcached: {:?}", key, r);
+    Ok(buf)
+}
+
 
 fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
