@@ -258,7 +258,7 @@ fn tag_one<'mw>(req: &mut Request,
     use rphotos::schema::tags::dsl::{slug, tags};
     let c: &PgConnection = &req.db_conn();
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
-        use rphotos::schema::photos::dsl::id;
+        use rphotos::schema::photos::dsl::{date, grade, id};
         use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         return render(res, |o| templates::tag(
             o,
@@ -266,10 +266,8 @@ fn tag_one<'mw>(req: &mut Request,
             Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_tags.select(photo_id)
                                             .filter(tag_id.eq(tag.id))))
+                .order((grade.desc().nulls_last(), date.desc().nulls_last()))
                 .load(c).unwrap(),
-            // TODO
-            // .desc_nulls_last("grade")
-            // .desc_nulls_last("date")
             tag));
     }
     res.error(StatusCode::NotFound, "Not a tag")
@@ -306,7 +304,7 @@ fn place_one<'mw>(req: &mut Request,
     use rphotos::schema::places::dsl::{places, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
-        use rphotos::schema::photos::dsl::id;
+        use rphotos::schema::photos::dsl::{date, grade, id};
         use rphotos::schema::photo_places::dsl::{photo_id, photo_places,
                                                  place_id};
         return render(res, |o| templates::place(
@@ -315,10 +313,8 @@ fn place_one<'mw>(req: &mut Request,
             Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_places.select(photo_id)
                                               .filter(place_id.eq(place.id))))
+                .order((grade.desc().nulls_last(), date.desc().nulls_last()))
                 .load(c).unwrap(),
-            // TODO
-            // .desc_nulls_last("grade")
-            // .desc_nulls_last("date")
             place));
     }
     res.error(StatusCode::NotFound, "Not a place")
@@ -355,7 +351,7 @@ fn person_one<'mw>(req: &mut Request,
     use rphotos::schema::people::dsl::{people, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
-        use rphotos::schema::photos::dsl::id;
+        use rphotos::schema::photos::dsl::{date, grade, id};
         use rphotos::schema::photo_people::dsl::{person_id, photo_id,
                                                  photo_people};
         return render(res, |o| templates::person(
@@ -364,10 +360,8 @@ fn person_one<'mw>(req: &mut Request,
             Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_people.select(photo_id)
                                               .filter(person_id.eq(person.id))))
+                .order((grade.desc().nulls_last(), date.desc().nulls_last()))
                 .load(c).unwrap(),
-            // TODO
-            // .desc_nulls_last("grade")
-            // .desc_nulls_last("date")
             person));
     }
     res.error(StatusCode::NotFound, "Not a person")
