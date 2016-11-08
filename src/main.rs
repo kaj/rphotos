@@ -230,33 +230,43 @@ fn show_image<'mw>(req: &Request,
 fn get_image_data(req: &Request, photo: Photo, size: SizeTag)
                   -> Result<Vec<u8>, image::ImageError>
 {
-    let servers = [
-        ("tcp://127.0.0.1:11211", 1),
-    ];
-    let mut client = Client::connect(&servers, ProtoType::Binary)
-        .expect("Connect to memcached");
-
-    let key = format!("rp{}{:?}", photo.id, size);
-    debug!("Cache key is {}", key);
-    match client.get(&key.as_bytes()) {
-        Ok((data, _flags)) => {
-            debug!("Cached image {} found", key);
-            return Ok(data);
-        },
-        //Err(BMemcachedError::Status(Status::KeyNotFound)) => {
-        //    debug!("Cached image {} not found", key);
-        //},
-        Err(err) => {
-            warn!("Error fetching {} from memcached: {:?}", key, err);
-        }
-    }
-    let size = size.px();
-    let buf = try!(req.photos().get_scaled_image(photo, size, size));
-    let r = client.set(key.as_bytes(), &buf, 0, 24 * 60 * 60);
-    info!("Stored {} to memcached: {:?}", key, r);
-    Ok(buf)
+    cached_or(&format!("rp{}{:?}", photo.id, size), || {
+        let size = size.px();
+        req.photos().get_scaled_image(photo, size, size)
+    })
 }
 
+fn cached_or<F>(key: &str, init: F) -> Result<Vec<u8>, image::ImageError>
+    where F: FnOnce() -> Result<Vec<u8>, image::ImageError>
+{
+    debug!("Cache key is {}", key);
+    let servers = [
+        ("tcp://127.0.0.1:11211", 1),
+        ];
+
+    match Client::connect(&servers, ProtoType::Binary) {
+        Ok(mut client) => {
+            match client.get(&key.as_bytes()) {
+                Ok((data, _flags)) => {
+                    debug!("Cached image {} found", key);
+                    return Ok(data);
+                },
+                Err(err) => {
+                    warn!("Error fetching {} from memcached: {:?}", key, err);
+                }
+            }
+
+            let data = try!(init());
+            let r = client.set(key.as_bytes(), &data, 0, 7 * 24 * 60 * 60);
+            info!("Stored {} to memcached: {:?}", key, r);
+            Ok(data)
+        }
+        Err(err) => {
+            warn!("Error connecting to memcached: {}", err);
+            init()
+        }
+    }
+}
 
 fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
