@@ -447,7 +447,7 @@ fn all_years<'mw>(req: &mut Request,
     let groups: Vec<Group> =
             SqlLiteral::new(format!(
                 "select cast(extract(year from date) as int) y, count(*) c \
-                 from photos{} group by y order by y",
+                 from photos{} group by y order by y desc nulls last",
                 if req.authorized_user().is_none() {
                     " where is_public"
                 } else {
