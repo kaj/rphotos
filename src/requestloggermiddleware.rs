@@ -41,10 +41,10 @@ fn fmt_elapsed(t: Duration) -> String {
         format!("{:.2} s", ms as f32 * 1e-3)
     } else {
         let ns = t.num_nanoseconds().unwrap();
-        if ns > 1e6 as i64 {
-            format!("{} ms", ns / 1e6 as i64)
-        } else if ns > 1000 {
-            format!("{} us", ns / 1000)
+        if ns > 10_000_000 {
+            format!("{} ms", ns / 1000_000)
+        } else if ns > 10_000 {
+            format!("{} µs", ns / 1000)
         } else {
             format!("{} ns", ns)
         }
