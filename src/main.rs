@@ -23,7 +23,7 @@ extern crate dotenv;
 extern crate memcached;
 
 use memcached::Client;
-use memcached::proto::{Operation, MultiOperation, NoReplyOperation, CasOperation, ProtoType};
+use memcached::proto::{Operation, ProtoType, Error as MprotError};
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use r2d2::NopErrorHandler;
 use chrono::Duration as ChDuration;
@@ -44,6 +44,7 @@ use chrono::naive::date::NaiveDate;
 
 use rphotos::models::{Person, Photo, Place, Tag};
 use std::io::{self, Write};
+use std::error::Error;
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -248,17 +249,24 @@ fn cached_or<F>(key: &str, init: F) -> Result<Vec<u8>, image::ImageError>
         Ok(mut client) => {
             match client.get(&key.as_bytes()) {
                 Ok((data, _flags)) => {
-                    debug!("Cached image {} found", key);
+                    debug!("Cache: {} found", key);
                     return Ok(data);
                 },
+                Err(MprotError::BinaryProtoError(ref err))
+                    if err.description() == "key not found" =>
+                {
+                    debug!("Cache: {} not found", key);
+                }
                 Err(err) => {
-                    warn!("Error fetching {} from memcached: {:?}", key, err);
+                    warn!("Cache: get {} failed: {:?}", key, err);
                 }
             }
 
             let data = try!(init());
-            let r = client.set(key.as_bytes(), &data, 0, 7 * 24 * 60 * 60);
-            info!("Stored {} to memcached: {:?}", key, r);
+            match client.set(key.as_bytes(), &data, 0, 7 * 24 * 60 * 60) {
+                Ok(()) => debug!("Cache: stored {}", key),
+                Err(err) => warn!("Cache: Error storing {}: {}", key, err),
+            }
             Ok(data)
         }
         Err(err) => {
