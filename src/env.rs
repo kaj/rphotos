@@ -1,6 +1,6 @@
 use std::env::var;
-use std::process::exit;
 use std::path::PathBuf;
+use std::process::exit;
 
 pub fn dburl() -> String {
     require_var("DATABASE_URL", "Database url")

@@ -1,12 +1,10 @@
-use std::path::{Path, PathBuf};
-use std::fs;
-use std::io;
-use image::open as image_open;
 use image::{FilterType, GenericImage, ImageError, ImageFormat};
+use image::open as image_open;
 use rexif::{self, ExifData};
-use std::ffi::OsStr;
-
 use rphotos::models::Photo;
+use std::{fs, io};
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
 
 pub struct PhotosDir {
     basedir: PathBuf,

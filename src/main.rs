@@ -21,26 +21,25 @@ extern crate diesel;
 extern crate r2d2_diesel;
 extern crate dotenv;
 
-use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
-use r2d2::NopErrorHandler;
-use chrono::Duration as ChDuration;
 use chrono::Datelike;
+use chrono::Duration as ChDuration;
+use chrono::naive::date::NaiveDate;
+use diesel::expression::sql_literal::SqlLiteral;
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
 use dotenv::dotenv;
 use hyper::header::{Expires, HttpDate};
 use nickel::{FormBody, Halt, HttpRouter, MediaType, MiddlewareResult, Nickel,
              Request, Response, StaticFilesHandler};
 use nickel::extensions::response::Redirect;
+use nickel::status::StatusCode;
+use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
-use time::Duration;
-use nickel::status::StatusCode;
-use diesel::expression::sql_literal::SqlLiteral;
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-use chrono::naive::date::NaiveDate;
-
+use r2d2::NopErrorHandler;
 use rphotos::models::{Person, Photo, Place, Tag};
 use std::io::{self, Write};
+use time::Duration;
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -129,7 +128,8 @@ fn main() {
     wrap2!(server.get /:year/:month/:day/, all_for_day);
     wrap2!(server.get /thisday,            on_this_day);
 
-    server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767")).expect("listen");
+    server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"))
+        .expect("listen");
 }
 
 fn login<'mw>(_req: &mut Request,
@@ -707,7 +707,7 @@ fn render<'mw, F>(res: Response<'mw>, do_render: F)
     let mut stream = try!(res.start());
     match do_render(&mut stream) {
         Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e)),
     }
 }
 

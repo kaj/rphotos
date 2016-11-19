@@ -6,13 +6,13 @@ extern crate dotenv;
 extern crate env_logger;
 
 mod env;
-use env::dburl;
 
 use dotenv::dotenv;
 use diesel::expression::dsl::{count_star, sql};
-use diesel::types::{BigInt, Double, Nullable, Text, Timestamp};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::types::{BigInt, Double, Nullable, Text, Timestamp};
+use env::dburl;
 
 
 sql_function!(date_part,

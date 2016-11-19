@@ -13,8 +13,8 @@ use diesel::result::Error as DieselError;
 use diesel::result::Error;
 use dotenv::dotenv;
 use rphotos::models::{Modification, Photo};
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 
 mod env;
 use env::{dburl, photos_dir};
@@ -26,7 +26,7 @@ fn main() {
     env_logger::init().unwrap();
     let photodir = PhotosDir::new(photos_dir());
     let db = PgConnection::establish(&dburl())
-                 .expect("Error connecting to database");
+        .expect("Error connecting to database");
 
     let stdin = io::stdin();
     for line in stdin.lock().lines() {
@@ -57,14 +57,15 @@ fn main() {
     }
 }
 
-fn register_photo(db: &PgConnection, tpath: &str) -> Result<Photo, DieselError> {
+fn register_photo(db: &PgConnection, tpath: &str)
+                  -> Result<Photo, DieselError> {
     debug!("Should add {} to database", tpath);
     use rphotos::schema::photos::dsl::{photos, is_public};
     let photo =
         match try!(Photo::create_or_set_basics(&db, &tpath, None, 0, None)) {
             Modification::Created(photo) => photo,
             Modification::Updated(photo) => photo,
-            Modification::Unchanged(photo) => photo
+            Modification::Unchanged(photo) => photo,
         };
     diesel::update(photos.find(photo.id))
         .set(is_public.eq(true))
