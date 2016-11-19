@@ -22,8 +22,6 @@ extern crate r2d2_diesel;
 extern crate dotenv;
 extern crate memcached;
 
-use memcached::Client;
-use memcached::proto::{Operation, ProtoType, Error as MprotError};
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use r2d2::NopErrorHandler;
 use chrono::Duration as ChDuration;
@@ -44,7 +42,6 @@ use chrono::naive::date::NaiveDate;
 
 use rphotos::models::{Person, Photo, Place, Tag};
 use std::io::{self, Write};
-use std::error::Error;
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -56,6 +53,9 @@ use requestloggermiddleware::RequestLoggerMiddleware;
 
 mod photosdirmiddleware;
 use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
+
+mod memcachemiddleware;
+use memcachemiddleware::*;
 
 #[macro_use]
 mod nickelext;
@@ -105,6 +105,8 @@ fn main() {
 
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
+    server.utilize(MemcacheMiddleware::new
+                   (vec![("tcp://127.0.0.1:11211".into(), 1)]));
     server.utilize(SessionMiddleware::new(&jwt_key()));
     // TODO This is a "build" location, not an "install" location ...
     let staticdir = concat!(env!("OUT_DIR"), "/static/");
@@ -231,49 +233,10 @@ fn show_image<'mw>(req: &Request,
 fn get_image_data(req: &Request, photo: Photo, size: SizeTag)
                   -> Result<Vec<u8>, image::ImageError>
 {
-    cached_or(&format!("rp{}{:?}", photo.id, size), || {
+    req.cached_or(&format!("rp{}{:?}", photo.id, size), || {
         let size = size.px();
         req.photos().get_scaled_image(photo, size, size)
     })
-}
-
-fn cached_or<F>(key: &str, init: F) -> Result<Vec<u8>, image::ImageError>
-    where F: FnOnce() -> Result<Vec<u8>, image::ImageError>
-{
-    debug!("Cache key is {}", key);
-    let servers = [
-        ("tcp://127.0.0.1:11211", 1),
-        ];
-
-    match Client::connect(&servers, ProtoType::Binary) {
-        Ok(mut client) => {
-            match client.get(&key.as_bytes()) {
-                Ok((data, _flags)) => {
-                    debug!("Cache: {} found", key);
-                    return Ok(data);
-                },
-                Err(MprotError::BinaryProtoError(ref err))
-                    if err.description() == "key not found" =>
-                {
-                    debug!("Cache: {} not found", key);
-                }
-                Err(err) => {
-                    warn!("Cache: get {} failed: {:?}", key, err);
-                }
-            }
-
-            let data = try!(init());
-            match client.set(key.as_bytes(), &data, 0, 7 * 24 * 60 * 60) {
-                Ok(()) => debug!("Cache: stored {}", key),
-                Err(err) => warn!("Cache: Error storing {}: {}", key, err),
-            }
-            Ok(data)
-        }
-        Err(err) => {
-            warn!("Error connecting to memcached: {}", err);
-            init()
-        }
-    }
 }
 
 fn tag_all<'mw>(req: &mut Request,
