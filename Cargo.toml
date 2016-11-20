@@ -15,7 +15,7 @@ brotli2 = "*"
 syntex = "^0.44"
 diesel_codegen_syntex = { version = "^0.8", features = ["postgres", "syntex"] }
 dotenv_codegen = "*"
-ructe = "^0.1"
+ructe = "^0.1.2"
 
 [[bin]]
 name = "rphotoserver"
