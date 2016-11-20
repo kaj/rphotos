@@ -22,8 +22,8 @@ name = "rphotoserver"
 path = "src/main.rs"
 
 [[bin]]
-name = "listyears"
-path = "src/listyears.rs"
+name = "rphotosadm"
+path = "src/rphotosadm.rs"
 
 [[bin]]
 name = "readkpa"
@@ -47,6 +47,7 @@ nickel-jwt-session = "^0.5"
 env_logger = "*"
 log = "*"
 chrono = "*"
+clap = "^2.18"
 rustc-serialize = "*"
 typemap = "*"
 plugin = "*"
