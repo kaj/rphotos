@@ -5,39 +5,39 @@ extern crate rand;
 extern crate rphotos;
 extern crate diesel;
 
-use dotenv::dotenv;
-use std::iter::Iterator;
-use rand::os::OsRng;
-use rand::distributions::range::Range;
-use rand::distributions::IndependentSample;
-use djangohashers::make_password;
+use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use djangohashers::make_password;
+use dotenv::dotenv;
+use rand::distributions::IndependentSample;
+use rand::distributions::range::Range;
+use rand::os::OsRng;
+use std::iter::Iterator;
 mod env;
 use env::dburl;
-use diesel::pg::PgConnection;
 
 fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
     let db = PgConnection::establish(&dburl())
-                 .expect("Error connecting to database");
+        .expect("Error connecting to database");
     let uname = std::env::args().nth(1).expect("username argument missing");
     let pword = random_password(14);
     println!("User {} has password {}", uname, pword);
     let hashword = make_password(&pword);
     use rphotos::schema::users::dsl::*;
     match diesel::update(users.filter(username.eq(&uname)))
-              .set(password.eq(&hashword))
-              .execute(&db) {
+        .set(password.eq(&hashword))
+        .execute(&db) {
         Ok(1) => {
             println!("Updated password");
         }
         Ok(0) => {
             use rphotos::models::NewUser;
             diesel::insert(&NewUser {
-                username: &uname,
-                password: &hashword,
-            })
+                    username: &uname,
+                    password: &hashword,
+                })
                 .into(users)
                 .execute(&db)
                 .expect("Create user");

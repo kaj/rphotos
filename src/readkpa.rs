@@ -10,14 +10,13 @@ extern crate rphotos;
 extern crate dotenv;
 
 use chrono::naive::datetime::NaiveDateTime;
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use dotenv::dotenv;
+use rphotos::models::{Modification, Person, Photo, Place, Tag};
 use std::fs::File;
 use xml::attribute::OwnedAttribute;
-use xml::reader::EventReader;
-use xml::reader::XmlEvent; // ::{EndDocument, StartElement};
-use diesel::pg::PgConnection;
-use rphotos::models::{Modification, Person, Photo, Place, Tag};
-use dotenv::dotenv;
-use self::diesel::prelude::*;
+use xml::reader::{EventReader, XmlEvent};
 
 mod env;
 use env::{dburl, photos_dir};
@@ -159,9 +158,9 @@ fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) {
     });
     use rphotos::schema::photos::dsl::*;
     let n = diesel::update(photos.find(photo.id))
-                .set(grade.eq(photo.grade))
-                .execute(db)
-                .expect(&format!("Update grade of {:?}", photo));
+        .set(grade.eq(photo.grade))
+        .execute(db)
+        .expect(&format!("Update grade of {:?}", photo));
     debug!("Graded {} photo", n);
 }
 
@@ -169,7 +168,7 @@ fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
     let db = PgConnection::establish(&dburl())
-                 .expect("Error connecting to database");
+        .expect("Error connecting to database");
     let file = File::open(photos_dir().join("index.xml")).unwrap();
     info!("Reading kphotoalbum data");
     let mut xml = EventReader::new(file);
@@ -207,7 +206,7 @@ fn main() {
                                     Modification::Unchanged(photo) => {
                                         debug!("No change for {:?}", photo);
                                         photo
-                                    },
+                                    }
                                 })
                         }
                     }
@@ -266,7 +265,7 @@ fn main() {
 
 fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<NaiveDateTime> {
     let start_date = find_attr("startDate", attributes)
-                         .unwrap_or("".to_string());
+        .unwrap_or("".to_string());
     let end_date = find_attr("endDate", attributes).unwrap_or("".to_string());
     let format = "%FT%T";
     if let Ok(start_t) = NaiveDateTime::parse_from_str(&*start_date, format) {

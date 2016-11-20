@@ -11,12 +11,12 @@ extern crate rphotos;
 
 use chrono::format::ParseError;
 use chrono::naive::datetime::NaiveDateTime;
-use rexif::{ExifData, ExifEntry, ExifTag, TagValue};
-use std::path::Path;
-use dotenv::dotenv;
 use diesel::pg::PgConnection;
-use self::diesel::prelude::*;
+use diesel::prelude::*;
+use dotenv::dotenv;
+use rexif::{ExifData, ExifEntry, ExifTag, TagValue};
 use rphotos::models::{Modification, Photo, Camera};
+use std::path::Path;
 
 mod env;
 use env::{dburl, photos_dir};
@@ -28,7 +28,7 @@ fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
     let db = PgConnection::establish(&dburl())
-                 .expect("Error connecting to database");
+        .expect("Error connecting to database");
     let photos = PhotosDir::new(photos_dir());
 
     let args = std::env::args().skip(1);

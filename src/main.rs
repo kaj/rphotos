@@ -22,26 +22,25 @@ extern crate r2d2_diesel;
 extern crate dotenv;
 extern crate memcached;
 
-use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
-use r2d2::NopErrorHandler;
-use chrono::Duration as ChDuration;
 use chrono::Datelike;
+use chrono::Duration as ChDuration;
+use chrono::naive::date::NaiveDate;
+use diesel::expression::sql_literal::SqlLiteral;
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
 use dotenv::dotenv;
 use hyper::header::{Expires, HttpDate};
 use nickel::{FormBody, Halt, HttpRouter, MediaType, MiddlewareResult, Nickel,
              Request, Response, StaticFilesHandler};
 use nickel::extensions::response::Redirect;
+use nickel::status::StatusCode;
+use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
-use time::Duration;
-use nickel::status::StatusCode;
-use diesel::expression::sql_literal::SqlLiteral;
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-use chrono::naive::date::NaiveDate;
-
+use r2d2::NopErrorHandler;
 use rphotos::models::{Person, Photo, Place, Tag};
 use std::io::{self, Write};
+use time::Duration;
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -135,7 +134,8 @@ fn main() {
     wrap2!(server.get /:year/:month/:day/, all_for_day);
     wrap2!(server.get /thisday,            on_this_day);
 
-    server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767")).expect("listen");
+    server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"))
+        .expect("listen");
 }
 
 fn login<'mw>(_req: &mut Request,
@@ -508,7 +508,7 @@ fn months_in_year<'mw>(req: &mut Request,
             SqlLiteral::new(format!(
                 "select cast(extract(month from date) as int) m, count(*) c \
                  from photos where extract(year from date)={}{} \
-                 group by m order by m",
+                 group by m order by m desc",
                 year,
                 if req.authorized_user().is_none() {
                     " and is_public"
@@ -560,7 +560,7 @@ fn days_in_month<'mw>(req: &mut Request,
             SqlLiteral::new(format!(
                 "select cast(extract(day from date) as int) d, count(*) c \
                  from photos where extract(year from date)={} \
-                 and extract(month from date)={}{} group by d order by d",
+                 and extract(month from date)={}{} group by d order by d desc",
                 year, month,
                 if req.authorized_user().is_none() {
                     " and is_public"
@@ -626,7 +626,7 @@ fn all_for_day<'mw>(req: &mut Request,
     let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
             .filter(date.ge(thedate))
             .filter(date.lt(thedate + ChDuration::days(1)))
-            .order((grade.desc().nulls_last(), date.asc()))
+            .order((grade.desc().nulls_last(), date.desc()))
             .limit(500)
             .load(c).unwrap();
 
@@ -722,7 +722,7 @@ fn render<'mw, F>(res: Response<'mw>, do_render: F)
     let mut stream = try!(res.start());
     match do_render(&mut stream) {
         Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e))
+        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e)),
     }
 }
 

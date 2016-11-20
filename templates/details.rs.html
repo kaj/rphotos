@@ -9,10 +9,12 @@
 
     @if let Some(ref pos) = position {
     <div id="map"></div>
-    <link href="https://rasmus.krats.se/static/leaflet077c/leaflet.css" rel="stylesheet"/>
-    <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript">
-    </script>
     <script language="javascript" type="text/javascript">
+    fn initMap() @{
+    var csslink = document.createElement('link');
+    csslink.rel = 'stylesheet';
+    csslink.href = 'https://rasmus.krats.se/static/leaflet077c/leaflet.css';
+    document.getElementById('head').append(csslink);
     var pos = [@pos.x, @pos.y];
     var map = document.getElementById('map');
     map.style.height = 3 * map.clientWidth / 4 + "px";
@@ -21,14 +23,20 @@
     attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
     @}).addTo(map);
     L.marker(pos).addTo(map);
+    @}
+    </script>
+    <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript" async onload="initmap">
     </script>
     }
 
     @if let Some(g) = photo.grade {<p>Betyg: @g</p>}
     <p>Tid: @time</p>
-    <p>People: @for p in people{<a href="/person/@p.slug">@p.person_name</a>, }</p>
-    <p>Places: @for p in places{<a href="/place/@p.slug">@p.place_name</a>, }</p>
-    <p>Tags: @for t in tags{<a href="/tag/@t.slug">@t.tag_name</a>, }</p>
+    @if !people.is_empty() {
+    <p>People: @for p in people{<a href="/person/@p.slug">@p.person_name</a>, }</p>}
+    @if !places.is_empty() {
+    <p>Places: @for p in places{<a href="/place/@p.slug">@p.place_name</a>, }</p>}
+    @if !tags.is_empty() {
+    <p>Tags: @for t in tags{<a href="/tag/@t.slug">@t.tag_name</a>, }</p>}
     @if let Some(ref pos) = position {<p>Position: @pos.x @pos.y</p>}
     @if let Some(ref c) = camera{<p>Camera: @c.model (@c.manufacturer)</p>}
 })
