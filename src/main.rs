@@ -493,7 +493,7 @@ fn months_in_year<'mw>(req: &mut Request,
             SqlLiteral::new(format!(
                 "select cast(extract(month from date) as int) m, count(*) c \
                  from photos where extract(year from date)={}{} \
-                 group by m order by m",
+                 group by m order by m desc",
                 year,
                 if req.authorized_user().is_none() {
                     " and is_public"
@@ -545,7 +545,7 @@ fn days_in_month<'mw>(req: &mut Request,
             SqlLiteral::new(format!(
                 "select cast(extract(day from date) as int) d, count(*) c \
                  from photos where extract(year from date)={} \
-                 and extract(month from date)={}{} group by d order by d",
+                 and extract(month from date)={}{} group by d order by d desc",
                 year, month,
                 if req.authorized_user().is_none() {
                     " and is_public"
@@ -611,7 +611,7 @@ fn all_for_day<'mw>(req: &mut Request,
     let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
             .filter(date.ge(thedate))
             .filter(date.lt(thedate + ChDuration::days(1)))
-            .order((grade.desc().nulls_last(), date.asc()))
+            .order((grade.desc().nulls_last(), date.desc()))
             .limit(500)
             .load(c).unwrap();
 
