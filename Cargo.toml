@@ -37,10 +37,6 @@ path = "src/findphotos.rs"
 name = "public_from_list"
 path = "src/public_from_list.rs"
 
-[[bin]]
-name = "setpassword"
-path = "src/setpassword.rs"
-
 [dependencies]
 nickel = "^0.9"
 nickel-jwt-session = "^0.5"

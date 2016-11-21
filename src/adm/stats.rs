@@ -1,3 +1,4 @@
+use adm::result::Error;
 use diesel::expression::dsl::{count_star, sql};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -7,7 +8,7 @@ sql_function!(date_part,
               date_part_t,
               (part: Text, date: Nullable<Timestamp>) -> Nullable<Double>);
 
-pub fn show_stats(db: &PgConnection) -> Result<(), ConnectionError> {
+pub fn show_stats(db: &PgConnection) -> Result<(), Error> {
     use rphotos::schema::photos::dsl::{date, photos};
 
     println!("Nice semantics, but no group: {:?}",
