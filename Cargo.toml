@@ -33,10 +33,6 @@ path = "src/readkpa.rs"
 name = "findphotos"
 path = "src/findphotos.rs"
 
-[[bin]]
-name = "public_from_list"
-path = "src/public_from_list.rs"
-
 [dependencies]
 nickel = "^0.9"
 nickel-jwt-session = "^0.5"

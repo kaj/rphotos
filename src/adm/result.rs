@@ -1,12 +1,14 @@
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
+use std::{io, fmt};
 use std::convert::From;
-use std::fmt;
 
 #[derive(Debug)]
 pub enum Error {
     Connection(ConnectionError),
     Db(DieselError),
+    Io(io::Error),
+    Other(String),
 }
 
 impl fmt::Display for Error {
@@ -14,6 +16,8 @@ impl fmt::Display for Error {
         match self {
             &Error::Connection(ref e) => write!(f, "Connection error: {}", e),
             &Error::Db(ref e) => write!(f, "Database error: {}", e),
+            &Error::Io(ref e) => write!(f, "I/O error: {}", e),
+            &Error::Other(ref s) => write!(f, "Error: {}", s),
         }
     }
 }
@@ -27,5 +31,11 @@ impl From<ConnectionError> for Error {
 impl From<DieselError> for Error {
     fn from(e: DieselError) -> Self {
         Error::Db(e)
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
+        Error::Io(e)
     }
 }
