@@ -95,18 +95,20 @@ fn run(args: ArgMatches) -> Result<(), Error> {
         ("makepublic", Some(args)) => {
             let pd = PhotosDir::new(photos_dir());
             let db = try!(get_db());
-            if let Some(f) = args.value_of("LIST") {
-                if f == "-" {
+            match args.value_of("LIST") {
+                Some("-") => {
                     let list = io::stdin();
                     try!(makepublic::by_file_list(&db, &pd, list.lock()));
-                } else {
+                    Ok(())
+                }
+                Some(f) => {
                     let list = try!(File::open(f));
                     let list = BufReader::new(list);
-                    try!(makepublic::by_file_list(&db, &pd, list));
+                    makepublic::by_file_list(&db, &pd, list)
                 }
-                Ok(())
-            } else {
-                makepublic::one(&db, &pd, args.value_of("IMAGE").unwrap())
+                None => {
+                    makepublic::one(&db, &pd, args.value_of("IMAGE").unwrap())
+                }
             }
         }
         ("stats", Some(_args)) => show_stats(&try!(get_db())),
