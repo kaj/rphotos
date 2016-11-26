@@ -25,10 +25,6 @@ path = "src/main.rs"
 name = "rphotosadm"
 path = "src/rphotosadm.rs"
 
-[[bin]]
-name = "readkpa"
-path = "src/readkpa.rs"
-
 [dependencies]
 nickel = "^0.9"
 nickel-jwt-session = "^0.5"

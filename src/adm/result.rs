@@ -3,6 +3,7 @@ use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
 use std::{io, fmt};
 use std::convert::From;
+use std::num::ParseIntError;
 
 #[derive(Debug)]
 pub enum Error {
@@ -11,6 +12,7 @@ pub enum Error {
     Io(io::Error),
     UnknownOrientation(u16),
     BadTimeFormat(ChronoParseError),
+    BadIntFormat(ParseIntError),
     Other(String),
 }
 
@@ -24,6 +26,7 @@ impl fmt::Display for Error {
                 write!(f, "Unknown image orientation: {:?}", o)
             }
             &Error::BadTimeFormat(ref e) => write!(f, "Bad time value: {}", e),
+            &Error::BadIntFormat(ref e) => write!(f, "Bad int value: {}", e),
             &Error::Other(ref s) => write!(f, "Error: {}", s),
         }
     }
@@ -38,6 +41,12 @@ impl From<ConnectionError> for Error {
 impl From<ChronoParseError> for Error {
     fn from(e: ChronoParseError) -> Self {
         Error::BadTimeFormat(e)
+    }
+}
+
+impl From<ParseIntError> for Error {
+    fn from(e: ParseIntError) -> Self {
+        Error::BadIntFormat(e)
     }
 }
 

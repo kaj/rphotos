@@ -12,12 +12,13 @@ extern crate rexif;
 #[macro_use]
 extern crate log;
 extern crate image;
+extern crate xml;
 
 mod adm;
 mod env;
 mod photosdir;
 
-use adm::{findphotos, makepublic, users};
+use adm::{findphotos, makepublic, readkpa, users};
 use adm::result::Error;
 use adm::stats::show_stats;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -42,6 +43,8 @@ fn main() {
                 .multiple(true)
                 .help("Base directory to search in (relative to the \
                        image root).")))
+        .subcommand(SubCommand::with_name("readkpa")
+            .about("Read metadata from my kphotoalbum"))
         .subcommand(SubCommand::with_name("stats")
             .about("Show some statistics from the database"))
         .subcommand(SubCommand::with_name("userlist")
@@ -110,6 +113,9 @@ fn run(args: ArgMatches) -> Result<(), Error> {
                     makepublic::one(&db, &pd, args.value_of("IMAGE").unwrap())
                 }
             }
+        }
+        ("readkpa", Some(_args)) => {
+            readkpa::readkpa(&try!(get_db()), &photos_dir())
         }
         ("stats", Some(_args)) => show_stats(&try!(get_db())),
         ("userlist", Some(_args)) => users::list(&try!(get_db())),
