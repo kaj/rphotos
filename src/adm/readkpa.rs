@@ -32,7 +32,7 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                     "image" => {
                         if let Some(file) = find_attr("file", attributes) {
                             let angle = try!(find_attr("angle", attributes)
-                                             .unwrap_or("0".to_string())
+                                             .unwrap_or("0")
                                              .parse::<i16>());
                             let date = find_image_date(attributes);
                             photo = Some(match try!(Photo::create_or_set_basics
@@ -53,7 +53,7 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                         }
                     }
                     "option" => {
-                        option = find_attr("name", attributes);
+                        option = find_attr("name", attributes).map(|s| s.into());
                     }
                     "value" => {
                         try!(match (photo.as_mut(),
@@ -242,9 +242,8 @@ fn slugify(val: &str) -> String {
 }
 
 fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<NaiveDateTime> {
-    let start_date = find_attr("startDate", attributes)
-        .unwrap_or("".to_string());
-    let end_date = find_attr("endDate", attributes).unwrap_or("".to_string());
+    let start_date = find_attr("startDate", attributes).unwrap_or("");
+    let end_date = find_attr("endDate", attributes).unwrap_or("");
     let format = "%FT%T";
     if let Ok(start_t) = NaiveDateTime::parse_from_str(&*start_date, format) {
         if let Ok(end_t) = NaiveDateTime::parse_from_str(&*end_date, format) {
@@ -266,10 +265,11 @@ fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<NaiveDateTime> {
     }
 }
 
-fn find_attr(name: &str, attrs: &Vec<OwnedAttribute>) -> Option<String> {
+fn find_attr<'a>(name: &'a str, attrs: &'a Vec<OwnedAttribute>)
+                 -> Option<&'a str> {
     for attr in attrs {
         if attr.name.local_name == name {
-            return Some(attr.value.clone());
+            return Some(&attr.value);
         }
     }
     None
