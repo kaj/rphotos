@@ -10,11 +10,11 @@
     @if let Some(ref pos) = position {
     <div id="map"></div>
     <script language="javascript" type="text/javascript">
-    fn initMap() @{
+    function initmap() @{
     var csslink = document.createElement('link');
     csslink.rel = 'stylesheet';
     csslink.href = 'https://rasmus.krats.se/static/leaflet077c/leaflet.css';
-    document.getElementById('head').append(csslink);
+    document.getElementsByTagName('head')[0].append(csslink);
     var pos = [@pos.x, @pos.y];
     var map = document.getElementById('map');
     map.style.height = 3 * map.clientWidth / 4 + "px";
@@ -25,7 +25,7 @@
     L.marker(pos).addTo(map);
     @}
     </script>
-    <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript" async onload="initmap">
+    <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript" async onload="initmap()">
     </script>
     }
 
