@@ -60,10 +60,6 @@ use memcachemiddleware::*;
 mod nickelext;
 use nickelext::FromSlug;
 
-use templates::Html;
-pub static CSSLINK: Html<&'static str> =
-    Html(include!(concat!(env!("OUT_DIR"), "/stylelink")));
-
 #[derive(Debug, Clone, RustcEncodable)]
 pub struct Group {
     title: String,

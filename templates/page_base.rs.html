@@ -1,4 +1,4 @@
-@use ::{CSSLINK, Link};
+@use ::Link;
 @use templates::head;
 
 @(title: &str, lpath: Vec<Link>, user: Option<String>, content: Content)
@@ -8,7 +8,7 @@
   <head>
     <title>@title</title>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-    @CSSLINK
+    @Html(include!(concat!(env!("OUT_DIR"), "/stylelink")))
   </head>
   <body>
     @:head(lpath, user)
