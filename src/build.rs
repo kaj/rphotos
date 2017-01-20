@@ -1,12 +1,10 @@
 extern crate brotli2;
 extern crate diesel_codegen_syntex as diesel_codegen;
-extern crate dotenv_codegen;
 extern crate flate2;
 extern crate md5;
 extern crate rustc_serialize as serialize;
 extern crate sass_rs;
 extern crate sass_sys;
-extern crate syntex;
 extern crate ructe;
 
 use brotli2::write::BrotliEncoder;
@@ -31,13 +29,9 @@ fn main() {
 }
 
 pub fn prepare_diesel(out_dir: &Path) {
-    let mut registry = syntex::Registry::new();
-    diesel_codegen::register(&mut registry);
-    dotenv_codegen::register(&mut registry);
-
     let src = Path::new("src/lib.in.rs");
     let dst = out_dir.join("lib.rs");
-    registry.expand("", &src, &dst).unwrap();
+    diesel_codegen::expand(&src, &dst).unwrap();
 
     println!("cargo:rerun-if-changed=src/build.rs");
     println!("cargo:rerun-if-changed=src/models.rs");
