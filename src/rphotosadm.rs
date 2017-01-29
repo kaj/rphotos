@@ -1,5 +1,6 @@
 //! Just fooling around with different ways to count images per year.
 extern crate rphotos;
+extern crate brotli2;
 extern crate clap;
 extern crate chrono;
 #[macro_use]
@@ -7,6 +8,7 @@ extern crate diesel;
 extern crate djangohashers;
 extern crate dotenv;
 extern crate env_logger;
+extern crate flate2;
 extern crate rand;
 extern crate rexif;
 #[macro_use]
@@ -18,7 +20,7 @@ mod adm;
 mod env;
 mod photosdir;
 
-use adm::{findphotos, makepublic, readkpa, users};
+use adm::{findphotos, makepublic, readkpa, users, storestatics};
 use adm::result::Error;
 use adm::stats::show_stats;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -66,6 +68,11 @@ fn main() {
                 .help("Image path to make public"))
             .after_help("The image path(s) are relative to the \
                          image root."))
+        .subcommand(SubCommand::with_name("storestatics")
+            .about("Store statics as files for a web server")
+            .arg(Arg::with_name("DIR")
+                .required(true)
+                .help("Directory to store the files in")))
         .get_matches();
 
     match run(args) {
@@ -121,6 +128,9 @@ fn run(args: ArgMatches) -> Result<(), Error> {
         ("userlist", Some(_args)) => users::list(&try!(get_db())),
         ("userpass", Some(args)) => {
             users::passwd(&try!(get_db()), args.value_of("USER").unwrap())
+        }
+        ("storestatics", Some(args)) => {
+            storestatics::to_dir(args.value_of("DIR").unwrap())
         }
         _ => Ok(println!("No subcommand given.\n\n{}", args.usage())),
     }

@@ -31,7 +31,7 @@ use diesel::prelude::*;
 use dotenv::dotenv;
 use hyper::header::{Expires, HttpDate};
 use nickel::{FormBody, Halt, HttpRouter, MediaType, MiddlewareResult, Nickel,
-             Request, Response, StaticFilesHandler};
+             Request, Response};
 use nickel::extensions::response::Redirect;
 use nickel::status::StatusCode;
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
@@ -100,13 +100,10 @@ fn main() {
 
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
+    server.get("/static/:file.:ext", wrap!(static_file: file, ext));
     server.utilize(MemcacheMiddleware::new
                    (vec![("tcp://127.0.0.1:11211".into(), 1)]));
     server.utilize(SessionMiddleware::new(&jwt_key()));
-    // TODO This is a "build" location, not an "install" location ...
-    let staticdir = concat!(env!("OUT_DIR"), "/static/");
-    info!("Serving static files from {}", staticdir);
-    server.utilize(StaticFilesHandler::new(staticdir));
     let dm: DieselMiddleware<PgConnection> =
         DieselMiddleware::new(&dburl(), 5, Box::new(NopErrorHandler)).unwrap();
     server.utilize(dm);
@@ -306,6 +303,20 @@ fn place_all<'mw>(req: &mut Request,
         o,
         req.authorized_user(),
         query.order(place_name).load(c).expect("List places")))
+}
+
+fn static_file<'mw>(_req: &mut Request,
+                    mut res: Response<'mw>,
+                    name: String,
+                    ext: String)
+                    -> MiddlewareResult<'mw> {
+    use templates::statics::StaticFile;
+    if let Some(s) = StaticFile::get(&format!("{}.{}", name, ext)) {
+        res.set(ext.parse().unwrap_or(MediaType::Bin));
+        res.set(Expires(HttpDate(time::now() + Duration::days(300))));
+        return res.send(s.content);
+    }
+    res.error(StatusCode::NotFound, "No such file")
 }
 
 fn place_one<'mw>(req: &mut Request,

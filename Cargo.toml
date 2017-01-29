@@ -6,14 +6,9 @@ authors = ["Rasmus Kaj <kaj@kth.se>"]
 build = "src/build.rs"
 
 [build-dependencies]
-sass-rs = "*"
-sass-sys = "*"
-md5 = "*"
-rustc-serialize = "*"
-flate2 = "*"
-brotli2 = "*"
 diesel_codegen_syntex = { version = "*", features = ["postgres", "syntex"] }
 ructe = "*"
+rsass = "*"
 
 [[bin]]
 name = "rphotoserver"
@@ -46,3 +41,5 @@ r2d2-diesel = "*"
 djangohashers = "*"
 rand = "*"
 memcached-rs = "^0.1"
+flate2 = "*"
+brotli2 = "*"
