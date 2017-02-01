@@ -1,13 +1,11 @@
 @use ::Link;
 @use rphotos::models::Photo;
-@use templates::page_base;
+@use templates::{page_base, img_link};
 
 @(title: &str, lpath: Vec<Link>, user: Option<String>, photos: Vec<Photo>)
 
 @:page_base(title, lpath, user, {
   <div class="group">
-    @for p in photos {
-      <p class="item"><a href="/details/@p.id"><img src="/img/@p.id/s"></a></p>
-    }
+    @for p in photos {@:img_link(p)}
   </div>
 })

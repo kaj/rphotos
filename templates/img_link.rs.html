@@ -1,0 +1,4 @@
+@use rphotos::models::Photo;
+
+@(photo: Photo)
+<p class="item"><a href="/details/@photo.id"><img src="/img/@photo.id/s"></a></p>
