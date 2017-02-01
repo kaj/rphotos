@@ -100,7 +100,7 @@ fn main() {
 
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
-    server.get("/static/:file.:ext", wrap!(static_file: file, ext));
+    wrap3!(server.get "/static/{}\\.{}", static_file: file, ext);
     server.utilize(MemcacheMiddleware::new
                    (vec![("tcp://127.0.0.1:11211".into(), 1)]));
     server.utilize(SessionMiddleware::new(&jwt_key()));
@@ -109,23 +109,23 @@ fn main() {
     server.utilize(dm);
     server.utilize(PhotosDirMiddleware::new(photos_dir()));
 
-    wrap2!(server.get  /login,             login);
-    wrap2!(server.post /login,             do_login);
-    wrap2!(server.get  /logout,            logout);
-    server.get("/",                        all_years);
-    wrap2!(server.get /img/:id/:size,      show_image);
-    wrap2!(server.get /tag/,               tag_all);
-    wrap2!(server.get /tag/:tag,           tag_one);
-    wrap2!(server.get /place/,             place_all);
-    wrap2!(server.get /place/:slug,        place_one);
-    wrap2!(server.get /person/,            person_all);
-    wrap2!(server.get /person/:slug,       person_one);
-    wrap2!(server.get /details/:id,        photo_details);
-    server.get("/0/",                      all_null_date);
-    wrap2!(server.get /:year/,             months_in_year);
-    wrap2!(server.get /:year/:month/,      days_in_month);
-    wrap2!(server.get /:year/:month/:day/, all_for_day);
-    wrap2!(server.get /thisday,            on_this_day);
+    wrap3!(server.get  "/login",           login);
+    wrap3!(server.post "/login",           do_login);
+    wrap3!(server.get  "/logout",          logout);
+    wrap3!(server.get "/",                 all_years);
+    wrap3!(server.get "/img/{}/{}",        show_image: id, size);
+    wrap3!(server.get "/tag/",             tag_all);
+    wrap3!(server.get "/tag/{}",           tag_one: tag);
+    wrap3!(server.get "/place/",           place_all);
+    wrap3!(server.get "/place/{}",         place_one: slug);
+    wrap3!(server.get "/person/",          person_all);
+    wrap3!(server.get "/person/{}",        person_one: slug);
+    wrap3!(server.get "/details/{}",       photo_details: id);
+    wrap3!(server.get "/0/",               all_null_date);
+    wrap3!(server.get "/{}/",              months_in_year: year);
+    wrap3!(server.get "/{}/{}/",           days_in_month: year, month);
+    wrap3!(server.get "/{}/{}/{}",         all_for_day: year, month, day);
+    wrap3!(server.get "/thisday",          on_this_day);
 
     server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"))
         .expect("listen");
