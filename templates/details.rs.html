@@ -4,8 +4,8 @@
 
 @(lpath: Vec<Link>, user: Option<String>, people: Vec<Person>, places: Vec<Place>, tags: Vec<Tag>, position: Option<Coord>, camera: Option<Camera>, time: String, photo: Photo)
 @:page_base("Photo details", lpath, user, {
-    <p><a href="/img/@photo.id/l">@photo.path</a></p>
-    <p><img src="/img/@photo.id/m"></p>
+    <p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>
+    <p><img src="/img/@photo.id-m.jpg"></p>
 
     @if let Some(ref pos) = position {
     <div id="map"></div>

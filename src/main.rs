@@ -113,14 +113,14 @@ fn main() {
     wrap3!(server.post "/login",           do_login);
     wrap3!(server.get  "/logout",          logout);
     wrap3!(server.get "/",                 all_years);
-    wrap3!(server.get "/img/{}/{}",        show_image: id, size);
+    wrap3!(server.get "/img/{}[-]{}\\.jpg", show_image: id, size);
+    wrap3!(server.get "/img/{}",           photo_details: id);
     wrap3!(server.get "/tag/",             tag_all);
     wrap3!(server.get "/tag/{}",           tag_one: tag);
     wrap3!(server.get "/place/",           place_all);
     wrap3!(server.get "/place/{}",         place_one: slug);
     wrap3!(server.get "/person/",          person_all);
     wrap3!(server.get "/person/{}",        person_one: slug);
-    wrap3!(server.get "/details/{}",       photo_details: id);
     wrap3!(server.get "/0/",               all_null_date);
     wrap3!(server.get "/{}/",              months_in_year: year);
     wrap3!(server.get "/{}/{}/",           days_in_month: year, month);
