@@ -1,6 +1,17 @@
+$border: 1px solid #333;
+
 body {
     background: #eee;
     margin-top: 2em;
+    line-height: 1.6;
+}
+
+p {
+    margin: 0;
+}
+
+p + p {
+    margin-top: 1ex;
 }
 
 header {
@@ -26,13 +37,20 @@ header {
     }
 }
 
+.item {
+    background: #ccc;
+    border: $border;
+    img {
+	box-shadow: 0 .2em 1em -.2em #000;
+	vertical-align: middle;
+    }
+}
+
 div.group {
   display: flex;
   flex-flow: row-reverse wrap;
 
   .item {
-    background: #ccc;
-    border: 1px solid #333;
     display: flex;
     flex-basis: 210px;
     flex-flow: column;
@@ -45,10 +63,29 @@ div.group {
     h2, p {
       margin: .2em;
     }
-    img {
-      box-shadow: 0 .2em 1em -.2em #000;
-    }
   }
+}
+div.details {
+    display: flex;
+    flex-flow: row wrap;
+
+    .item, .meta {
+	padding: 1em;
+    }
+    .item {
+	align-self: flex-start;
+	flex-grow: 3;
+	flex-basis: 30em;
+	text-align: center;
+	img {
+	    max-width: 100%;
+	}
+    }
+    .meta {
+	flex-grow: 1;
+	flex-basis: 25em;
+	padding-top: 0;
+    }
 }
 
 ul.alltags, ul.allpeople, ul.allplaces {
@@ -57,9 +94,7 @@ ul.alltags, ul.allpeople, ul.allplaces {
 }
 
 #map {
-    border: 1px solid #333;
-    float: right;
+    border: $border;
     height: 8em;
-    margin: 1ex;
-    width: 40%;
+    margin: 1ex auto;
 }

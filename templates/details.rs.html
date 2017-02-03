@@ -4,8 +4,21 @@
 
 @(lpath: Vec<Link>, user: Option<String>, people: Vec<Person>, places: Vec<Place>, tags: Vec<Tag>, position: Option<Coord>, camera: Option<Camera>, time: String, photo: Photo)
 @:page_base("Photo details", lpath, user, {
+  <div class="details">
+    <div class="item"><img src="/img/@photo.id-m.jpg"></div>
+    <div class="meta">
     <p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>
-    <p><img src="/img/@photo.id-m.jpg"></p>
+
+    @if let Some(g) = photo.grade {<p>Betyg: @g</p>}
+    <p>Tid: @time</p>
+    @if !people.is_empty() {
+    <p>People: @for p in people{<a href="/person/@p.slug">@p.person_name</a>, }</p>}
+    @if !places.is_empty() {
+    <p>Places: @for p in places{<a href="/place/@p.slug">@p.place_name</a>, }</p>}
+    @if !tags.is_empty() {
+    <p>Tags: @for t in tags{<a href="/tag/@t.slug">@t.tag_name</a>, }</p>}
+    @if let Some(ref pos) = position {<p>Position: @pos.x @pos.y</p>}
+    @if let Some(ref c) = camera{<p>Camera: @c.model (@c.manufacturer)</p>}
 
     @if let Some(ref pos) = position {
     <div id="map"></div>
@@ -28,15 +41,6 @@
     <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript" async onload="initmap()">
     </script>
     }
-
-    @if let Some(g) = photo.grade {<p>Betyg: @g</p>}
-    <p>Tid: @time</p>
-    @if !people.is_empty() {
-    <p>People: @for p in people{<a href="/person/@p.slug">@p.person_name</a>, }</p>}
-    @if !places.is_empty() {
-    <p>Places: @for p in places{<a href="/place/@p.slug">@p.place_name</a>, }</p>}
-    @if !tags.is_empty() {
-    <p>Tags: @for t in tags{<a href="/tag/@t.slug">@t.tag_name</a>, }</p>}
-    @if let Some(ref pos) = position {<p>Position: @pos.x @pos.y</p>}
-    @if let Some(ref c) = camera{<p>Camera: @c.model (@c.manufacturer)</p>}
+    </div>
+  </div>
 })
