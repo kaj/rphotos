@@ -35,21 +35,8 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                                              .unwrap_or("0")
                                              .parse::<i16>());
                             let date = find_image_date(attributes);
-                            photo = Some(match try!(Photo::create_or_set_basics
-                                                   (db, &file, date, angle, None)) {
-                                    Modification::Created(photo) => {
-                                        info!("Created {:?}", photo);
-                                        photo
-                                    }
-                                    Modification::Updated(photo) => {
-                                        info!("Modified {:?}", photo);
-                                        photo
-                                    }
-                                    Modification::Unchanged(photo) => {
-                                        debug!("No change for {:?}", photo);
-                                        photo
-                                    }
-                                })
+                            photo = Some(try!(photo_by_path
+                                              (db, &file, date, angle)));
                         }
                     }
                     "option" => {
@@ -97,6 +84,36 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+pub fn photo_by_path(db: &PgConnection,
+                     file: &str,
+                     date: Option<NaiveDateTime>,
+                     angle: i16)
+                     -> Result<Photo> {
+    match try!(Photo::update_by_path(db, file, date, angle, &None)) {
+        Some(Modification::Created(photo)) => {
+            info!("Created {:?}", photo);
+            Ok(photo)
+        }
+        Some(Modification::Updated(photo)) => {
+            info!("Modified {:?}", photo);
+            Ok(photo)
+        }
+        Some(Modification::Unchanged(photo)) => {
+            debug!("No change for {:?}", photo);
+            Ok(photo)
+        }
+        None => {
+            let lower_path = file.to_lowercase();
+            if lower_path != file {
+                photo_by_path(db, &lower_path, date, angle)
+            } else {
+                panic!("Photo {:?} does not exist in db.",
+                       file);
+            }
+        }
+    }
 }
 
 fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) -> Result<()> {

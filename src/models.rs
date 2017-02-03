@@ -73,20 +73,20 @@ impl Photo {
         }
     }
 
-    pub fn create_or_set_basics(db: &PgConnection,
-                                file_path: &str,
-                                exifdate: Option<NaiveDateTime>,
-                                exifrotation: i16,
-                                camera: Option<Camera>)
-                                -> Result<Modification<Photo>, DieselError> {
+    pub fn update_by_path(db: &PgConnection,
+                          file_path: &str,
+                          exifdate: Option<NaiveDateTime>,
+                          exifrotation: i16,
+                          camera: &Option<Camera>)
+                          -> Result<Option<Modification<Photo>>, DieselError> {
         use diesel;
         use diesel::prelude::*;
         use schema::photos::dsl::*;
-        let cameraid = camera.map(|c| c.id);
         if let Some(mut pic) =
                try!(photos.filter(path.eq(&file_path.to_string()))
-                          .first::<Photo>(db)
-                          .optional()) {
+                    .first::<Photo>(db)
+                    .optional())
+        {
             let mut change = false;
             // TODO Merge updates to one update statement!
             if exifdate.is_some() && exifdate != pic.date {
@@ -101,27 +101,45 @@ impl Photo {
                                .set(rotation.eq(exifrotation))
                                .get_result::<Photo>(db));
             }
-            if cameraid.is_some() && cameraid != pic.camera_id {
-                change = true;
-                pic = try!(diesel::update(photos.find(pic.id))
-                               .set(camera_id.eq(cameraid))
+            if let &Some(ref camera) = camera {
+                if pic.camera_id != Some(camera.id) {
+                    change = true;
+                    pic = try!(diesel::update(photos.find(pic.id))
+                               .set(camera_id.eq(camera.id))
                                .get_result::<Photo>(db));
+                }
             }
-            Ok(if change {
+            Ok(Some(if change {
                 Modification::Updated(pic)
             } else {
                 Modification::Unchanged(pic)
-            })
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn create_or_set_basics(db: &PgConnection,
+                                file_path: &str,
+                                exifdate: Option<NaiveDateTime>,
+                                exifrotation: i16,
+                                camera: Option<Camera>)
+                                -> Result<Modification<Photo>, DieselError> {
+        use diesel;
+        use diesel::prelude::*;
+        use schema::photos::dsl::*;
+        if let Some(result) = try!(Self::update_by_path(db, file_path, exifdate, exifrotation, &camera)) {
+            Ok(result)
         } else {
             let pic = NewPhoto {
                 path: &file_path,
                 date: exifdate,
                 rotation: exifrotation,
-                camera_id: cameraid,
+                camera_id: camera.map(|c| c.id),
             };
             let pic = try!(diesel::insert(&pic)
-                               .into(photos)
-                               .get_result::<Photo>(db));
+                           .into(photos)
+                           .get_result::<Photo>(db));
             Ok(Modification::Created(pic))
         }
     }
