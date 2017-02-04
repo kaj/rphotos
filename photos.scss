@@ -74,7 +74,7 @@ div.details {
     }
     .item {
 	align-self: flex-start;
-	flex-grow: 3;
+	flex-grow: 4;
 	flex-basis: 30em;
 	text-align: center;
 	img {
@@ -83,7 +83,7 @@ div.details {
     }
     .meta {
 	flex-grow: 1;
-	flex-basis: 25em;
+	flex-basis: 20em;
 	padding-top: 0;
     }
 }
