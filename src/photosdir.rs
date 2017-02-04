@@ -5,6 +5,7 @@ use rphotos::models::Photo;
 use std::{fs, io};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
+use image;
 
 pub struct PhotosDir {
     basedir: PathBuf,
@@ -70,7 +71,17 @@ impl PhotosDir {
                         let path = p1.to_str().unwrap();
                         cb(&path[bl..], &exif);
                     } else {
-                        debug!("'{:?}' has no exif data.", p1);
+                        if image::open(p1.clone()).is_ok() {
+                            let none = ExifData {
+                                mime: "".into(),
+                                entries: vec![],
+                            };
+                            info!("{:?} seems like a pic with no exif.", p1);
+                            let path = p1.to_str().unwrap();
+                            cb(&path[bl..], &none);
+                        } else {
+                            debug!("{:?} is no pic.", p1)
+                        }
                     }
                 }
             }

@@ -26,7 +26,7 @@ fn save_photo(db: &PgConnection,
               -> Result<(), Error> {
     let photo =
         match try!(Photo::create_or_set_basics(db, file_path,
-                                               Some(try!(find_date(&exif))),
+                                               find_date(&exif).ok(),
                                                try!(find_rotation(&exif)),
                                                try!(find_camera(db, exif)))) {
             Modification::Created(photo) => {

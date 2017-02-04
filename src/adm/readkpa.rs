@@ -35,8 +35,13 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                                              .unwrap_or("0")
                                              .parse::<i16>());
                             let date = find_image_date(attributes);
-                            photo = Some(try!(photo_by_path
-                                              (db, &file, date, angle)));
+                            match photo_by_path(db, &file, date, angle) {
+                                Ok(p) => { photo = Some(p) }
+                                Err(e) => {
+                                    error!("{}", e);
+                                    photo = None;
+                                }
+                            }
                         }
                     }
                     "option" => {
@@ -58,7 +63,7 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                             (Some(p), Some("Betyg"), Some(v)) => {
                                 grade_photo(db, p, &v)
                             }
-                            (None, None, _value_in_categories) => Ok(()),
+                            (None, _option, _value_in_categories) => Ok(()),
                             (p, o, v) => {
                                 Err(Error::Other(format!("Got value {:?} \
                                                           for option {:?} \
@@ -109,8 +114,7 @@ pub fn photo_by_path(db: &PgConnection,
             if lower_path != file {
                 photo_by_path(db, &lower_path, date, angle)
             } else {
-                panic!("Photo {:?} does not exist in db.",
-                       file);
+                Err(Error::Other(format!("Photo {:?} does not exist in db.", file)))
             }
         }
     }
