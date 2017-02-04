@@ -1,9 +1,9 @@
-use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use nickel::status::StatusCode;
+use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use plugin::Extensible;
-use typemap::Key;
-use time::{Duration, Timespec, get_time};
 use std::sync::{Arc, Mutex};
+use time::{Duration, Timespec, get_time};
+use typemap::Key;
 
 pub struct RequestLoggerMiddleware;
 

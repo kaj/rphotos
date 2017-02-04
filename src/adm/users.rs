@@ -50,12 +50,10 @@ fn random_password(len: usize) -> String {
     let nlc = 'z' as u8 - 'a' as u8 + 1;
     let x = Range::new(0, 6 * nlc + 4 * 10 + 1);
     (0..len)
-        .map(|_| {
-            match x.ind_sample(rng) {
-                n if n < (1 * nlc) => ('A' as u8 + (n % nlc)) as char,
-                n if n < (6 * nlc) => ('a' as u8 + (n % nlc)) as char,
-                n => ('0' as u8 + n % 10) as char,
-            }
+        .map(|_| match x.ind_sample(rng) {
+            n if n < (1 * nlc) => ('A' as u8 + (n % nlc)) as char,
+            n if n < (6 * nlc) => ('a' as u8 + (n % nlc)) as char,
+            n => ('0' as u8 + n % 10) as char,
         })
         .collect()
 }

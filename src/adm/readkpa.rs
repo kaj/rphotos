@@ -45,7 +45,8 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                         }
                     }
                     "option" => {
-                        option = find_attr("name", attributes).map(|s| s.into());
+                        option = find_attr("name", attributes)
+                            .map(|s| s.into());
                     }
                     "value" => {
                         try!(match (photo.as_mut(),
@@ -114,7 +115,8 @@ pub fn photo_by_path(db: &PgConnection,
             if lower_path != file {
                 photo_by_path(db, &lower_path, date, angle)
             } else {
-                Err(Error::Other(format!("Photo {:?} does not exist in db.", file)))
+                Err(Error::Other(format!("Photo {:?} does not exist in db.",
+                                         file)))
             }
         }
     }
@@ -183,9 +185,9 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
             })
             .into(photo_people)
             .execute(db)
-            .map_err(|e| Error::Other(format!("Place photo {:?}: {}",
-                                              photo,
-                                              e))));
+            .map_err(|e| {
+                Error::Other(format!("Place photo {:?}: {}", photo, e))
+            }));
     }
     Ok(())
 }
@@ -238,11 +240,11 @@ fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) -> Result<()> {
     });
     use rphotos::schema::photos::dsl::*;
     let n = try!(diesel::update(photos.find(photo.id))
-                 .set(grade.eq(photo.grade))
-                 .execute(db)
-                 .map_err(|e| Error::Other(format!("Update grade of {:?}: {}",
-                                                   photo,
-                                                   e))));
+        .set(grade.eq(photo.grade))
+        .execute(db)
+        .map_err(|e| {
+            Error::Other(format!("Update grade of {:?}: {}", photo, e))
+        }));
     debug!("Graded {} photo", n);
     Ok(())
 }
@@ -286,8 +288,7 @@ fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<NaiveDateTime> {
     }
 }
 
-fn find_attr<'a>(name: &'a str, attrs: &'a Vec<OwnedAttribute>)
-                 -> Option<&'a str> {
+fn find_attr<'a>(name: &str, attrs: &'a [OwnedAttribute]) -> Option<&'a str> {
     for attr in attrs {
         if attr.name.local_name == name {
             return Some(&attr.value);

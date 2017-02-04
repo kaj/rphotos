@@ -51,7 +51,11 @@ fn save_photo(db: &PgConnection,
                 .first::<(i32, i32, i32)>(db) {
             if (clat != (lat * 1e6) as i32) || (clong != (long * 1e6) as i32) {
                 panic!("TODO Should update position #{} from {} {} to {} {}",
-                       pos, clat, clong, lat, long)
+                       pos,
+                       clat,
+                       clong,
+                       lat,
+                       long)
             }
         } else {
             info!("Position for {} is {} {}", file_path, lat, long);

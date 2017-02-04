@@ -1,3 +1,4 @@
+use {Group, Link};
 use chrono::Duration as ChDuration;
 use chrono::naive::date::NaiveDate;
 use diesel::expression::sql_literal::SqlLiteral;
@@ -6,12 +7,11 @@ use diesel::prelude::*;
 use nickel::{MiddlewareResult, Request, Response};
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
-use rphotos::models::Photo;
-use time;
 use nickelext::MyResponse;
+use rphotos::models::Photo;
+use templates;
+use time;
 
-use ::{Group, Link};
-use ::templates;
 
 pub fn all_years<'mw>(req: &mut Request,
                   res: Response<'mw>)

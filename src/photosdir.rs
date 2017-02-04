@@ -1,11 +1,9 @@
-use image::{FilterType, GenericImage, ImageError, ImageFormat};
-use image::open as image_open;
+use image::{self, FilterType, GenericImage, ImageError, ImageFormat};
 use rexif::{self, ExifData};
 use rphotos::models::Photo;
 use std::{fs, io};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use image;
 
 pub struct PhotosDir {
     basedir: PathBuf,
@@ -24,7 +22,7 @@ impl PhotosDir {
                             -> Result<Vec<u8>, ImageError> {
         let path = self.basedir.join(photo.path);
         info!("Should open {:?}", path);
-        let img = try!(image_open(path));
+        let img = try!(image::open(path));
         let img = if width < img.width() || height < img.height() {
             img.resize(width, height, FilterType::CatmullRom)
         } else {

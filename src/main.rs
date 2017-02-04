@@ -194,8 +194,8 @@ fn show_image<'mw>(req: &Request,
                     return res.send(buf);
                 }
                 Err(err) => {
-                            return res.error(StatusCode::InternalServerError,
-                                             format!("{}", err));
+                    return res.error(StatusCode::InternalServerError,
+                                     format!("{}", err));
                 }
             }
         }
@@ -203,7 +203,9 @@ fn show_image<'mw>(req: &Request,
     res.not_found("No such image")
 }
 
-fn get_image_data(req: &Request, photo: Photo, size: SizeTag)
+fn get_image_data(req: &Request,
+                  photo: Photo,
+                  size: SizeTag)
                   -> Result<Vec<u8>, image::ImageError>
 {
     req.cached_or(&format!("rp{}{:?}", photo.id, size), || {
@@ -230,13 +232,11 @@ fn tag_all<'mw>(req: &mut Request,
                                                .select(p::id)
                                                .filter(p::is_public)))))
     };
-    res.ok(|o| templates::tags(
-        o,
-        req.authorized_user(),
-        query
-            .order(tag_name)
-            .load(c)
-            .expect("List tags")))
+    res.ok(|o| {
+        templates::tags(o,
+                        req.authorized_user(),
+                        query.order(tag_name).load(c).expect("List tags"))
+    })
 }
 
 fn tag_one<'mw>(req: &mut Request,
@@ -248,15 +248,17 @@ fn tag_one<'mw>(req: &mut Request,
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
         use rphotos::schema::photos::dsl::{date, grade, id};
         use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
-        return res.ok(|o| templates::tag(
-            o,
-            req.authorized_user(),
-            Photo::query(req.authorized_user().is_some())
-                .filter(id.eq_any(photo_tags.select(photo_id)
-                                            .filter(tag_id.eq(tag.id))))
-                .order((grade.desc().nulls_last(), date.desc().nulls_last()))
-                .load(c).unwrap(),
-            tag));
+        return res.ok(|o| {
+            templates::tag(o,
+                           req.authorized_user(),
+                           Photo::query(req.authorized_user().is_some())
+                           .filter(id.eq_any(photo_tags.select(photo_id)
+                                             .filter(tag_id.eq(tag.id))))
+                           .order((grade.desc().nulls_last(),
+                                   date.desc().nulls_last()))
+                           .load(c).unwrap(),
+                           tag)
+        })
     }
     res.not_found("Not a tag")
 }

@@ -1,8 +1,8 @@
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
-use plugin::Extensible;
-use typemap::Key;
 use photosdir::PhotosDir;
+use plugin::Extensible;
 use std::path::PathBuf;
+use typemap::Key;
 
 pub struct PhotosDirMiddleware {
     dir: PathBuf,
@@ -24,7 +24,7 @@ impl<D> Middleware<D> for PhotosDirMiddleware {
                           res: Response<'mw, D>)
                           -> MiddlewareResult<'mw, D> {
         req.extensions_mut()
-           .insert::<PhotosDirMiddleware>(PhotosDir::new(self.dir.clone()));
+            .insert::<PhotosDirMiddleware>(PhotosDir::new(self.dir.clone()));
         Ok(Continue(res))
     }
 }

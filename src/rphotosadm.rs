@@ -50,7 +50,7 @@ fn main() {
         .subcommand(SubCommand::with_name("stats")
             .about("Show some statistics from the database"))
         .subcommand(SubCommand::with_name("userlist")
-            .about("List users"))
+            .about("List existing users"))
         .subcommand(SubCommand::with_name("userpass")
             .about("Set password for a (new or existing) user")
             .arg(Arg::with_name("USER")
@@ -92,8 +92,11 @@ fn run(args: ArgMatches) -> Result<(), Error> {
             if let Some(bases) = args.values_of("BASE") {
                 for base in bases {
                     try!(findphotos::crawl(&db, &pd, Path::new(&base))
-                         .map_err(|e| Error::Other(
-                             format!("Failed to crawl {}: {}", base, e))));
+                         .map_err(|e| {
+                             Error::Other(format!("Failed to crawl {}: {}",
+                                                  base,
+                                                  e))
+                         }));
                 }
             } else {
                 try!(findphotos::crawl(&db, &pd, Path::new(""))
