@@ -23,14 +23,11 @@ extern crate dotenv;
 extern crate memcached;
 
 use chrono::Datelike;
-use chrono::Duration as ChDuration;
-use chrono::naive::date::NaiveDate;
-use diesel::expression::sql_literal::SqlLiteral;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
 use hyper::header::{Expires, HttpDate};
-use nickel::{FormBody, Halt, HttpRouter, MediaType, MiddlewareResult, Nickel,
+use nickel::{FormBody, HttpRouter, MediaType, MiddlewareResult, Nickel,
              Request, Response};
 use nickel::extensions::response::Redirect;
 use nickel::status::StatusCode;
@@ -39,7 +36,6 @@ use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
 use r2d2::NopErrorHandler;
 use rphotos::models::{Person, Photo, Place, Tag};
-use std::io::{self, Write};
 use time::Duration;
 
 mod env;
@@ -58,7 +54,10 @@ use memcachemiddleware::*;
 
 #[macro_use]
 mod nickelext;
-use nickelext::FromSlug;
+use nickelext::{FromSlug, MyResponse};
+
+mod views_by_date;
+use views_by_date::*;
 
 #[derive(Debug, Clone, RustcEncodable)]
 pub struct Group {
@@ -73,25 +72,6 @@ pub struct Coord {
     x: f64,
     y: f64,
 }
-
-fn monthname(n: u32) -> &'static str {
-    match n {
-        1 => "january",
-        2 => "february",
-        3 => "march",
-        4 => "april",
-        5 => "may",
-        6 => "june",
-        7 => "july",
-        8 => "august",
-        9 => "september",
-        10 => "october",
-        11 => "november",
-        12 => "december",
-        _ => "non-month",
-    }
-}
-
 
 fn main() {
     dotenv().ok();
@@ -135,7 +115,7 @@ fn login<'mw>(_req: &mut Request,
               mut res: Response<'mw>)
               -> MiddlewareResult<'mw> {
     res.clear_jwt();
-    render(res, |o| templates::login(o))
+    res.ok(|o| templates::login(o))
 }
 
 fn do_login<'mw>(req: &mut Request,
@@ -160,7 +140,7 @@ fn do_login<'mw>(req: &mut Request,
             debug!("No hash found for {}", user);
         }
     }
-    render(res, |o| templates::login(o))
+    res.ok(|o| templates::login(o))
 }
 
 fn logout<'mw>(_req: &mut Request,
@@ -214,13 +194,13 @@ fn show_image<'mw>(req: &Request,
                     return res.send(buf);
                 }
                 Err(err) => {
-                    return res.error(StatusCode::InternalServerError,
-                                     format!("{}", err));
+                            return res.error(StatusCode::InternalServerError,
+                                             format!("{}", err));
                 }
             }
         }
     }
-    res.error(StatusCode::NotFound, "No such image")
+    res.not_found("No such image")
 }
 
 fn get_image_data(req: &Request, photo: Photo, size: SizeTag)
@@ -250,7 +230,7 @@ fn tag_all<'mw>(req: &mut Request,
                                                .select(p::id)
                                                .filter(p::is_public)))))
     };
-    render(res, |o| templates::tags(
+    res.ok(|o| templates::tags(
         o,
         req.authorized_user(),
         query
@@ -268,7 +248,7 @@ fn tag_one<'mw>(req: &mut Request,
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
         use rphotos::schema::photos::dsl::{date, grade, id};
         use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
-        return render(res, |o| templates::tag(
+        return res.ok(|o| templates::tag(
             o,
             req.authorized_user(),
             Photo::query(req.authorized_user().is_some())
@@ -278,7 +258,7 @@ fn tag_one<'mw>(req: &mut Request,
                 .load(c).unwrap(),
             tag));
     }
-    res.error(StatusCode::NotFound, "Not a tag")
+    res.not_found("Not a tag")
 }
 
 fn place_all<'mw>(req: &mut Request,
@@ -299,7 +279,7 @@ fn place_all<'mw>(req: &mut Request,
                                                .filter(p::is_public)))))
     };
     let c: &PgConnection = &req.db_conn();
-    render(res, |o| templates::places(
+    res.ok(|o| templates::places(
         o,
         req.authorized_user(),
         query.order(place_name).load(c).expect("List places")))
@@ -316,7 +296,7 @@ fn static_file<'mw>(_req: &mut Request,
         res.set(Expires(HttpDate(time::now() + Duration::days(300))));
         return res.send(s.content);
     }
-    res.error(StatusCode::NotFound, "No such file")
+    res.not_found("No such file")
 }
 
 fn place_one<'mw>(req: &mut Request,
@@ -329,7 +309,7 @@ fn place_one<'mw>(req: &mut Request,
         use rphotos::schema::photos::dsl::{date, grade, id};
         use rphotos::schema::photo_places::dsl::{photo_id, photo_places,
                                                  place_id};
-        return render(res, |o| templates::place(
+        return res.ok(|o| templates::place(
             o,
             req.authorized_user(),
             Photo::query(req.authorized_user().is_some())
@@ -339,7 +319,7 @@ fn place_one<'mw>(req: &mut Request,
                 .load(c).unwrap(),
             place));
     }
-    res.error(StatusCode::NotFound, "Not a place")
+    res.not_found("Not a place")
 }
 
 fn person_all<'mw>(req: &mut Request,
@@ -360,7 +340,7 @@ fn person_all<'mw>(req: &mut Request,
                                                .filter(p::is_public)))))
     };
     let c: &PgConnection = &req.db_conn();
-    render(res, |o| templates::people(
+    res.ok(|o| templates::people(
         o,
         req.authorized_user(),
         query.order(person_name).load(c).expect("list people")))
@@ -376,7 +356,7 @@ fn person_one<'mw>(req: &mut Request,
         use rphotos::schema::photos::dsl::{date, grade, id};
         use rphotos::schema::photo_people::dsl::{person_id, photo_id,
                                                  photo_people};
-        return render(res, |o| templates::person(
+        return res.ok(|o| templates::person(
             o,
             req.authorized_user(),
             Photo::query(req.authorized_user().is_some())
@@ -386,7 +366,7 @@ fn person_one<'mw>(req: &mut Request,
                 .load(c).unwrap(),
             person));
     }
-    res.error(StatusCode::NotFound, "Not a person")
+    res.not_found("Not a person")
 }
 
 fn photo_details<'mw>(req: &mut Request,
@@ -397,7 +377,7 @@ fn photo_details<'mw>(req: &mut Request,
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
-            return render(res, |o| templates::details(
+            return res.ok(|o| templates::details(
                 o,
                 tphoto.date
                     .map(|d| vec![Link::year(d.year()),
@@ -455,245 +435,9 @@ fn photo_details<'mw>(req: &mut Request,
                 tphoto));
         }
     }
-    res.error(StatusCode::NotFound, "Photo not found")
+    res.not_found("Photo not found")
 }
 
-fn all_years<'mw>(req: &mut Request,
-                  res: Response<'mw>)
-                  -> MiddlewareResult<'mw> {
-
-    use rphotos::schema::photos::dsl::{date, grade};
-    let c: &PgConnection = &req.db_conn();
-
-    let user: Option<String> = req.authorized_user();
-    let groups: Vec<Group> =
-            SqlLiteral::new(format!(
-                "select cast(extract(year from date) as int) y, count(*) c \
-                 from photos{} group by y order by y desc nulls last",
-                if req.authorized_user().is_none() {
-                    " where is_public"
-                } else {
-                    ""
-                }))
-            .load::<(Option<i32>, i64)>(c).unwrap()
-            .iter().map(|&(year, count)| {
-                let q = Photo::query(req.authorized_user().is_some())
-                    .order((grade.desc().nulls_last(), date.asc()))
-                    .limit(1);
-                let photo =
-                    if let Some(year) = year {
-                        q.filter(date.ge(NaiveDate::from_ymd(year, 1, 1)
-                                         .and_hms(0, 0, 0)))
-                         .filter(date.lt(NaiveDate::from_ymd(year + 1, 1, 1)
-                                         .and_hms(0, 0, 0)))
-                    } else {
-                        q.filter(date.is_null())
-                    };
-                Group {
-                    title: year.map(|y|format!("{}", y))
-                               .unwrap_or("-".to_string()),
-                    url: format!("/{}/", year.unwrap_or(0)),
-                    count: count,
-                    photo: photo.first::<Photo>(c).unwrap()
-                }
-            }).collect();
-
-    render(res,
-           |o| templates::groups(o, "All photos", Vec::new(), user, groups))
-}
-
-fn months_in_year<'mw>(req: &mut Request,
-                       res: Response<'mw>,
-                       year: i32)
-                       -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::{date, grade};
-    let c: &PgConnection = &req.db_conn();
-
-    let user: Option<String> = req.authorized_user();
-    let title: String = format!("Photos from {}", year);
-    let groups: Vec<Group> =
-            SqlLiteral::new(format!(
-                "select cast(extract(month from date) as int) m, count(*) c \
-                 from photos where extract(year from date)={}{} \
-                 group by m order by m desc",
-                year,
-                if req.authorized_user().is_none() {
-                    " and is_public"
-                } else {
-                    ""
-                }))
-            .load::<(Option<i32>, i64)>(c).unwrap()
-            .iter().map(|&(month, count)| {
-                let month = month.map(|y| y as u32).unwrap_or(0);
-                let fromdate = NaiveDate::from_ymd(year, month, 1).and_hms(0, 0, 0);
-                let todate =
-                    if month == 12 { NaiveDate::from_ymd(year + 1, 1, 1) }
-                    else { NaiveDate::from_ymd(year, month + 1, 1) }
-                    .and_hms(0, 0, 0);
-                let photo = Photo::query(req.authorized_user().is_some())
-                    .filter(date.ge(fromdate))
-                    .filter(date.lt(todate))
-                    .order((grade.desc().nulls_last(), date.asc()))
-                    .limit(1)
-                    .first::<Photo>(c).unwrap();
-
-                Group {
-                    title: monthname(month).to_string(),
-                    url: format!("/{}/{}/", year, month),
-                    count: count,
-                    photo: photo
-                }
-            }).collect();
-
-    if groups.is_empty() {
-        res.error(StatusCode::NotFound, "No such image")
-    } else {
-        render(res, |o| templates::groups(o, &title, Vec::new(), user, groups))
-    }
-}
-
-fn days_in_month<'mw>(req: &mut Request,
-                      res: Response<'mw>,
-                      year: i32,
-                      month: u32)
-                      -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::{date, grade};
-    let c: &PgConnection = &req.db_conn();
-
-    let user: Option<String> = req.authorized_user();
-    let lpath: Vec<Link> = vec![Link::year(year)];
-    let title: String = format!("Photos from {} {}", monthname(month), year);
-    let groups: Vec<Group> =
-            SqlLiteral::new(format!(
-                "select cast(extract(day from date) as int) d, count(*) c \
-                 from photos where extract(year from date)={} \
-                 and extract(month from date)={}{} group by d order by d desc",
-                year, month,
-                if req.authorized_user().is_none() {
-                    " and is_public"
-                } else {
-                    ""
-                }))
-            .load::<(Option<i32>, i64)>(c).unwrap()
-            .iter().map(|&(day, count)| {
-                let day = day.map(|y| y as u32).unwrap_or(0);
-                let fromdate = NaiveDate::from_ymd(year, month, day)
-                    .and_hms(0, 0, 0);
-                let photo = Photo::query(req.authorized_user().is_some())
-                    .filter(date.ge(fromdate))
-                    .filter(date.lt(fromdate + ChDuration::days(1)))
-                    .order((grade.desc().nulls_last(), date.asc()))
-                    .limit(1)
-                    .first::<Photo>(c).unwrap();
-
-                Group {
-                    title: format!("{}", day),
-                    url: format!("/{}/{}/{}", year, month, day),
-                    count: count,
-                    photo: photo
-                }
-            }).collect();
-
-    if groups.is_empty() {
-        res.error(StatusCode::NotFound, "No such image")
-    } else {
-        render(res, |o| templates::groups(o, &title, lpath, user, groups))
-    }
-}
-
-fn all_null_date<'mw>(req: &mut Request,
-                      res: Response<'mw>)
-                      -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::{date, path};
-
-    let c: &PgConnection = &req.db_conn();
-    render(res, |o| templates::index(
-        o,
-        &"Photos without a date",
-        vec![],
-        req.authorized_user(),
-        Photo::query(req.authorized_user().is_some())
-            .filter(date.is_null())
-            .order(path.asc())
-            .limit(500)
-            .load(c).unwrap()))
-}
-
-fn all_for_day<'mw>(req: &mut Request,
-                    res: Response<'mw>,
-                    year: i32,
-                    month: u32,
-                    day: u32)
-                    -> MiddlewareResult<'mw> {
-    let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
-    use rphotos::schema::photos::dsl::{date, grade};
-
-    let c: &PgConnection = &req.db_conn();
-
-    let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
-            .filter(date.ge(thedate))
-            .filter(date.lt(thedate + ChDuration::days(1)))
-            .order((grade.desc().nulls_last(), date.desc()))
-            .limit(500)
-            .load(c).unwrap();
-
-    if photos.is_empty() {
-        res.error(StatusCode::NotFound, "No such image")
-    } else {
-        render(res, |o| templates::index(
-            o,
-            &format!("Photos from {} {} {}", day, monthname(month), year),
-            vec![Link::year(year), Link::month(year, month)],
-            req.authorized_user(),
-            photos))
-    }
-}
-
-fn on_this_day<'mw>(req: &mut Request,
-                    res: Response<'mw>)
-                    -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::{date, grade};
-    let c: &PgConnection = &req.db_conn();
-
-    let (month, day) = {
-        let now = time::now();
-        (now.tm_mon as u32 + 1, now.tm_mday as u32)
-    };
-    render(res, |o| templates::groups(
-        o,
-        &format!("Photos from {} {}", day, monthname(month)),
-        vec![],
-        req.authorized_user(),
-        SqlLiteral::new(format!(
-                "select extract(year from date) y, count(*) c \
-                 from photos where extract(month from date)={} \
-                 and extract(day from date)={}{} group by y order by y desc",
-                month, day,
-                if req.authorized_user().is_none() {
-                    " and is_public"
-                } else {
-                    ""
-                }))
-            .load::<(Option<f64>, i64)>(c).unwrap()
-            .iter().map(|&(year, count)| {
-                let year = year.map(|y| y as i32).unwrap_or(0);
-                let fromdate = NaiveDate::from_ymd(year, month as u32, day)
-                    .and_hms(0, 0, 0);
-                let photo = Photo::query(req.authorized_user().is_some())
-                    .filter(date.ge(fromdate))
-                    .filter(date.lt(fromdate + ChDuration::days(1)))
-                    .order((grade.desc().nulls_last(), date.asc()))
-                    .limit(1)
-                    .first::<Photo>(c).unwrap();
-
-                Group {
-                    title: format!("{}", year),
-                    url: format!("/{}/{}/{}", year, month, day),
-                    count: count,
-                    photo: photo
-                }
-            }).collect()))
-}
 
 #[derive(Debug, Clone, RustcEncodable)]
 pub struct Link {
@@ -719,17 +463,6 @@ impl Link {
             url: format!("/{}/{}/{}", year, month, day),
             name: format!("{}", day),
         }
-    }
-}
-
-fn render<'mw, F>(res: Response<'mw>, do_render: F)
-                     ->MiddlewareResult<'mw>
-    where F: FnOnce(&mut Write) -> io::Result<()>
-{
-    let mut stream = try!(res.start());
-    match do_render(&mut stream) {
-        Ok(()) => Ok(Halt(stream)),
-        Err(e) => stream.bail(format!("Problem rendering template: {:?}", e)),
     }
 }
 

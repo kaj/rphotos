@@ -1,6 +1,9 @@
 //! A module of stuff that might evolve into improvements in nickel
 //! itself.
 //! Mainly, I'm experimenting with parsing url segments.
+use nickel::{Halt, MiddlewareResult, Response};
+use nickel::status::StatusCode;
+use std::io::{self, Write};
 
 macro_rules! wrap3 {
     ($server:ident.$method:ident $url:expr,
@@ -59,5 +62,28 @@ impl FromSlug for u16 {
 impl FromSlug for u32 {
     fn parse(slug: &str) -> Option<Self> {
         slug.parse::<Self>().ok()
+    }
+}
+
+pub trait MyResponse<'mw> {
+    fn ok<F>(self, do_render: F) -> MiddlewareResult<'mw>
+        where F: FnOnce(&mut Write) -> io::Result<()>;
+
+    fn not_found(self, msg: &'static str) -> MiddlewareResult<'mw>;
+}
+
+impl<'mw> MyResponse<'mw> for Response<'mw> {
+    fn ok<F>(self, do_render: F) -> MiddlewareResult<'mw>
+        where F: FnOnce(&mut Write) -> io::Result<()>
+    {
+        let mut stream = try!(self.start());
+        match do_render(&mut stream) {
+            Ok(()) => Ok(Halt(stream)),
+            Err(e) => stream.bail(format!("Error rendering template: {:?}", e)),
+        }
+    }
+
+    fn not_found(self, msg: &'static str) -> MiddlewareResult<'mw> {
+        self.error(StatusCode::NotFound, msg)
     }
 }
