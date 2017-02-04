@@ -6,7 +6,7 @@ authors = ["Rasmus Kaj <kaj@kth.se>"]
 build = "src/build.rs"
 
 [build-dependencies]
-diesel_codegen_syntex = { version = "*", features = ["postgres", "syntex"] }
+diesel_codegen_syntex = { version = "^0.9", features = ["postgres", "syntex"] }
 ructe = "*"
 rsass = "*"
 
@@ -33,11 +33,11 @@ hyper = "^0.9"
 time = "*"
 xml-rs = "*"
 rexif = "*"
-diesel = { version = "*", default-features = false, features = ["chrono", "postgres"] }
+diesel = { version = "^0.9", default-features = false, features = ["chrono", "postgres"] }
 dotenv = "*"
 r2d2 = "*"
 nickel-diesel = "*"
-r2d2-diesel = "*"
+r2d2-diesel = "^0.9"
 djangohashers = "*"
 rand = "*"
 memcached-rs = "^0.1"
