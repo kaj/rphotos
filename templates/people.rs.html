@@ -1,8 +1,8 @@
 @use rphotos::models::Person;
 @use templates::page_base;
 
-@(user: Option<String>, people: Vec<Person>)
-@:page_base("Photo people", vec![], user, {
+@(user: Option<String>, people: &[Person])
+@:page_base("Photo people", &[], user, {
   <ul class="allpeople">
     @for p in people {
       <li><a href="/person/@p.slug">@p.person_name</a>

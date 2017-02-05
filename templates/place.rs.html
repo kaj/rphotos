@@ -1,8 +1,8 @@
 @use rphotos::models::{Photo, Place};
 @use templates::{page_base, img_link};
 
-@(user: Option<String>, photos: Vec<Photo>, place: Place)
-@:page_base(&format!("Photos from {}", place.place_name), vec![], user, {
+@(user: Option<String>, photos: &[Photo], place: Place)
+@:page_base(&format!("Photos from {}", place.place_name), &[], user, {
   <div class="group">
     @for p in photos {@:img_link(p)}
   </div>

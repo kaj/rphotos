@@ -53,7 +53,7 @@ pub fn all_years<'mw>(req: &mut Request,
                 }
             }).collect();
 
-    res.ok(|o| templates::groups(o, "All photos", Vec::new(), user, groups))
+    res.ok(|o| templates::groups(o, "All photos", &[], user, &groups))
 }
 
 pub fn months_in_year<'mw>(req: &mut Request,
@@ -102,7 +102,7 @@ pub fn months_in_year<'mw>(req: &mut Request,
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        res.ok(|o| templates::groups(o, &title, Vec::new(), user, groups))
+        res.ok(|o| templates::groups(o, &title, &[], user, &groups))
     }
 }
 
@@ -151,7 +151,7 @@ pub fn days_in_month<'mw>(req: &mut Request,
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        res.ok(|o| templates::groups(o, &title, lpath, user, groups))
+        res.ok(|o| templates::groups(o, &title, &lpath, user, &groups))
     }
 }
 
@@ -164,9 +164,9 @@ pub fn all_null_date<'mw>(req: &mut Request,
     res.ok(|o| templates::index(
         o,
         &"Photos without a date",
-        vec![],
+        &[],
         req.authorized_user(),
-        Photo::query(req.authorized_user().is_some())
+        &Photo::query(req.authorized_user().is_some())
             .filter(date.is_null())
             .order(path.asc())
             .limit(500)
@@ -197,9 +197,9 @@ pub fn all_for_day<'mw>(req: &mut Request,
         res.ok(|o| templates::index(
             o,
             &format!("Photos from {} {} {}", day, monthname(month), year),
-            vec![Link::year(year), Link::month(year, month)],
+            &[Link::year(year), Link::month(year, month)],
             req.authorized_user(),
-            photos))
+            &photos))
     }
 }
 
@@ -216,9 +216,9 @@ pub fn on_this_day<'mw>(req: &mut Request,
     res.ok(|o| templates::groups(
         o,
         &format!("Photos from {} {}", day, monthname(month)),
-        vec![],
+        &[],
         req.authorized_user(),
-        SqlLiteral::new(format!(
+        &SqlLiteral::new(format!(
                 "select extract(year from date) y, count(*) c \
                  from photos where extract(month from date)={} \
                  and extract(day from date)={}{} group by y order by y desc",
@@ -246,7 +246,7 @@ pub fn on_this_day<'mw>(req: &mut Request,
                     count: count,
                     photo: photo
                 }
-            }).collect()))
+            }).collect::<Vec<_>>()))
 }
 
 fn monthname(n: u32) -> &'static str {

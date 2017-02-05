@@ -2,7 +2,7 @@
 @use rphotos::models::{Photo, Person, Place, Tag, Camera};
 @use templates::page_base;
 
-@(lpath: Vec<Link>, user: Option<String>, people: Vec<Person>, places: Vec<Place>, tags: Vec<Tag>, position: Option<Coord>, camera: Option<Camera>, time: String, photo: Photo)
+@(lpath: &[Link], user: Option<String>, people: &[Person], places: &[Place], tags: &[Tag], position: Option<Coord>, camera: Option<Camera>, time: String, photo: Photo)
 @:page_base("Photo details", lpath, user, {
   <div class="details">
     <div class="item"><img src="/img/@photo.id-m.jpg"></div>

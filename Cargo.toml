@@ -7,7 +7,7 @@ build = "src/build.rs"
 
 [build-dependencies]
 diesel_codegen_syntex = { version = "^0.9", features = ["postgres", "syntex"] }
-ructe = "*"
+ructe = "^0.2.4"
 rsass = "*"
 
 [[bin]]

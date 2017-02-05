@@ -2,7 +2,7 @@
 @use templates::head;
 @use templates::statics::style_css;
 
-@(title: &str, lpath: Vec<Link>, user: Option<String>, content: Content)
+@(title: &str, lpath: &[Link], user: Option<String>, content: Content)
 
 <!doctype html>
 <html>

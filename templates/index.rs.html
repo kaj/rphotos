@@ -2,7 +2,7 @@
 @use rphotos::models::Photo;
 @use templates::{page_base, img_link};
 
-@(title: &str, lpath: Vec<Link>, user: Option<String>, photos: Vec<Photo>)
+@(title: &str, lpath: &[Link], user: Option<String>, photos: &[Photo])
 
 @:page_base(title, lpath, user, {
   <div class="group">

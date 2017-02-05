@@ -235,7 +235,7 @@ fn tag_all<'mw>(req: &mut Request,
     res.ok(|o| {
         templates::tags(o,
                         req.authorized_user(),
-                        query.order(tag_name).load(c).expect("List tags"))
+                        &query.order(tag_name).load(c).expect("List tags"))
     })
 }
 
@@ -251,7 +251,7 @@ fn tag_one<'mw>(req: &mut Request,
         return res.ok(|o| {
             templates::tag(o,
                            req.authorized_user(),
-                           Photo::query(req.authorized_user().is_some())
+                           &Photo::query(req.authorized_user().is_some())
                            .filter(id.eq_any(photo_tags.select(photo_id)
                                              .filter(tag_id.eq(tag.id))))
                            .order((grade.desc().nulls_last(),
@@ -284,7 +284,7 @@ fn place_all<'mw>(req: &mut Request,
     res.ok(|o| templates::places(
         o,
         req.authorized_user(),
-        query.order(place_name).load(c).expect("List places")))
+        &query.order(place_name).load(c).expect("List places")))
 }
 
 fn static_file<'mw>(_req: &mut Request,
@@ -314,7 +314,7 @@ fn place_one<'mw>(req: &mut Request,
         return res.ok(|o| templates::place(
             o,
             req.authorized_user(),
-            Photo::query(req.authorized_user().is_some())
+            &Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_places.select(photo_id)
                                               .filter(place_id.eq(place.id))))
                 .order((grade.desc().nulls_last(), date.desc().nulls_last()))
@@ -345,7 +345,7 @@ fn person_all<'mw>(req: &mut Request,
     res.ok(|o| templates::people(
         o,
         req.authorized_user(),
-        query.order(person_name).load(c).expect("list people")))
+        &query.order(person_name).load(c).expect("list people")))
 }
 
 fn person_one<'mw>(req: &mut Request,
@@ -361,7 +361,7 @@ fn person_one<'mw>(req: &mut Request,
         return res.ok(|o| templates::person(
             o,
             req.authorized_user(),
-            Photo::query(req.authorized_user().is_some())
+            &Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_people.select(photo_id)
                                               .filter(person_id.eq(person.id))))
                 .order((grade.desc().nulls_last(), date.desc().nulls_last()))
@@ -381,27 +381,27 @@ fn photo_details<'mw>(req: &mut Request,
         if req.authorized_user().is_some() || tphoto.is_public() {
             return res.ok(|o| templates::details(
                 o,
-                tphoto.date
+                &tphoto.date
                     .map(|d| vec![Link::year(d.year()),
                                   Link::month(d.year(), d.month()),
                                   Link::day(d.year(), d.month(), d.day())])
                     .unwrap_or_else(|| vec![]),
                 req.authorized_user(),
-                {
+                &{
                     use rphotos::schema::people::dsl::{people, id};
                     use rphotos::schema::photo_people::dsl::{photo_people, photo_id, person_id};
                     people.filter(id.eq_any(photo_people.select(person_id)
                                             .filter(photo_id.eq(tphoto.id))))
                         .load(c).unwrap()
                 },
-                {
+                &{
                     use rphotos::schema::places::dsl::{places, id};
                     use rphotos::schema::photo_places::dsl::{photo_places, photo_id, place_id};
                     places.filter(id.eq_any(photo_places.select(place_id)
                                             .filter(photo_id.eq(tphoto.id))))
                         .load(c).unwrap()
                 },
-                {
+                &{
                     use rphotos::schema::tags::dsl::{tags, id};
                     use rphotos::schema::photo_tags::dsl::{photo_tags, photo_id, tag_id};
                     tags.filter(id.eq_any(photo_tags.select(tag_id)

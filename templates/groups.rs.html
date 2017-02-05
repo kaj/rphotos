@@ -1,7 +1,7 @@
 @use ::{Group, Link};
 @use templates::page_base;
 
-@(title: &str, lpath: Vec<Link>, user: Option<String>, groups: Vec<Group>)
+@(title: &str, lpath: &[Link], user: Option<String>, groups: &[Group])
 
 @:page_base(title, lpath, user, {
   <div class="group">
