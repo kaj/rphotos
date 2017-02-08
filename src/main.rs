@@ -30,7 +30,6 @@ use hyper::header::{Expires, HttpDate};
 use nickel::{FormBody, HttpRouter, MediaType, MiddlewareResult, Nickel,
              Request, Response};
 use nickel::extensions::response::Redirect;
-use nickel::status::StatusCode;
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
@@ -186,18 +185,11 @@ fn show_image<'mw>(req: &Request,
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
-            match get_image_data(req, tphoto, size) {
-                Ok(buf) => {
-                    res.set(MediaType::Jpeg);
-                    res.set(Expires(HttpDate(time::now() +
-                                             Duration::days(14))));
-                    return res.send(buf);
-                }
-                Err(err) => {
-                    return res.error(StatusCode::InternalServerError,
-                                     format!("{}", err));
-                }
-            }
+            let data = get_image_data(req, tphoto, size)
+                .expect("Get image data");
+            res.set(MediaType::Jpeg);
+            res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+            return res.send(data);
         }
     }
     res.not_found("No such image")

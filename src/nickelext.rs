@@ -16,7 +16,7 @@ macro_rules! wrap3 {
                  ($(req.param(stringify!($param)).and_then(FromSlug::parse),)*) {
                      $handler(req, res, $($param),*)
                  } else {
-                     res.error(StatusCode::NotFound, "Parameter mismatch")
+                     res.not_found("Parameter mismatch")
                  }
          }
          let matcher = format!($url, $(concat!(":", stringify!($param))),+);
