@@ -36,7 +36,7 @@ rexif = "*"
 diesel = { version = "^0.9", default-features = false, features = ["chrono", "postgres"] }
 dotenv = "*"
 r2d2 = "*"
-nickel-diesel = "*"
+nickel-diesel = "^0.5"
 r2d2-diesel = "^0.9"
 djangohashers = "*"
 rand = "*"
