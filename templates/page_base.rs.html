@@ -13,8 +13,14 @@
   </head>
   <body>
     @:head(lpath, user)
-    <h1>@title</h1>
-
-    @:content()
+    <main>
+      <h1>@title</h1>
+      @:content()
+    </main>
+    <footer>
+      <p>Managed by
+	<a href="https://github.com/kaj/rphotos">rphotos, which is
+	open source</a>.</p>
+    </footer>
   </body>
 </html>

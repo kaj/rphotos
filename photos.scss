@@ -1,9 +1,20 @@
 $border: 1px solid #333;
 
+html {
+    height: 100%;
+    &, body {
+	margin: 0;
+	padding: 0;
+    }
+}
+
 body {
     background: #eee;
-    margin-top: 2em;
     line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100%;
 }
 
 p {
@@ -17,24 +28,40 @@ p + p {
 header {
     background-color: #eee;
     box-shadow: 0 0 1ex #444;
-    display: flex;
-    flex-wrap: wrap;
-    left: 0;
-    padding: 0 1ex;
-    position: fixed;
+    position: sticky;
     top: 0;
-    width: 100%;
-    width: -moz-available;
+}
+
+footer {
+    background: #999;
+    color: white;
+    :link, :visited {
+	color: #edf;
+    }
+    p { margin: 0; }
+}
+
+header, footer {
+    display: flex;
 
     & > span {
         flex-grow: 1;
     }
-
-    span.user {
+    & > :last-child {
         flex-grow: 5;
         padding-left: 1em;
         text-align: right;
     }
+}
+
+main {
+    flex-grow: 1;
+    margin-bottom: 1em;
+}
+
+header, footer, main {
+    flex-wrap: wrap;
+    padding: 0 1ex;
 }
 
 .item {
@@ -97,4 +124,21 @@ ul.alltags, ul.allpeople, ul.allplaces {
     border: $border;
     height: 8em;
     margin: 1ex auto;
+}
+
+
+form {
+    border: $border;
+    margin: auto;
+    padding: 1em;
+    width: -moz-fit-content;
+
+    p {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+    }
+    label {
+	padding: .2em 1em .2em 0;
+    }
 }
