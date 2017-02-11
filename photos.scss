@@ -107,6 +107,9 @@ div.details {
 	img {
 	    max-width: 100%;
 	}
+	&.zoom {
+	    flex-basis: auto;
+	}
     }
     .meta {
 	flex-grow: 1;
@@ -125,7 +128,6 @@ ul.alltags, ul.allpeople, ul.allplaces {
     height: 8em;
     margin: 1ex auto;
 }
-
 
 form {
     border: $border;
