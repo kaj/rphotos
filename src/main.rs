@@ -417,6 +417,12 @@ fn photo_details<'mw>(req: &mut Request,
                         }
                 },
                 {
+                    use rphotos::schema::attributions::dsl::*;
+                    tphoto.attribution_id.map(|i| {
+                        attributions.find(i).select(name).first(c).unwrap()
+                    })
+                },
+                {
                     use rphotos::schema::cameras::dsl::*;
                     tphoto.camera_id.map(|i| {
                         cameras.find(i).first(c).unwrap()

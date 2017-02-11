@@ -13,6 +13,7 @@ pub struct Photo {
     pub rotation: i16,
     pub is_public: bool,
     pub camera_id: Option<i32>,
+    pub attribution_id: Option<i32>,
 }
 
 // NaiveDateTime isn't Encodable, so we have to implement this by hand.

@@ -2,7 +2,7 @@
 @use rphotos::models::{Photo, Person, Place, Tag, Camera};
 @use templates::page_base;
 
-@(lpath: &[Link], user: Option<String>, people: &[Person], places: &[Place], tags: &[Tag], position: Option<Coord>, camera: Option<Camera>, time: String, photo: Photo)
+@(lpath: &[Link], user: Option<String>, people: &[Person], places: &[Place], tags: &[Tag], position: Option<Coord>, attribution: Option<String>, camera: Option<Camera>, time: String, photo: Photo)
 @:page_base("Photo details", lpath, user, {
   <div class="details">
     <div class="item"><img src="/img/@photo.id-m.jpg"></div>
@@ -18,6 +18,7 @@
     @if !tags.is_empty() {
     <p>Tags: @for t in tags{<a href="/tag/@t.slug">@t.tag_name</a>, }</p>}
     @if let Some(ref pos) = position {<p>Position: @pos.x @pos.y</p>}
+    @if let Some(ref a) = attribution {<p>Av: @a</p>}
     @if let Some(ref c) = camera{<p>Camera: @c.model (@c.manufacturer)</p>}
 
     @if let Some(ref pos) = position {
