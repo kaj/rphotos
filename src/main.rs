@@ -438,10 +438,6 @@ fn photo_details<'mw>(req: &mut Request,
                         cameras.find(i).first(c).unwrap()
                     })
                 },
-                match tphoto.date {
-                    Some(d) => d.format("%T").to_string(),
-                    None => "".to_string()
-                },
                 tphoto));
         }
     }

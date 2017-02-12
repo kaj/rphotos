@@ -2,14 +2,14 @@
 @use rphotos::models::{Photo, Person, Place, Tag, Camera};
 @use templates::page_base;
 
-@(lpath: &[Link], user: Option<String>, people: &[Person], places: &[Place], tags: &[Tag], position: Option<Coord>, attribution: Option<String>, camera: Option<Camera>, time: String, photo: Photo)
+@(lpath: &[Link], user: Option<String>, people: &[Person], places: &[Place], tags: &[Tag], position: Option<Coord>, attribution: Option<String>, camera: Option<Camera>, photo: Photo)
 @:page_base("Photo details", lpath, &user, {
   <div class="details">
     <div class="item"><img src="/img/@photo.id-m.jpg"></div>
     <div class="meta">
     @if user.is_some() {<p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>}
     @if let Some(g) = photo.grade {<p>Betyg: @g</p>}
-    <p>Tid: @time</p>
+    @if let Some(d) = photo.date{<p>Tid: @d.format("%F %T")</p>}
     @if !people.is_empty() {
     <p>People: @for p in people{<a href="/person/@p.slug">@p.person_name</a>, }</p>}
     @if !places.is_empty() {
