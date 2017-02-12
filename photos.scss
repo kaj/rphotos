@@ -91,6 +91,9 @@ div.group {
       margin: .2em;
     }
   }
+  p.item {
+      justify-content: space-around;
+  }
 }
 div.details {
     display: flex;
