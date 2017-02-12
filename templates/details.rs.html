@@ -3,12 +3,11 @@
 @use templates::page_base;
 
 @(lpath: &[Link], user: Option<String>, people: &[Person], places: &[Place], tags: &[Tag], position: Option<Coord>, attribution: Option<String>, camera: Option<Camera>, time: String, photo: Photo)
-@:page_base("Photo details", lpath, user, {
+@:page_base("Photo details", lpath, &user, {
   <div class="details">
     <div class="item"><img src="/img/@photo.id-m.jpg"></div>
     <div class="meta">
-    <p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>
-
+    @if user.is_some() {<p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>}
     @if let Some(g) = photo.grade {<p>Betyg: @g</p>}
     <p>Tid: @time</p>
     @if !people.is_empty() {

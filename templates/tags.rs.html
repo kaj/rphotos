@@ -2,7 +2,7 @@
 @use templates::page_base;
 
 @(user: Option<String>, tags: &[Tag])
-@:page_base("Photo tags", &[], user, {
+@:page_base("Photo tags", &[], &user, {
   <ul class="alltags">
   @for tag in tags {
     <li><a href="/tag/@tag.slug">@tag.tag_name</a>

@@ -4,7 +4,7 @@
 
 @(title: &str, lpath: &[Link], user: Option<String>, photos: &[Photo])
 
-@:page_base(title, lpath, user, {
+@:page_base(title, lpath, &user, {
   <div class="group">
     @for p in photos {@:img_link(p)}
   </div>

@@ -149,7 +149,7 @@ fn logout<'mw>(_req: &mut Request,
     res.redirect("/")
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum SizeTag {
     Small,
     Medium,
@@ -185,11 +185,21 @@ fn show_image<'mw>(req: &Request,
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
-            let data = get_image_data(req, tphoto, size)
-                .expect("Get image data");
-            res.set(MediaType::Jpeg);
-            res.set(Expires(HttpDate(time::now() + Duration::days(14))));
-            return res.send(data);
+            if size == SizeTag::Large {
+                if req.authorized_user().is_some() {
+                    let path = req.photos().get_raw_path(tphoto);
+                    res.set(MediaType::Jpeg);
+                    res.set(Expires(HttpDate(time::now() +
+                                             Duration::days(14))));
+                    return res.send_file(path);
+                }
+            } else {
+                let data = get_image_data(req, tphoto, size)
+                    .expect("Get image data");
+                res.set(MediaType::Jpeg);
+                res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                return res.send(data);
+            }
         }
     }
     res.not_found("No such image")

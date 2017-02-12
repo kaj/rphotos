@@ -3,7 +3,7 @@
 
 @(user: Option<String>, places: &[Place])
 
-@:page_base("Photo places", &[], user, {
+@:page_base("Photo places", &[], &user, {
   <ul class="allplaces">
   @for p in places {
     <li><a href="/place/@p.slug">@p.place_name</a>

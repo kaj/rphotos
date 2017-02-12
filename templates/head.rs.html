@@ -1,6 +1,6 @@
 @use ::Link;
 
-@(lpath: &[Link], user: Option<String>)
+@(lpath: &[Link], user: &Option<String>)
 
 <header>
 <span><a href="/">Bilder</a>
@@ -10,6 +10,6 @@
 <span>· <a href="/person/">Personer</a></span>
 <span>· <a href="/place/">Platser</a></span>
 <span>· <a href="/thisday">Denna dag</a></span>
-@if let Some(u) = user {<span class="user">@u (<a href="/logout">log out</a>)</span>}
+@if let &Some(ref u) = user {<span class="user">@u (<a href="/logout">log out</a>)</span>}
 else {<span class="user">(<a href="/login">log in</a>)</span>}
 </header>

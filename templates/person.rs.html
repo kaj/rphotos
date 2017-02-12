@@ -2,7 +2,7 @@
 @use templates::{page_base, img_link};
 
 @(user: Option<String>, photos: &[Photo], person: Person)
-@:page_base(&format!("Photos with {}", person.person_name), &[], user, {
+@:page_base(&format!("Photos with {}", person.person_name), &[], &user, {
   <div class="group">
     @for p in photos {@:img_link(p)}
   </div>

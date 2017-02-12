@@ -3,7 +3,7 @@
 
 @(user: Option<String>, photos: &[Photo], tag: Tag)
 
-@:page_base(&format!("Photos tagged {}", tag.tag_name), &[], user, {
+@:page_base(&format!("Photos tagged {}", tag.tag_name), &[], &user, {
   <div class="group">
     @for p in photos {@:img_link(p)}
   </div>

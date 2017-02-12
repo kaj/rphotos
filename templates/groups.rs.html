@@ -3,7 +3,7 @@
 
 @(title: &str, lpath: &[Link], user: Option<String>, groups: &[Group])
 
-@:page_base(title, lpath, user, {
+@:page_base(title, lpath, &user, {
   <div class="group">
     @if groups.is_empty() {
       <p>Inga bilder.</p>
