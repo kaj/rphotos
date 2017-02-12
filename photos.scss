@@ -134,10 +134,11 @@ form {
     margin: auto;
     padding: 1em;
     width: -moz-fit-content;
+    width: fit-content;
 
     p {
 	display: flex;
-	flex-direction: row;
+	flex-flow: row wrap;
 	justify-content: space-between;
     }
     label {
