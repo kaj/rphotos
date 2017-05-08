@@ -26,7 +26,6 @@ use chrono::Datelike;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
-use hyper::header::{Expires, HttpDate};
 use nickel::{FormBody, HttpRouter, MediaType, MiddlewareResult, Nickel,
              Request, Response};
 use nickel::extensions::response::Redirect;
@@ -35,7 +34,6 @@ use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
 use r2d2::NopErrorHandler;
 use rphotos::models::{Person, Photo, Place, Tag};
-use time::Duration;
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
@@ -53,7 +51,7 @@ use memcachemiddleware::*;
 
 #[macro_use]
 mod nickelext;
-use nickelext::{FromSlug, MyResponse};
+use nickelext::{FromSlug, MyResponse, far_expires};
 
 mod views_by_date;
 use views_by_date::*;
@@ -189,15 +187,14 @@ fn show_image<'mw>(req: &Request,
                 if req.authorized_user().is_some() {
                     let path = req.photos().get_raw_path(tphoto);
                     res.set(MediaType::Jpeg);
-                    res.set(Expires(HttpDate(time::now() +
-                                             Duration::days(14))));
+                    res.set(far_expires());
                     return res.send_file(path);
                 }
             } else {
                 let data = get_image_data(req, tphoto, size)
                     .expect("Get image data");
                 res.set(MediaType::Jpeg);
-                res.set(Expires(HttpDate(time::now() + Duration::days(14))));
+                res.set(far_expires());
                 return res.send(data);
             }
         }
@@ -297,7 +294,7 @@ fn static_file<'mw>(_req: &mut Request,
     use templates::statics::StaticFile;
     if let Some(s) = StaticFile::get(&format!("{}.{}", name, ext)) {
         res.set(ext.parse().unwrap_or(MediaType::Bin));
-        res.set(Expires(HttpDate(time::now() + Duration::days(300))));
+        res.set(far_expires());
         return res.send(s.content);
     }
     res.not_found("No such file")

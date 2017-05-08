@@ -1,9 +1,11 @@
 //! A module of stuff that might evolve into improvements in nickel
 //! itself.
 //! Mainly, I'm experimenting with parsing url segments.
+use hyper::header::{Expires, HttpDate};
 use nickel::{Halt, MiddlewareResult, Response};
 use nickel::status::StatusCode;
 use std::io::{self, Write};
+use time::{Duration, now};
 
 macro_rules! wrap3 {
     ($server:ident.$method:ident $url:expr,
@@ -86,4 +88,8 @@ impl<'mw> MyResponse<'mw> for Response<'mw> {
     fn not_found(self, msg: &'static str) -> MiddlewareResult<'mw> {
         self.error(StatusCode::NotFound, msg)
     }
+}
+
+pub fn far_expires() -> Expires {
+    Expires(HttpDate(now() + Duration::days(300)))
 }
