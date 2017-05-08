@@ -13,7 +13,7 @@ use xml::reader::{EventReader, XmlEvent};
 type Result<T> = result::Result<T, Error>;
 
 pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
-    let file = try!(File::open(dir.join("index.xml")));
+    let file = File::open(dir.join("index.xml"))?;
     info!("Reading kphotoalbum data");
     let mut xml = EventReader::new(file);
     let mut option: Option<String> = None;
@@ -31,9 +31,9 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                 match &*name.local_name {
                     "image" => {
                         if let Some(file) = find_attr("file", attributes) {
-                            let angle = try!(find_attr("angle", attributes)
+                            let angle = find_attr("angle", attributes)
                                              .unwrap_or("0")
-                                             .parse::<i16>());
+                                             .parse::<i16>()?;
                             let date = find_image_date(attributes);
                             match photo_by_path(db, &file, date, angle) {
                                 Ok(p) => { photo = Some(p) }
@@ -49,7 +49,7 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                             .map(|s| s.into());
                     }
                     "value" => {
-                        try!(match (photo.as_mut(),
+                        match (photo.as_mut(),
                                     option.as_ref().map(|s| s.as_ref()),
                                     find_attr("value", attributes)) {
                             (Some(p), Some("Nyckelord"), Some(v)) => {
@@ -73,7 +73,7 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                                                          o,
                                                          p)))
                             }
-                        })
+                        }?
                     }
                     _ => {}
                 }
@@ -97,7 +97,7 @@ pub fn photo_by_path(db: &PgConnection,
                      date: Option<NaiveDateTime>,
                      angle: i16)
                      -> Result<Photo> {
-    match try!(Photo::update_by_path(db, file, date, angle, &None)) {
+    match Photo::update_by_path(db, file, date, angle, &None)? {
         Some(Modification::Created(photo)) => {
             info!("Created {:?}", photo);
             Ok(photo)
@@ -124,7 +124,7 @@ pub fn photo_by_path(db: &PgConnection,
 
 fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) -> Result<()> {
     use rphotos::models::{NewPhotoTag, NewTag, PhotoTag};
-    let tag = try!({
+    let tag = {
         use rphotos::schema::tags::dsl::*;
         tags.filter(tag_name.eq(tagname))
             .first::<Tag>(db)
@@ -136,7 +136,7 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) -> Result<()> {
                     .into(tags)
                     .get_result::<Tag>(db)
             })
-    });
+    }?;
     debug!("  tag {:?}", tag);
     use rphotos::schema::photo_tags::dsl::*;
     let q = photo_tags.filter(photo_id.eq(thephoto.id))
@@ -158,7 +158,7 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) -> Result<()> {
 
 fn person_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
     use rphotos::models::{NewPerson, NewPhotoPerson, PhotoPerson};
-    let person = try!({
+    let person = {
         use rphotos::schema::people::dsl::*;
         people.filter(person_name.eq(name))
             .first::<Person>(db)
@@ -170,7 +170,7 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
                     .into(people)
                     .get_result::<Person>(db)
             })
-    });
+    }?;
     debug!("  person {:?}", person);
     use rphotos::schema::photo_people::dsl::*;
     let q = photo_people.filter(photo_id.eq(photo.id))
@@ -179,7 +179,7 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
         debug!("  match {:?}", result);
     } else {
         debug!("  new person {:?} on {:?}!", person, photo);
-        try!(diesel::insert(&NewPhotoPerson {
+        diesel::insert(&NewPhotoPerson {
                 photo_id: photo.id,
                 person_id: person.id,
             })
@@ -187,14 +187,14 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
             .execute(db)
             .map_err(|e| {
                 Error::Other(format!("Place photo {:?}: {}", photo, e))
-            }));
+            })?;
     }
     Ok(())
 }
 
 fn place_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
     use rphotos::models::{NewPhotoPlace, NewPlace, PhotoPlace};
-    let place = try!({
+    let place = {
         use rphotos::schema::places::dsl::*;
         places.filter(place_name.eq(name))
             .first::<Place>(db)
@@ -206,7 +206,7 @@ fn place_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
                     .into(places)
                     .get_result::<Place>(db)
             })
-    });
+    }?;
     debug!("  place {:?}", place);
     use rphotos::schema::photo_places::dsl::*;
     photo_places.filter(photo_id.eq(photo.id))
@@ -239,12 +239,12 @@ fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) -> Result<()> {
         }
     });
     use rphotos::schema::photos::dsl::*;
-    let n = try!(diesel::update(photos.find(photo.id))
+    let n = diesel::update(photos.find(photo.id))
         .set(grade.eq(photo.grade))
         .execute(db)
         .map_err(|e| {
             Error::Other(format!("Update grade of {:?}: {}", photo, e))
-        }));
+        })?;
     debug!("Graded {} photo", n);
     Ok(())
 }

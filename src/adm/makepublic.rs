@@ -24,7 +24,7 @@ pub fn one(db: &PgConnection,
                 return Err(Error::Other(format!("File {} does not exist",
                                                 tpath)));
             }
-            let photo = try!(register_photo(db, &tpath));
+            let photo = register_photo(db, &tpath)?;
             println!("New photo {:?} is public.", photo);
             Ok(())
         }
@@ -37,7 +37,7 @@ pub fn by_file_list<In: BufRead + Sized>(db: &PgConnection,
                                          list: In)
                                          -> Result<(), Error> {
     for line in list.lines() {
-        try!(one(db, photodir, &try!(line)));
+        one(db, photodir, &line?)?;
     }
     Ok(())
 }
@@ -47,7 +47,7 @@ fn register_photo(db: &PgConnection,
                   -> Result<Photo, DieselError> {
     use rphotos::schema::photos::dsl::{photos, is_public};
     let photo =
-        match try!(Photo::create_or_set_basics(&db, &tpath, None, 0, None)) {
+        match Photo::create_or_set_basics(&db, &tpath, None, 0, None)? {
             Modification::Created(photo) => photo,
             Modification::Updated(photo) => photo,
             Modification::Unchanged(photo) => photo,

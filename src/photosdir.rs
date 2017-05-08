@@ -22,7 +22,7 @@ impl PhotosDir {
                             -> Result<Vec<u8>, ImageError> {
         let path = self.basedir.join(photo.path);
         info!("Should open {:?}", path);
-        let img = try!(image::open(path));
+        let img = image::open(path)?;
         let img = if width < img.width() || height < img.height() {
             img.resize(width, height, FilterType::CatmullRom)
         } else {
@@ -41,7 +41,7 @@ impl PhotosDir {
         };
         // TODO Put the icon in some kind of cache!
         let mut buf = Vec::new();
-        try!(img.save(&mut buf, ImageFormat::JPEG));
+        img.save(&mut buf, ImageFormat::JPEG)?;
         Ok(buf)
     }
 
@@ -61,13 +61,13 @@ impl PhotosDir {
                       cb: &Fn(&str, &ExifData))
                       -> io::Result<()> {
         let absdir = self.basedir.join(dir);
-        if try!(fs::metadata(&absdir)).is_dir() {
+        if fs::metadata(&absdir)?.is_dir() {
             let bl = self.basedir.to_str().unwrap().len() + 1;
             debug!("Should look in {:?}", absdir);
-            for entry in try!(fs::read_dir(absdir)) {
-                let entry = try!(entry);
-                if try!(fs::metadata(entry.path())).is_dir() {
-                    try!(self.find_files(&entry.path(), cb));
+            for entry in fs::read_dir(absdir)? {
+                let entry = entry?;
+                if fs::metadata(entry.path())?.is_dir() {
+                    self.find_files(&entry.path(), cb)?;
                 } else {
                     let p1 = entry.path();
                     if let Ok(exif) = rexif::parse_file(&p1.to_str().unwrap()) {

@@ -16,12 +16,12 @@ sql_function!(date_part,
 pub fn show_stats(db: &PgConnection) -> Result<(), Error> {
 
     println!("There are {} photos in total.",
-             try!(photos.select(count_star()).first::<i64>(db)));
+             photos.select(count_star()).first::<i64>(db)?);
 
     println!("There are {} persons, {} places, and {} tags mentioned.",
-             try!(people.select(count_star()).first::<i64>(db)),
-             try!(places.select(count_star()).first::<i64>(db)),
-             try!(tags.select(count_star()).first::<i64>(db)));
+             people.select(count_star()).first::<i64>(db)?,
+             places.select(count_star()).first::<i64>(db)?,
+             tags.select(count_star()).first::<i64>(db)?);
 
     // Something like this should be possible, I guess?
     //
@@ -34,11 +34,11 @@ pub fn show_stats(db: &PgConnection) -> Result<(), Error> {
     //              .load::<(Option<f64>, i64)>(db));
 
     println!("Count per year: {:?}",
-             try!(photos.select(sql::<(Nullable<Double>, BigInt)>(
+             photos.select(sql::<(Nullable<Double>, BigInt)>(
                  "extract(year from date) y, count(*)"))
                   .group_by(sql::<Nullable<Double>>("y"))
                   .order(sql::<Nullable<Double>>("y").desc().nulls_last())
-                  .load::<(Option<f64>, i64)>(db))
+                  .load::<(Option<f64>, i64)>(db)?
                  .iter()
                  .map(|&(y, n)| format!("{}: {}", y.unwrap_or(0.0), n))
                  .collect::<Vec<_>>());

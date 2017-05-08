@@ -88,34 +88,34 @@ fn run(args: ArgMatches) -> Result<(), Error> {
     match args.subcommand() {
         ("findphotos", Some(args)) => {
             let pd = PhotosDir::new(photos_dir());
-            let db = try!(get_db());
+            let db = get_db()?;
             if let Some(bases) = args.values_of("BASE") {
                 for base in bases {
-                    try!(findphotos::crawl(&db, &pd, Path::new(&base))
+                    findphotos::crawl(&db, &pd, Path::new(&base))
                          .map_err(|e| {
                              Error::Other(format!("Failed to crawl {}: {}",
                                                   base,
                                                   e))
-                         }));
+                         })?;
                 }
             } else {
-                try!(findphotos::crawl(&db, &pd, Path::new(""))
+                findphotos::crawl(&db, &pd, Path::new(""))
                      .map_err(|e| Error::Other(
-                         format!("Failed to crawl: {}", e))));
+                         format!("Failed to crawl: {}", e)))?;
             }
             Ok(())
         }
         ("makepublic", Some(args)) => {
             let pd = PhotosDir::new(photos_dir());
-            let db = try!(get_db());
+            let db = get_db()?;
             match args.value_of("LIST") {
                 Some("-") => {
                     let list = io::stdin();
-                    try!(makepublic::by_file_list(&db, &pd, list.lock()));
+                    makepublic::by_file_list(&db, &pd, list.lock())?;
                     Ok(())
                 }
                 Some(f) => {
-                    let list = try!(File::open(f));
+                    let list = File::open(f)?;
                     let list = BufReader::new(list);
                     makepublic::by_file_list(&db, &pd, list)
                 }
@@ -125,12 +125,12 @@ fn run(args: ArgMatches) -> Result<(), Error> {
             }
         }
         ("readkpa", Some(_args)) => {
-            readkpa::readkpa(&try!(get_db()), &photos_dir())
+            readkpa::readkpa(&get_db()?, &photos_dir())
         }
-        ("stats", Some(_args)) => show_stats(&try!(get_db())),
-        ("userlist", Some(_args)) => users::list(&try!(get_db())),
+        ("stats", Some(_args)) => show_stats(&get_db()?),
+        ("userlist", Some(_args)) => users::list(&get_db()?),
         ("userpass", Some(args)) => {
-            users::passwd(&try!(get_db()), args.value_of("USER").unwrap())
+            users::passwd(&get_db()?, args.value_of("USER").unwrap())
         }
         ("storestatics", Some(args)) => {
             storestatics::to_dir(args.value_of("DIR").unwrap())

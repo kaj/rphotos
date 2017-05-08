@@ -20,17 +20,17 @@ pub struct Photo {
 impl Encodable for Photo {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         s.emit_struct("Photo", 3, |s| {
-            try!(s.emit_struct_field("id", 0, |s| s.emit_i32(self.id)));
-            try!(s.emit_struct_field("path", 1, |s| s.emit_str(&self.path)));
-            try!(s.emit_struct_field("date", 2, |s| {
+            s.emit_struct_field("id", 0, |s| s.emit_i32(self.id))?;
+            s.emit_struct_field("path", 1, |s| s.emit_str(&self.path))?;
+            s.emit_struct_field("date", 2, |s| {
                 s.emit_str(&self.date
                                 .map(|d| format!("{:?}", d))
                                 .unwrap_or("-".to_string()))
-            }));
-            try!(s.emit_struct_field("grade", 2, |s| match self.grade {
+            })?;
+            s.emit_struct_field("grade", 2, |s| match self.grade {
                 Some(g) => s.emit_option_some(|s| s.emit_i16(g)),
                 None => s.emit_option_none(),
-            }));
+            })?;
             s.emit_struct_field("rotation", 2, |s| s.emit_i16(self.rotation))
         })
     }
@@ -84,30 +84,30 @@ impl Photo {
         use diesel::prelude::*;
         use schema::photos::dsl::*;
         if let Some(mut pic) =
-               try!(photos.filter(path.eq(&file_path.to_string()))
+               photos.filter(path.eq(&file_path.to_string()))
                     .first::<Photo>(db)
-                    .optional())
+                    .optional()?
         {
             let mut change = false;
             // TODO Merge updates to one update statement!
             if exifdate.is_some() && exifdate != pic.date {
                 change = true;
-                pic = try!(diesel::update(photos.find(pic.id))
+                pic = diesel::update(photos.find(pic.id))
                                .set(date.eq(exifdate))
-                               .get_result::<Photo>(db));
+                               .get_result::<Photo>(db)?;
             }
             if exifrotation != pic.rotation {
                 change = true;
-                pic = try!(diesel::update(photos.find(pic.id))
+                pic = diesel::update(photos.find(pic.id))
                                .set(rotation.eq(exifrotation))
-                               .get_result::<Photo>(db));
+                               .get_result::<Photo>(db)?;
             }
             if let &Some(ref camera) = camera {
                 if pic.camera_id != Some(camera.id) {
                     change = true;
-                    pic = try!(diesel::update(photos.find(pic.id))
+                    pic = diesel::update(photos.find(pic.id))
                                .set(camera_id.eq(camera.id))
-                               .get_result::<Photo>(db));
+                               .get_result::<Photo>(db)?;
                 }
             }
             Ok(Some(if change {
@@ -129,7 +129,7 @@ impl Photo {
         use diesel;
         use diesel::prelude::*;
         use schema::photos::dsl::*;
-        if let Some(result) = try!(Self::update_by_path(db, file_path, exifdate, exifrotation, &camera)) {
+        if let Some(result) = Self::update_by_path(db, file_path, exifdate, exifrotation, &camera)? {
             Ok(result)
         } else {
             let pic = NewPhoto {
@@ -138,9 +138,9 @@ impl Photo {
                 rotation: exifrotation,
                 camera_id: camera.map(|c| c.id),
             };
-            let pic = try!(diesel::insert(&pic)
+            let pic = diesel::insert(&pic)
                            .into(photos)
-                           .get_result::<Photo>(db));
+                           .get_result::<Photo>(db)?;
             Ok(Modification::Created(pic))
         }
     }
@@ -278,10 +278,10 @@ impl Camera {
         use diesel;
         use diesel::prelude::*;
         use schema::cameras::dsl::*;
-        if let Some(camera) = try!(cameras.filter(manufacturer.eq(make))
+        if let Some(camera) = cameras.filter(manufacturer.eq(make))
                                    .filter(model.eq(modl))
                                    .first::<Camera>(db)
-                                   .optional()) {
+                                   .optional()? {
             Ok(camera)
         } else {
             let camera = NewCamera {

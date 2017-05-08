@@ -81,7 +81,7 @@ impl<'a, 'b, D> MemcacheRequestExtensions for Request<'a, 'b, D> {
                 for &(ref s, n) in ext {
                     servers.push((&s[..], n));
                 }
-                Ok(try!(Client::connect(&servers, ProtoType::Binary)))
+                Ok(Client::connect(&servers, ProtoType::Binary)?)
             }
             None => Err(McError::UninitializedMiddleware),
         }
@@ -106,7 +106,7 @@ impl<'a, 'b, D> MemcacheRequestExtensions for Request<'a, 'b, D> {
                         warn!("Cache: get {} failed: {:?}", key, err);
                     }
                 }
-                let data = try!(init());
+                let data = init()?;
                 match client.set(key.as_bytes(), &data, 0, 7 * 24 * 60 * 60) {
                     Ok(()) => debug!("Cache: stored {}", key),
                     Err(err) => warn!("Cache: Error storing {}: {}", key, err),

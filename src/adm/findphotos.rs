@@ -10,13 +10,13 @@ use std::path::Path;
 
 pub fn crawl(db: &PgConnection, photos: &PhotosDir, only_in: &Path)
              -> Result<(), Error> {
-    try!(photos.find_files(only_in,
-                           &|path, exif| {
+    photos.find_files(only_in,
+                      &|path, exif| {
         match save_photo(&db, path, &exif) {
             Ok(()) => debug!("Saved photo {}", path),
             Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
         }
-    }));
+    })?;
     Ok(())
 }
 
@@ -25,10 +25,10 @@ fn save_photo(db: &PgConnection,
               exif: &ExifData)
               -> Result<(), Error> {
     let photo =
-        match try!(Photo::create_or_set_basics(db, file_path,
-                                               find_date(&exif).ok(),
-                                               try!(find_rotation(&exif)),
-                                               try!(find_camera(db, exif)))) {
+        match Photo::create_or_set_basics(db, file_path,
+                                          find_date(&exif).ok(),
+                                          find_rotation(&exif)?,
+                                          find_camera(db, exif)?)? {
             Modification::Created(photo) => {
                 info!("Created {:?}", photo);
                 photo
@@ -42,7 +42,7 @@ fn save_photo(db: &PgConnection,
                 photo
             }
     };
-    if let Some((lat, long)) = try!(find_position(&exif)) {
+    if let Some((lat, long)) = find_position(&exif)? {
         debug!("Position for {} is {} {}", file_path, lat, long);
         use rphotos::schema::positions::dsl::*;
         if let Ok((pos, clat, clong)) =
@@ -80,7 +80,7 @@ fn find_camera(db: &PgConnection,
         (find_entry(exif, &ExifTag::Make), find_entry(exif, &ExifTag::Model)) {
         if let (TagValue::Ascii(make), TagValue::Ascii(model)) =
             (maketag.clone().value, modeltag.clone().value) {
-            let cam = try!(Camera::get_or_create(db, &make, &model));
+            let cam = Camera::get_or_create(db, &make, &model)?;
             return Ok(Some(cam));
         }
         // TODO else Err(...?)
@@ -120,7 +120,7 @@ fn find_date(exif: &ExifData) -> Result<NaiveDateTime, Error> {
                 debug!("Try to parse {:?} (from {:?}) as datetime",
                        str,
                        value.tag);
-                Ok(try!(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")))
+                Ok(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")?)
             } else {
                 Err(Error::Other(format!("Exif of unexpectedType {:?}",
                                          value.value)))
@@ -135,8 +135,7 @@ fn find_date(exif: &ExifData) -> Result<NaiveDateTime, Error> {
 fn find_position(exif: &ExifData) -> Result<Option<(f64, f64)>, Error> {
     if let Some(lat) = find_entry(exif, &ExifTag::GPSLatitude) {
         if let Some(long) = find_entry(exif, &ExifTag::GPSLongitude) {
-            return Ok(Some((try!(rat2float(&lat.value)),
-                            try!(rat2float(&long.value)))));
+            return Ok(Some((rat2float(&lat.value)?, rat2float(&long.value)?)));
         }
     }
     Ok(None)

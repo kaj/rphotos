@@ -78,7 +78,7 @@ impl<'mw> MyResponse<'mw> for Response<'mw> {
     fn ok<F>(self, do_render: F) -> MiddlewareResult<'mw>
         where F: FnOnce(&mut Write) -> io::Result<()>
     {
-        let mut stream = try!(self.start());
+        let mut stream = self.start()?;
         match do_render(&mut stream) {
             Ok(()) => Ok(Halt(stream)),
             Err(e) => stream.bail(format!("Error rendering template: {:?}", e)),

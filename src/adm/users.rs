@@ -11,7 +11,7 @@ use std::iter::Iterator;
 pub fn list(db: &PgConnection) -> Result<(), Error> {
     use rphotos::schema::users::dsl::*;
     println!("Existing users: {:?}.",
-             try!(users.select(username).load::<String>(db)));
+             users.select(username).load::<String>(db)?);
     Ok(())
 }
 
@@ -19,20 +19,20 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
     let pword = random_password(14);
     let hashword = make_password(&pword);
     use rphotos::schema::users::dsl::*;
-    match try!(update(users.filter(username.eq(&uname)))
+    match update(users.filter(username.eq(&uname)))
         .set(password.eq(&hashword))
-        .execute(db)) {
+        .execute(db)? {
         1 => {
             println!("Updated password for {:?} to {:?}", uname, pword);
         }
         0 => {
             use rphotos::models::NewUser;
-            try!(insert(&NewUser {
+            insert(&NewUser {
                     username: &uname,
                     password: &hashword,
                 })
                 .into(users)
-                .execute(db));
+                .execute(db)?;
             println!("Created user {:?} with password {:?}", uname, pword);
         }
         n => {
