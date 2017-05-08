@@ -7,8 +7,7 @@ build = "src/build.rs"
 
 [build-dependencies]
 diesel_codegen_syntex = { version = "^0.9", features = ["postgres", "syntex"] }
-ructe = "^0.2.4"
-rsass = "*"
+ructe = { version = "^0.3.0", features = ["sass"] }
 
 [[bin]]
 name = "rphotoserver"
