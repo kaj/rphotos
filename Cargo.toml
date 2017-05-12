@@ -19,7 +19,7 @@ path = "src/rphotosadm.rs"
 
 [dependencies]
 nickel = "^0.9"
-nickel-jwt-session = "^0.5"
+nickel-jwt-session = "^0.6"
 env_logger = "*"
 log = "*"
 chrono = "^0.2" # Must match version used by diesel
