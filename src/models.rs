@@ -3,7 +3,6 @@ use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 
 #[derive(Debug, Clone, Queryable)]
-#[belongs_to(Camera)]
 pub struct Photo {
     pub id: i32,
     pub path: String,
@@ -15,7 +14,7 @@ pub struct Photo {
     pub attribution_id: Option<i32>,
 }
 
-use super::schema::photos;
+use schema::photos;
 #[derive(Debug, Clone, Insertable)]
 #[table_name="photos"]
 pub struct NewPhoto<'a> {
@@ -235,7 +234,6 @@ pub struct NewUser<'a> {
 }
 
 #[derive(Debug, Clone, Identifiable, Queryable)]
-#[has_many(photos)]
 pub struct Camera {
     pub id: i32,
     pub manufacturer: String,

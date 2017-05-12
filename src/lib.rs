@@ -1,5 +1,8 @@
+extern crate chrono;
 #[macro_use]
 extern crate diesel;
-extern crate dotenv;
+#[macro_use]
+extern crate diesel_codegen;
 
-include!(concat!(env!("OUT_DIR"), "/lib.rs"));
+pub mod schema;
+pub mod models;

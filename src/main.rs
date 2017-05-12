@@ -15,7 +15,6 @@ extern crate rexif;
 extern crate rphotos;
 extern crate r2d2;
 extern crate nickel_diesel;
-#[macro_use]
 extern crate diesel;
 extern crate r2d2_diesel;
 extern crate dotenv;
