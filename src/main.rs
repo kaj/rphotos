@@ -5,7 +5,6 @@ extern crate log;
 extern crate djangohashers;
 extern crate env_logger;
 extern crate nickel_jwt_session;
-extern crate rustc_serialize;
 extern crate typemap;
 extern crate plugin;
 extern crate image;
@@ -56,7 +55,7 @@ use nickelext::{FromSlug, MyResponse, far_expires};
 mod views_by_date;
 use views_by_date::*;
 
-#[derive(Debug, Clone, RustcEncodable)]
+#[derive(Debug, Clone)]
 pub struct Group {
     title: String,
     url: String,
@@ -64,7 +63,7 @@ pub struct Group {
     photo: Photo,
 }
 
-#[derive(Debug, Clone, RustcEncodable)]
+#[derive(Debug, Clone)]
 pub struct Coord {
     x: f64,
     y: f64,
@@ -442,7 +441,7 @@ fn photo_details<'mw>(req: &mut Request,
 }
 
 
-#[derive(Debug, Clone, RustcEncodable)]
+#[derive(Debug, Clone)]
 pub struct Link {
     pub url: String,
     pub name: String,

@@ -1,5 +1,4 @@
 use chrono::naive::datetime::NaiveDateTime;
-use rustc_serialize::{Encodable, Encoder};
 use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 
@@ -14,26 +13,6 @@ pub struct Photo {
     pub is_public: bool,
     pub camera_id: Option<i32>,
     pub attribution_id: Option<i32>,
-}
-
-// NaiveDateTime isn't Encodable, so we have to implement this by hand.
-impl Encodable for Photo {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        s.emit_struct("Photo", 3, |s| {
-            s.emit_struct_field("id", 0, |s| s.emit_i32(self.id))?;
-            s.emit_struct_field("path", 1, |s| s.emit_str(&self.path))?;
-            s.emit_struct_field("date", 2, |s| {
-                s.emit_str(&self.date
-                                .map(|d| format!("{:?}", d))
-                                .unwrap_or("-".to_string()))
-            })?;
-            s.emit_struct_field("grade", 2, |s| match self.grade {
-                Some(g) => s.emit_option_some(|s| s.emit_i16(g)),
-                None => s.emit_option_none(),
-            })?;
-            s.emit_struct_field("rotation", 2, |s| s.emit_i16(self.rotation))
-        })
-    }
 }
 
 use super::schema::photos;
@@ -146,7 +125,7 @@ impl Photo {
     }
 }
 
-#[derive(Debug, Clone, RustcEncodable, Queryable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct Tag {
     pub id: i32,
     pub slug: String,
@@ -154,7 +133,7 @@ pub struct Tag {
 }
 
 
-#[derive(Debug, Clone, RustcEncodable, Queryable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct PhotoTag {
     pub id: i32,
     pub photo_id: i32,
@@ -178,14 +157,14 @@ pub struct NewPhotoTag {
 }
 
 
-#[derive(Debug, Clone, RustcEncodable, Queryable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct Person {
     pub id: i32,
     pub slug: String,
     pub person_name: String,
 }
 
-#[derive(Debug, Clone, RustcEncodable, Queryable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct PhotoPerson {
     pub id: i32,
     pub photo_id: i32,
@@ -208,14 +187,14 @@ pub struct NewPhotoPerson {
     pub person_id: i32,
 }
 
-#[derive(Debug, Clone, RustcEncodable, Queryable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct Place {
     pub id: i32,
     pub slug: String,
     pub place_name: String,
 }
 
-#[derive(Debug, Clone, RustcEncodable, Queryable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct PhotoPlace {
     pub id: i32,
     pub photo_id: i32,
@@ -255,7 +234,7 @@ pub struct NewUser<'a> {
     pub password: &'a str,
 }
 
-#[derive(Debug, Clone, Identifiable, RustcEncodable, Queryable)]
+#[derive(Debug, Clone, Identifiable, Queryable)]
 #[has_many(photos)]
 pub struct Camera {
     pub id: i32,

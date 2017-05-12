@@ -24,7 +24,6 @@ env_logger = "*"
 log = "*"
 chrono = "^0.2" # Must match version used by diesel
 clap = "^2.19"
-rustc-serialize = "*"
 typemap = "*"
 plugin = "*"
 image = "*"
