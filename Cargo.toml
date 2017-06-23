@@ -6,7 +6,7 @@ authors = ["Rasmus Kaj <kaj@kth.se>"]
 build = "src/build.rs"
 
 [build-dependencies]
-ructe = { version = "^0.3.0", features = ["sass"] }
+ructe = { version = "^0.3.2", features = ["sass", "mime02"] }
 
 [[bin]]
 name = "rphotoserver"
@@ -41,3 +41,4 @@ rand = "*"
 memcached-rs = "^0.1"
 flate2 = "*"
 brotli2 = "*"
+mime = "0.2.6"

@@ -24,6 +24,7 @@ use chrono::Datelike;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
+use hyper::header::ContentType;
 use nickel::{FormBody, HttpRouter, MediaType, MiddlewareResult, Nickel,
              Request, Response};
 use nickel::extensions::response::Redirect;
@@ -291,7 +292,7 @@ fn static_file<'mw>(_req: &mut Request,
                     -> MiddlewareResult<'mw> {
     use templates::statics::StaticFile;
     if let Some(s) = StaticFile::get(&format!("{}.{}", name, ext)) {
-        res.set(ext.parse().unwrap_or(MediaType::Bin));
+        res.set(ContentType(s.mime()));
         res.set(far_expires());
         return res.send(s.content);
     }
