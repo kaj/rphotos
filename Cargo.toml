@@ -29,7 +29,7 @@ image = "*"
 hyper = "^0.9"
 time = "*"
 xml-rs = "*"
-rexif = "*"
+rexif = "^0.3.4"
 diesel = { version = "^0.12", features = ["chrono", "postgres"] }
 diesel_codegen = { version = "^0.12", features = ["postgres"] }
 dotenv = "^0.8"
