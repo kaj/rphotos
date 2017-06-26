@@ -25,9 +25,10 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
 use hyper::header::ContentType;
-use nickel::{FormBody, HttpRouter, MediaType, MiddlewareResult, Nickel,
-             Request, Response};
+use nickel::{Action, Continue, FormBody, Halt, HttpRouter, MediaType, MiddlewareResult, Nickel,
+             NickelError, Request, Response};
 use nickel::extensions::response::Redirect;
+use nickel::status::StatusCode::NotFound;
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
@@ -103,8 +104,24 @@ fn main() {
     wrap3!(server.get "/{}/{}/{}",         all_for_day: year, month, day);
     wrap3!(server.get "/thisday",          on_this_day);
 
+    // https://github.com/rust-lang/rust/issues/20178
+    let custom_handler: fn(&mut NickelError, &mut Request) -> Action = custom_errors;
+    server.handle_error(custom_handler);
+
     server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"))
         .expect("listen");
+}
+
+
+fn custom_errors(err: &mut NickelError, req: &mut Request) -> Action {
+    if let Some(ref mut res) = err.stream {
+        if res.status() == NotFound {
+            templates::not_found(res, req.authorized_user()).unwrap();
+            return Halt(());
+        }
+    }
+
+    Continue(())
 }
 
 fn login<'mw>(_req: &mut Request,

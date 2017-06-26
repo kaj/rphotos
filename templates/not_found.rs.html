@@ -1,0 +1,11 @@
+@use templates::page_base;
+
+@(user: Option<String>)
+
+@:page_base("Not found", &[], &user, {
+  <p>No page or photo match that url.</p>
+  @if user.is_none() {
+    <p>At least nothing publicly visible, you might try
+    <a href="/login">logging in</a>.</p>
+  }
+})
