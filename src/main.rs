@@ -225,7 +225,7 @@ fn get_image_data(req: &Request,
 {
     req.cached_or(&format!("rp{}{:?}", photo.id, size), || {
         let size = size.px();
-        req.photos().get_scaled_image(photo, size, size)
+        req.photos().scale_image(photo, size, size)
     })
 }
 

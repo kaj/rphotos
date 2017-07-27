@@ -15,11 +15,11 @@ impl PhotosDir {
     }
 
     #[allow(dead_code)]
-    pub fn get_scaled_image(&self,
-                            photo: Photo,
-                            width: u32,
-                            height: u32)
-                            -> Result<Vec<u8>, ImageError> {
+    pub fn scale_image(&self,
+                       photo: Photo,
+                       width: u32,
+                       height: u32)
+                       -> Result<Vec<u8>, ImageError> {
         let path = self.basedir.join(photo.path);
         info!("Should open {:?}", path);
         let img = image::open(path)?;
@@ -39,7 +39,6 @@ impl PhotosDir {
                 img
             }
         };
-        // TODO Put the icon in some kind of cache!
         let mut buf = Vec::new();
         img.save(&mut buf, ImageFormat::JPEG)?;
         Ok(buf)
