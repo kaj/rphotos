@@ -202,15 +202,13 @@ fn show_image<'mw>(req: &Request,
             if size == SizeTag::Large {
                 if req.authorized_user().is_some() {
                     let path = req.photos().get_raw_path(tphoto);
-                    res.set(MediaType::Jpeg);
-                    res.set(far_expires());
+                    res.set((MediaType::Jpeg, far_expires()));
                     return res.send_file(path);
                 }
             } else {
                 let data = get_image_data(req, tphoto, size)
                     .expect("Get image data");
-                res.set(MediaType::Jpeg);
-                res.set(far_expires());
+                res.set((MediaType::Jpeg, far_expires()));
                 return res.send(data);
             }
         }
@@ -309,8 +307,7 @@ fn static_file<'mw>(_req: &mut Request,
                     -> MiddlewareResult<'mw> {
     use templates::statics::StaticFile;
     if let Some(s) = StaticFile::get(&format!("{}.{}", name, ext)) {
-        res.set(ContentType(s.mime()));
-        res.set(far_expires());
+        res.set((ContentType(s.mime()), far_expires()));
         return res.send(s.content);
     }
     res.not_found("No such file")
