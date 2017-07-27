@@ -17,7 +17,7 @@ name = "rphotosadm"
 path = "src/rphotosadm.rs"
 
 [dependencies]
-nickel = "^0.9"
+nickel = "~0.9.0"
 nickel-jwt-session = "^0.6"
 env_logger = "*"
 log = "*"
@@ -33,8 +33,7 @@ rexif = "^0.3.4"
 diesel = { version = "^0.12", features = ["chrono", "postgres"] }
 diesel_codegen = { version = "^0.12", features = ["postgres"] }
 dotenv = "^0.8"
-nickel-diesel = "*"
-r2d2-diesel = "*"
+r2d2-diesel = "^0.12"
 r2d2 = "*"
 djangohashers = "*"
 rand = "*"

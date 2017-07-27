@@ -14,7 +14,6 @@ extern crate chrono;
 extern crate rexif;
 extern crate rphotos;
 extern crate r2d2;
-extern crate nickel_diesel;
 extern crate diesel;
 extern crate r2d2_diesel;
 extern crate dotenv;
@@ -37,6 +36,8 @@ use rphotos::models::{Person, Photo, Place, Tag};
 
 mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
+
+mod nickel_diesel;
 
 mod photosdir;
 
