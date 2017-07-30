@@ -7,7 +7,11 @@
   <div class="details">
     <div class="item"><img src="/img/@photo.id-m.jpg"></div>
     <div class="meta">
-    @if user.is_some() {<p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>}
+    @if user.is_some() {
+    <p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>
+    @if photo.is_public() {<p>This photo is public.</p>}
+    else {<p>This photo is not public.</p>}
+    }
     @if let Some(g) = photo.grade {<p>Betyg: @g</p>}
     @if let Some(d) = photo.date{<p>Tid: @d.format("%F %T")</p>}
     @if !people.is_empty() {
