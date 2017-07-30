@@ -12,8 +12,8 @@
     @if photo.is_public() {<p>This photo is public.</p>}
     else {<p>This photo is not public.</p>}
     }
-    @if let Some(g) = photo.grade {<p>Betyg: @g</p>}
-    @if let Some(d) = photo.date{<p>Tid: @d.format("%F %T")</p>}
+    @if let Some(g) = photo.grade {<p>Grade: @g</p>}
+    @if let Some(d) = photo.date {<p>Time: @d.format("%F %T")</p>}
     @if !people.is_empty() {
     <p>People: @for p in people{<a href="/person/@p.slug">@p.person_name</a>, }</p>}
     @if !places.is_empty() {
