@@ -38,6 +38,7 @@ fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
     let args = App::new("rphotoadm")
+        .version(env!("CARGO_PKG_VERSION"))
         .about("Command line interface for rphotos")
         .subcommand(SubCommand::with_name("findphotos")
             .about("Find new photos in the photo directory")
