@@ -66,6 +66,11 @@ impl FromSlug for u32 {
         slug.parse::<Self>().ok()
     }
 }
+impl FromSlug for usize {
+    fn parse(slug: &str) -> Option<Self> {
+        slug.parse::<Self>().ok()
+    }
+}
 
 pub trait MyResponse<'mw> {
     fn ok<F>(self, do_render: F) -> MiddlewareResult<'mw>

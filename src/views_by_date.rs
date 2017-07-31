@@ -180,26 +180,116 @@ pub fn all_for_day<'mw>(req: &mut Request,
                     day: u32)
                     -> MiddlewareResult<'mw> {
     let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
-    use rphotos::schema::photos::dsl::{date, grade};
+    use rphotos::schema::photos::dsl::date;
 
     let c: &PgConnection = &req.db_conn();
 
     let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
-            .filter(date.ge(thedate))
-            .filter(date.lt(thedate + ChDuration::days(1)))
-            .order((grade.desc().nulls_last(), date.desc()))
-            .limit(500)
-            .load(c).unwrap();
+        .filter(date.ge(thedate))
+        .filter(date.lt(thedate + ChDuration::days(1)))
+        .order(date.desc())
+        .load(c).unwrap();
 
     if photos.is_empty() {
         res.not_found("No such image")
     } else {
-        res.ok(|o| templates::index(
-            o,
-            &format!("Photos from {} {} {}", day, monthname(month), year),
-            &[Link::year(year), Link::month(year, month)],
-            req.authorized_user(),
-            &photos))
+        let n = photos.len();
+        if n > 50 {
+            warn!("Got {} photos, way to many", n);
+            res.ok(|o| templates::groups(
+                o,
+                &format!("Photos from {} {}", day, monthname(month)),
+                &[Link::year(year), Link::month(year, month)],
+                req.authorized_user(),
+                &(photos.chunks((n as f64).sqrt() as usize)
+                    .enumerate()
+                    .map(|(i, chunk)| {
+                        Group {
+                            title: format!(
+                                "{} - {}",
+                                chunk.last()
+                                    .and_then(|p| p.date)
+                                    .map(|t| t.format("%H:%M").to_string())
+                                    .unwrap_or("?".to_string()),
+                                chunk.first()
+                                    .and_then(|p| p.date)
+                                    .map(|t| t.format("%H:%M").to_string())
+                                    .unwrap_or("?".to_string()),
+                            ),
+                            url: format!("/{}/{}/{}/{}", year, month, day, i),
+                            count: chunk.len() as i64,
+                            photo: chunk.into_iter()
+                                .max_by_key(|p| {
+                                    p.grade.unwrap_or(2) +
+                                        if p.is_public {3} else {0}
+                                })
+                                .unwrap()
+                                .clone()
+                        }
+                    })
+                    .collect::<Vec<_>>()),
+            ))
+        } else {
+            res.ok(|o| templates::index(
+                o,
+                &format!("Photos from {} {} {}", day, monthname(month), year),
+                &[Link::year(year), Link::month(year, month)],
+                req.authorized_user(),
+                &photos,
+            ))
+        }
+    }
+}
+
+pub fn part_for_day<'mw>(
+    req: &mut Request,
+    res: Response<'mw>,
+    year: i32,
+    month: u32,
+    day: u32,
+    part: usize,
+) -> MiddlewareResult<'mw> {
+    let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
+    use rphotos::schema::photos::dsl::date;
+
+    let c: &PgConnection = &req.db_conn();
+
+    let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
+        .filter(date.ge(thedate))
+        .filter(date.lt(thedate + ChDuration::days(1)))
+        .order(date.desc())
+        .load(c).unwrap();
+
+    if photos.is_empty() {
+        res.not_found("No such image")
+    } else {
+        let mut chunks = photos.chunks((photos.len() as f64).sqrt() as usize);
+        if let Some(photos) = chunks.nth(part) {
+            res.ok(|o| templates::index(
+                o,
+                &format!(
+                    "Photos from {} {} {}, {} - {}",
+                    day, monthname(month), year,
+                    photos.last()
+                        .and_then(|p| p.date)
+                        .map(|t| t.format("%H:%M").to_string())
+                        .unwrap_or("?".to_string()),
+                    photos.first()
+                        .and_then(|p| p.date)
+                        .map(|t| t.format("%H:%M").to_string())
+                        .unwrap_or("?".to_string()),
+                ),
+                &[
+                    Link::year(year),
+                    Link::month(year, month),
+                    Link::day(year, month, day),
+                ],
+                req.authorized_user(),
+                &photos,
+                ))
+        } else {
+            res.not_found("No such image")
+        }
     }
 }
 

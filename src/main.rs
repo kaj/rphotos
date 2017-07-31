@@ -103,6 +103,7 @@ fn main() {
     wrap3!(server.get "/{}/",              months_in_year: year);
     wrap3!(server.get "/{}/{}/",           days_in_month: year, month);
     wrap3!(server.get "/{}/{}/{}",         all_for_day: year, month, day);
+    wrap3!(server.get "/{}/{}/{}/{}",      part_for_day: year, month, day, part);
     wrap3!(server.get "/thisday",          on_this_day);
 
     // https://github.com/rust-lang/rust/issues/20178
