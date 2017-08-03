@@ -1,8 +1,9 @@
+@use nickel::Request;
 @use rphotos::models::{Photo, Place};
 @use templates::{page_base, img_link};
 
-@(user: Option<String>, photos: &[Photo], place: Place)
-@:page_base(&format!("Photos from {}", place.place_name), &[], &user, {
+@(req: &Request, photos: &[Photo], place: Place)
+@:page_base(req, &format!("Photos from {}", place.place_name), &[], {
   <div class="group">
     @for p in photos {@:img_link(p)}
   </div>

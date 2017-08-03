@@ -1,8 +1,9 @@
+@use nickel::Request;
 @use rphotos::models::Person;
 @use templates::page_base;
 
-@(user: Option<String>, people: &[Person])
-@:page_base("Photo people", &[], &user, {
+@(req: &Request, people: &[Person])
+@:page_base(req, "Photo people", &[], {
   <ul class="allpeople">
     @for p in people {
       <li><a href="/person/@p.slug">@p.person_name</a>

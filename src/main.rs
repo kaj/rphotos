@@ -132,16 +132,17 @@ fn login<'mw>(req: &mut Request,
               mut res: Response<'mw>)
               -> MiddlewareResult<'mw> {
     res.clear_jwt();
-    let next = sanitize_next(req.query().get("next"));
-    res.ok(|o| templates::login(o, next))
+    let next = sanitize_next(req.query().get("next")).map(String::from);
+    res.ok(|o| templates::login(o, req, next))
 }
 
 fn do_login<'mw>(req: &mut Request,
                  mut res: Response<'mw>)
                  -> MiddlewareResult<'mw> {
+    let next = {
     let c: &PgConnection = &req.db_conn();
     let form_data = try_with!(res, req.form_body());
-    let next = sanitize_next(form_data.get("next"));
+    let next = sanitize_next(form_data.get("next")).map(String::from);
     if let (Some(user), Some(pw)) = (form_data.get("user"),
                                      form_data.get("password")) {
         use rphotos::schema::users::dsl::*;
@@ -152,14 +153,16 @@ fn do_login<'mw>(req: &mut Request,
             if djangohashers::check_password_tolerant(pw, &hash) {
                 info!("User {} logged in", user);
                 res.set_jwt_user(user);
-                return res.redirect(next.unwrap_or("/"));
+                return res.redirect(next.unwrap_or("/".to_string()));
             }
             debug!("Password verification failed");
         } else {
             debug!("No hash found for {}", user);
         }
     }
-    res.ok(|o| templates::login(o, next))
+        next
+    };
+    res.ok(|o| templates::login(o, req, next))
 }
 
 fn sanitize_next(next: Option<&str>) -> Option<&str> {
@@ -291,7 +294,7 @@ fn tag_all<'mw>(req: &mut Request,
     };
     res.ok(|o| {
         templates::tags(o,
-                        req.authorized_user(),
+                        req,
                         &query.order(tag_name).load(c).expect("List tags"))
     })
 }
@@ -307,7 +310,7 @@ fn tag_one<'mw>(req: &mut Request,
         use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         return res.ok(|o| {
             templates::tag(o,
-                           req.authorized_user(),
+                           req,
                            &Photo::query(req.authorized_user().is_some())
                            .filter(id.eq_any(photo_tags.select(photo_id)
                                              .filter(tag_id.eq(tag.id))))
@@ -340,7 +343,7 @@ fn place_all<'mw>(req: &mut Request,
     let c: &PgConnection = &req.db_conn();
     res.ok(|o| templates::places(
         o,
-        req.authorized_user(),
+        req,
         &query.order(place_name).load(c).expect("List places")))
 }
 
@@ -369,7 +372,7 @@ fn place_one<'mw>(req: &mut Request,
                                                  place_id};
         return res.ok(|o| templates::place(
             o,
-            req.authorized_user(),
+            req,
             &Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_places.select(photo_id)
                                               .filter(place_id.eq(place.id))))
@@ -400,7 +403,7 @@ fn person_all<'mw>(req: &mut Request,
     let c: &PgConnection = &req.db_conn();
     res.ok(|o| templates::people(
         o,
-        req.authorized_user(),
+        req,
         &query.order(person_name).load(c).expect("list people")))
 }
 
@@ -416,7 +419,7 @@ fn person_one<'mw>(req: &mut Request,
                                                  photo_people};
         return res.ok(|o| templates::person(
             o,
-            req.authorized_user(),
+            req,
             &Photo::query(req.authorized_user().is_some())
                 .filter(id.eq_any(photo_people.select(photo_id)
                                               .filter(person_id.eq(person.id))))
@@ -437,12 +440,12 @@ fn photo_details<'mw>(req: &mut Request,
         if req.authorized_user().is_some() || tphoto.is_public() {
             return res.ok(|o| templates::details(
                 o,
+                req,
                 &tphoto.date
                     .map(|d| vec![Link::year(d.year()),
                                   Link::month(d.year(), d.month()),
                                   Link::day(d.year(), d.month(), d.day())])
                     .unwrap_or_else(|| vec![]),
-                req.authorized_user(),
                 &{
                     use rphotos::schema::people::dsl::{people, id};
                     use rphotos::schema::photo_people::dsl::{photo_people, photo_id, person_id};

@@ -1,10 +1,11 @@
 @use ::Link;
+@use nickel::Request;
 @use rphotos::models::Photo;
 @use templates::{page_base, img_link};
 
-@(title: &str, lpath: &[Link], user: Option<String>, photos: &[Photo])
+@(req: &Request, title: &str, lpath: &[Link], photos: &[Photo])
 
-@:page_base(title, lpath, &user, {
+@:page_base(req, title, lpath, {
   <div class="group">
     @for p in photos {@:img_link(p)}
   </div>

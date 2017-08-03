@@ -20,7 +20,6 @@ pub fn all_years<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    let user: Option<String> = req.authorized_user();
     let groups: Vec<Group> =
             SqlLiteral::new(format!(
                 "select cast(extract(year from date) as int) y, count(*) c \
@@ -53,7 +52,7 @@ pub fn all_years<'mw>(req: &mut Request,
                 }
             }).collect();
 
-    res.ok(|o| templates::groups(o, "All photos", &[], user, &groups))
+    res.ok(|o| templates::groups(o, req, "All photos", &[], &groups))
 }
 
 pub fn months_in_year<'mw>(req: &mut Request,
@@ -63,7 +62,6 @@ pub fn months_in_year<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    let user: Option<String> = req.authorized_user();
     let title: String = format!("Photos from {}", year);
     let groups: Vec<Group> =
             SqlLiteral::new(format!(
@@ -102,7 +100,7 @@ pub fn months_in_year<'mw>(req: &mut Request,
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        res.ok(|o| templates::groups(o, &title, &[], user, &groups))
+        res.ok(|o| templates::groups(o, req, &title, &[], &groups))
     }
 }
 
@@ -114,7 +112,6 @@ pub fn days_in_month<'mw>(req: &mut Request,
     use rphotos::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    let user: Option<String> = req.authorized_user();
     let lpath: Vec<Link> = vec![Link::year(year)];
     let title: String = format!("Photos from {} {}", monthname(month), year);
     let groups: Vec<Group> =
@@ -151,7 +148,7 @@ pub fn days_in_month<'mw>(req: &mut Request,
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        res.ok(|o| templates::groups(o, &title, &lpath, user, &groups))
+        res.ok(|o| templates::groups(o, req, &title, &lpath, &groups))
     }
 }
 
@@ -163,9 +160,9 @@ pub fn all_null_date<'mw>(req: &mut Request,
     let c: &PgConnection = &req.db_conn();
     res.ok(|o| templates::index(
         o,
+        req,
         &"Photos without a date",
         &[],
-        req.authorized_user(),
         &Photo::query(req.authorized_user().is_some())
             .filter(date.is_null())
             .order(path.asc())
@@ -198,9 +195,9 @@ pub fn all_for_day<'mw>(req: &mut Request,
             warn!("Got {} photos, way to many", n);
             res.ok(|o| templates::groups(
                 o,
+                req,
                 &format!("Photos from {} {}", day, monthname(month)),
                 &[Link::year(year), Link::month(year, month)],
-                req.authorized_user(),
                 &(photos.chunks((n as f64).sqrt() as usize)
                     .enumerate()
                     .map(|(i, chunk)| {
@@ -232,9 +229,9 @@ pub fn all_for_day<'mw>(req: &mut Request,
         } else {
             res.ok(|o| templates::index(
                 o,
+                req,
                 &format!("Photos from {} {} {}", day, monthname(month), year),
                 &[Link::year(year), Link::month(year, month)],
-                req.authorized_user(),
                 &photos,
             ))
         }
@@ -267,6 +264,7 @@ pub fn part_for_day<'mw>(
         if let Some(photos) = chunks.nth(part) {
             res.ok(|o| templates::index(
                 o,
+                req,
                 &format!(
                     "Photos from {} {} {}, {} - {}",
                     day, monthname(month), year,
@@ -284,7 +282,6 @@ pub fn part_for_day<'mw>(
                     Link::month(year, month),
                     Link::day(year, month, day),
                 ],
-                req.authorized_user(),
                 &photos,
                 ))
         } else {
@@ -305,9 +302,9 @@ pub fn on_this_day<'mw>(req: &mut Request,
     };
     res.ok(|o| templates::groups(
         o,
+        req,
         &format!("Photos from {} {}", day, monthname(month)),
         &[],
-        req.authorized_user(),
         &SqlLiteral::new(format!(
                 "select extract(year from date) y, count(*) c \
                  from photos where extract(month from date)={} \

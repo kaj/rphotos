@@ -1,9 +1,10 @@
+@use nickel::Request;
 @use rphotos::models::Place;
 @use templates::page_base;
 
-@(user: Option<String>, places: &[Place])
+@(req: &Request, places: &[Place])
 
-@:page_base("Photo places", &[], &user, {
+@:page_base(req, "Photo places", &[], {
   <ul class="allplaces">
   @for p in places {
     <li><a href="/place/@p.slug">@p.place_name</a>

@@ -4,7 +4,7 @@
 
 @(req: &Request)
 
-@:page_base("Not found", &[], &req.authorized_user(), {
+@:page_base(req, "Not found", &[], {
   <p>No page or photo match that url.</p>
   @if req.authorized_user().is_none() {
     <p>At least nothing publicly visible, you might try

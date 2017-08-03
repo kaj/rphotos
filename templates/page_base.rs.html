@@ -1,8 +1,9 @@
 @use ::Link;
+@use nickel::Request;
 @use templates::head;
 @use templates::statics::photos_css;
 
-@(title: &str, lpath: &[Link], user: &Option<String>, content: Content)
+@(req: &Request, title: &str, lpath: &[Link], content: Content)
 
 <!doctype html>
 <html>
@@ -13,7 +14,7 @@
     <link rel="stylesheet" href="/static/@photos_css.name" type="text/css"/>
   </head>
   <body>
-    @:head(lpath, user)
+    @:head(req, lpath)
     <main>
       <h1>@title</h1>
       @:content()
