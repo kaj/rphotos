@@ -1,6 +1,6 @@
 @use templates::page_base;
 
-@()
+@(next: Option<&str>)
 
 @:page_base("login", &[], &None, {
     <form action="/login" method="post">
@@ -8,6 +8,10 @@
 	<input id="user" name="user"></p>
       <p><label for="password">Password:</label>
 	<input id="password" name="password" type="password"></p>
-      <p><span></span><input type="submit" value="Log in"></p>
+      <p><span>@if let Some(next) = next {
+	  <input type="hidden" name="next" value="@next">
+	  }</span>
+	<input type="submit" value="Log in">
+      </p>
     </form>
 })

@@ -1,11 +1,13 @@
+@use nickel::Request;
 @use templates::page_base;
+@use nickel_jwt_session::SessionRequestExtensions;
 
-@(user: Option<String>)
+@(req: &Request)
 
-@:page_base("Not found", &[], &user, {
+@:page_base("Not found", &[], &req.authorized_user(), {
   <p>No page or photo match that url.</p>
-  @if user.is_none() {
+  @if req.authorized_user().is_none() {
     <p>At least nothing publicly visible, you might try
-    <a href="/login">logging in</a>.</p>
+    <a href="/login@if let Some(p) = req.path_without_query() {?next=@p}">logging in</a>.</p>
   }
 })

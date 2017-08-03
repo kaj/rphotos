@@ -18,14 +18,16 @@ extern crate diesel;
 extern crate r2d2_diesel;
 extern crate dotenv;
 extern crate memcached;
+extern crate regex;
 
 use chrono::Datelike;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
 use hyper::header::ContentType;
-use nickel::{Action, Continue, FormBody, Halt, HttpRouter, MediaType, MiddlewareResult, Nickel,
-             NickelError, Request, Response};
+use nickel::{Action, Continue, FormBody, Halt, HttpRouter, MediaType,
+             MiddlewareResult, Nickel, NickelError, QueryString, Request,
+             Response};
 use nickel::extensions::response::Redirect;
 use nickel::status::StatusCode::NotFound;
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
@@ -118,7 +120,7 @@ fn main() {
 fn custom_errors(err: &mut NickelError, req: &mut Request) -> Action {
     if let Some(ref mut res) = err.stream {
         if res.status() == NotFound {
-            templates::not_found(res, req.authorized_user()).unwrap();
+            templates::not_found(res, req).unwrap();
             return Halt(());
         }
     }
@@ -126,11 +128,12 @@ fn custom_errors(err: &mut NickelError, req: &mut Request) -> Action {
     Continue(())
 }
 
-fn login<'mw>(_req: &mut Request,
+fn login<'mw>(req: &mut Request,
               mut res: Response<'mw>)
               -> MiddlewareResult<'mw> {
     res.clear_jwt();
-    res.ok(|o| templates::login(o))
+    let next = sanitize_next(req.query().get("next"));
+    res.ok(|o| templates::login(o, next))
 }
 
 fn do_login<'mw>(req: &mut Request,
@@ -138,6 +141,7 @@ fn do_login<'mw>(req: &mut Request,
                  -> MiddlewareResult<'mw> {
     let c: &PgConnection = &req.db_conn();
     let form_data = try_with!(res, req.form_body());
+    let next = sanitize_next(form_data.get("next"));
     if let (Some(user), Some(pw)) = (form_data.get("user"),
                                      form_data.get("password")) {
         use rphotos::schema::users::dsl::*;
@@ -148,14 +152,52 @@ fn do_login<'mw>(req: &mut Request,
             if djangohashers::check_password_tolerant(pw, &hash) {
                 info!("User {} logged in", user);
                 res.set_jwt_user(user);
-                return res.redirect("/");
+                return res.redirect(next.unwrap_or("/"));
             }
             debug!("Password verification failed");
         } else {
             debug!("No hash found for {}", user);
         }
     }
-    res.ok(|o| templates::login(o))
+    res.ok(|o| templates::login(o, next))
+}
+
+fn sanitize_next(next: Option<&str>) -> Option<&str> {
+    if let Some(next) = next {
+        use regex::Regex;
+        let re = Regex::new(r"^/([a-z0-9.-]+/?)*$").unwrap();
+        if re.is_match(next) {
+            return Some(next)
+        }
+    }
+    None
+}
+
+#[test]
+fn test_sanitize_bad_1() {
+    assert_eq!(None, sanitize_next(Some("https://evil.org/")))
+}
+
+#[test]
+fn test_sanitize_bad_2() {
+    assert_eq!(None, sanitize_next(Some("//evil.org/")))
+}
+#[test]
+fn test_sanitize_bad_3() {
+    assert_eq!(None, sanitize_next(Some("/evil\"hack")))
+}
+#[test]
+fn test_sanitize_bad_4() {
+    assert_eq!(None, sanitize_next(Some("/evil'hack")))
+}
+
+#[test]
+fn test_sanitize_good_1() {
+    assert_eq!(Some("/foo/"), sanitize_next(Some("/foo/")))
+}
+#[test]
+fn test_sanitize_good_2() {
+    assert_eq!(Some("/2017/7/15"), sanitize_next(Some("/2017/7/15")))
 }
 
 fn logout<'mw>(_req: &mut Request,
