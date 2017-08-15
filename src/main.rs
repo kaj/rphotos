@@ -11,6 +11,8 @@ extern crate image;
 extern crate hyper;
 extern crate time;
 extern crate chrono;
+extern crate clap;
+extern crate libc;
 extern crate rexif;
 extern crate rphotos;
 extern crate r2d2;
@@ -21,6 +23,7 @@ extern crate memcached;
 extern crate regex;
 
 use chrono::Datelike;
+use clap::{App, Arg};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
@@ -52,6 +55,9 @@ use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
 mod memcachemiddleware;
 use memcachemiddleware::*;
 
+mod pidfiles;
+use pidfiles::handle_pid_file;
+
 #[macro_use]
 mod nickelext;
 use nickelext::{FromSlug, MyResponse, far_expires};
@@ -77,6 +83,23 @@ fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
     info!("Initalized logger");
+    let args = App::new("rphotoserver")
+        .about("RPhotos web server")
+        .version(env!("CARGO_PKG_VERSION"))
+        .arg(Arg::with_name("PIDFILE")
+             .long("pidfile")
+             .takes_value(true)
+             .help("Write (and read, if --replace) a pid file with the name \
+                    given as <PIDFILE>."))
+        .arg(Arg::with_name("REPLACE")
+             .long("replace")
+             .help("Kill old server (identified by pid file) before running"))
+        .get_matches();
+
+    if let Some(pidfile) = args.value_of("PIDFILE") {
+        handle_pid_file(pidfile, args.is_present("REPLACE"))
+            .unwrap()
+    }
 
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);

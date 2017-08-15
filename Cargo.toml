@@ -21,6 +21,7 @@ nickel = "~0.10.0"
 nickel-jwt-session = "~0.10.0"
 hyper = "~0.10.0"
 env_logger = "*"
+libc = "*"
 log = "*"
 chrono = "^0.3" # Must match version used by diesel
 clap = "^2.19"
