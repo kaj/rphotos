@@ -37,7 +37,7 @@ use std::process::exit;
 fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
-    let args = App::new("rphotoadm")
+    let args = App::new("rphotosadm")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Command line interface for rphotos")
         .subcommand(SubCommand::with_name("findphotos")
