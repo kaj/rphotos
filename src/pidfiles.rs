@@ -1,12 +1,17 @@
 use libc::{SIGHUP, getpid, kill, pid_t};
 use std::fs::File;
 use std::io::{ErrorKind, Read, Write};
+use std::path::Path;
 
 pub fn handle_pid_file(pidfile: &str, replace: bool) -> Result<(), String> {
     if replace {
         if let Some(oldpid) = read_pid_file(pidfile)? {
             info!("Killing old pid {}.", oldpid);
             unsafe { kill(oldpid, SIGHUP); }
+        }
+    } else {
+        if Path::new(pidfile).exists() {
+            return Err(format!("Pid file {:?} exists.", pidfile))
         }
     }
     let pid = unsafe { getpid() };
