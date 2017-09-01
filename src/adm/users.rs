@@ -9,7 +9,7 @@ use rand::os::OsRng;
 use std::iter::Iterator;
 
 pub fn list(db: &PgConnection) -> Result<(), Error> {
-    use rphotos::schema::users::dsl::*;
+    use schema::users::dsl::*;
     println!("Existing users: {:?}.",
              users.select(username).load::<String>(db)?);
     Ok(())
@@ -18,7 +18,7 @@ pub fn list(db: &PgConnection) -> Result<(), Error> {
 pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
     let pword = random_password(14);
     let hashword = make_password(&pword);
-    use rphotos::schema::users::dsl::*;
+    use schema::users::dsl::*;
     match update(users.filter(username.eq(&uname)))
         .set(password.eq(&hashword))
         .execute(db)? {
@@ -26,7 +26,7 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
             println!("Updated password for {:?} to {:?}", uname, pword);
         }
         0 => {
-            use rphotos::models::NewUser;
+            use models::NewUser;
             insert(&NewUser {
                     username: &uname,
                     password: &hashword,

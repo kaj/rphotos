@@ -8,10 +8,6 @@ build = "src/build.rs"
 [build-dependencies]
 ructe = { version = "^0.3.2", features = ["sass", "mime02"] }
 
-[[bin]]
-name = "rphotosadm"
-path = "src/rphotosadm.rs"
-
 [dependencies]
 nickel = "~0.10.0"
 nickel-jwt-session = "~0.10.0"

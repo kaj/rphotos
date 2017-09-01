@@ -1,9 +1,11 @@
-extern crate rphotos;
+#![recursion_limit="128"]
 extern crate brotli2;
 extern crate clap;
 extern crate chrono;
 #[macro_use]
 extern crate diesel;
+#[macro_use]
+extern crate diesel_codegen;
 extern crate djangohashers;
 extern crate dotenv;
 extern crate env_logger;
@@ -30,11 +32,13 @@ extern crate xml;
 mod adm;
 mod env;
 mod memcachemiddleware;
+mod models;
 mod nickel_diesel;
 mod photosdir;
 mod photosdirmiddleware;
 mod pidfiles;
 mod requestloggermiddleware;
+mod schema;
 mod server;
 
 use adm::{findphotos, makepublic, readkpa, users, storestatics};

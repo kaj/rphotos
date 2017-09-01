@@ -1,6 +1,6 @@
 use image::{self, FilterType, GenericImage, ImageError, ImageFormat};
 use rexif::{self, ExifData};
-use rphotos::models::Photo;
+use models::Photo;
 use std::{fs, io};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};

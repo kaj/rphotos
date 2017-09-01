@@ -4,10 +4,10 @@ use diesel::expression::dsl::{count_star, sql};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::types::{BigInt, Double, Nullable, Text, Timestamp};
-use rphotos::schema::people::dsl::people;
-use rphotos::schema::photos::dsl::photos;
-use rphotos::schema::places::dsl::places;
-use rphotos::schema::tags::dsl::tags;
+use schema::people::dsl::people;
+use schema::photos::dsl::photos;
+use schema::places::dsl::places;
+use schema::tags::dsl::tags;
 
 sql_function!(date_part,
               date_part_t,
@@ -25,7 +25,7 @@ pub fn show_stats(db: &PgConnection) -> Result<(), Error> {
 
     // Something like this should be possible, I guess?
     //
-    // use rphotos::schema::photos::dsl::date;
+    // use schema::photos::dsl::date;
     // let year = date_part("year", date).aliased("y");
     // println!("Count per year: {:?}",
     //          photos.select((year, count_star()))

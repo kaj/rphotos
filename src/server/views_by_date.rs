@@ -4,11 +4,11 @@ use chrono::naive::NaiveDate;
 use diesel::expression::sql_literal::SqlLiteral;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use models::Photo;
 use nickel::{MiddlewareResult, Request, Response};
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
 use server::nickelext::MyResponse;
-use rphotos::models::Photo;
 use templates;
 use time;
 
@@ -17,7 +17,7 @@ pub fn all_years<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
 
-    use rphotos::schema::photos::dsl::{date, grade};
+    use schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     let groups: Vec<Group> =
@@ -59,7 +59,7 @@ pub fn months_in_year<'mw>(req: &mut Request,
                        res: Response<'mw>,
                        year: i32)
                        -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::{date, grade};
+    use schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     let title: String = format!("Photos from {}", year);
@@ -109,7 +109,7 @@ pub fn days_in_month<'mw>(req: &mut Request,
                       year: i32,
                       month: u32)
                       -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::{date, grade};
+    use schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     let lpath: Vec<Link> = vec![Link::year(year)];
@@ -155,7 +155,7 @@ pub fn days_in_month<'mw>(req: &mut Request,
 pub fn all_null_date<'mw>(req: &mut Request,
                       res: Response<'mw>)
                       -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::{date, path};
+    use schema::photos::dsl::{date, path};
 
     let c: &PgConnection = &req.db_conn();
     res.ok(|o| templates::index(
@@ -177,7 +177,7 @@ pub fn all_for_day<'mw>(req: &mut Request,
                     day: u32)
                     -> MiddlewareResult<'mw> {
     let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
-    use rphotos::schema::photos::dsl::date;
+    use schema::photos::dsl::date;
 
     let c: &PgConnection = &req.db_conn();
 
@@ -247,7 +247,7 @@ pub fn part_for_day<'mw>(
     part: usize,
 ) -> MiddlewareResult<'mw> {
     let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
-    use rphotos::schema::photos::dsl::date;
+    use schema::photos::dsl::date;
 
     let c: &PgConnection = &req.db_conn();
 
@@ -293,7 +293,7 @@ pub fn part_for_day<'mw>(
 pub fn on_this_day<'mw>(req: &mut Request,
                     res: Response<'mw>)
                     -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::{date, grade};
+    use schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     let (month, day) = {

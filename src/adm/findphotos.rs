@@ -5,7 +5,7 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use photosdir::PhotosDir;
 use rexif::{ExifData, ExifEntry, ExifTag, TagValue};
-use rphotos::models::{Modification, Photo, Camera};
+use models::{Modification, Photo, Camera};
 use std::path::Path;
 
 pub fn crawl(db: &PgConnection, photos: &PhotosDir, only_in: &Path)
@@ -44,7 +44,7 @@ fn save_photo(db: &PgConnection,
     };
     if let Some((lat, long)) = find_position(&exif)? {
         debug!("Position for {} is {} {}", file_path, lat, long);
-        use rphotos::schema::positions::dsl::*;
+        use schema::positions::dsl::*;
         if let Ok((pos, clat, clong)) =
             positions.filter(photo_id.eq(photo.id))
                 .select((id, latitude, longitude))
@@ -59,7 +59,7 @@ fn save_photo(db: &PgConnection,
             }
         } else {
             info!("Position for {} is {} {}", file_path, lat, long);
-            use rphotos::models::NewPosition;
+            use models::NewPosition;
             insert(&NewPosition {
                     photo_id: photo.id,
                     latitude: (lat * 1e6) as i32,

@@ -3,7 +3,7 @@ use chrono::naive::NaiveDateTime;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use rphotos::models::{Modification, Person, Photo, Place, Tag};
+use models::{Modification, Person, Photo, Place, Tag};
 use std::fs::File;
 use std::path::Path;
 use std::result;
@@ -123,9 +123,9 @@ pub fn photo_by_path(db: &PgConnection,
 }
 
 fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) -> Result<()> {
-    use rphotos::models::{NewPhotoTag, NewTag, PhotoTag};
+    use models::{NewPhotoTag, NewTag, PhotoTag};
     let tag = {
-        use rphotos::schema::tags::dsl::*;
+        use schema::tags::dsl::*;
         tags.filter(tag_name.eq(tagname))
             .first::<Tag>(db)
             .or_else(|_| {
@@ -138,7 +138,7 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) -> Result<()> {
             })
     }?;
     debug!("  tag {:?}", tag);
-    use rphotos::schema::photo_tags::dsl::*;
+    use schema::photo_tags::dsl::*;
     let q = photo_tags.filter(photo_id.eq(thephoto.id))
         .filter(tag_id.eq(tag.id));
     if let Ok(result) = q.first::<PhotoTag>(db) {
@@ -157,9 +157,9 @@ fn tag_photo(db: &PgConnection, thephoto: &Photo, tagname: &str) -> Result<()> {
 }
 
 fn person_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
-    use rphotos::models::{NewPerson, NewPhotoPerson, PhotoPerson};
+    use models::{NewPerson, NewPhotoPerson, PhotoPerson};
     let person = {
-        use rphotos::schema::people::dsl::*;
+        use schema::people::dsl::*;
         people.filter(person_name.eq(name))
             .first::<Person>(db)
             .or_else(|_| {
@@ -172,7 +172,7 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
             })
     }?;
     debug!("  person {:?}", person);
-    use rphotos::schema::photo_people::dsl::*;
+    use schema::photo_people::dsl::*;
     let q = photo_people.filter(photo_id.eq(photo.id))
         .filter(person_id.eq(person.id));
     if let Ok(result) = q.first::<PhotoPerson>(db) {
@@ -193,9 +193,9 @@ fn person_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
 }
 
 fn place_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
-    use rphotos::models::{NewPhotoPlace, NewPlace, PhotoPlace};
+    use models::{NewPhotoPlace, NewPlace, PhotoPlace};
     let place = {
-        use rphotos::schema::places::dsl::*;
+        use schema::places::dsl::*;
         places.filter(place_name.eq(name))
             .first::<Place>(db)
             .or_else(|_| {
@@ -208,7 +208,7 @@ fn place_photo(db: &PgConnection, photo: &Photo, name: &str) -> Result<()> {
             })
     }?;
     debug!("  place {:?}", place);
-    use rphotos::schema::photo_places::dsl::*;
+    use schema::photo_places::dsl::*;
     photo_places.filter(photo_id.eq(photo.id))
         .filter(place_id.eq(place.id))
         .first::<PhotoPlace>(db)
@@ -238,7 +238,7 @@ fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) -> Result<()> {
                                             photo)))
         }
     });
-    use rphotos::schema::photos::dsl::*;
+    use schema::photos::dsl::*;
     let n = diesel::update(photos.find(photo.id))
         .set(grade.eq(photo.grade))
         .execute(db)

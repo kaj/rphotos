@@ -21,7 +21,7 @@ use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
 use r2d2::NopErrorHandler;
-use rphotos::models::{Person, Photo, Place, Tag};
+use models::{Person, Photo, Place, Tag};
 
 use env::{dburl, env_or, jwt_key, photos_dir};
 
@@ -126,7 +126,7 @@ fn do_login<'mw>(req: &mut Request,
     let next = sanitize_next(form_data.get("next")).map(String::from);
     if let (Some(user), Some(pw)) = (form_data.get("user"),
                                      form_data.get("password")) {
-        use rphotos::schema::users::dsl::*;
+        use schema::users::dsl::*;
         if let Ok(hash) = users.filter(username.eq(user))
                                .select(password)
                                .first::<String>(c) {
@@ -223,7 +223,7 @@ fn show_image<'mw>(req: &Request,
                    the_id: i32,
                    size: SizeTag)
                    -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::photos;
+    use schema::photos::dsl::photos;
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
@@ -258,14 +258,14 @@ fn get_image_data(req: &Request,
 fn tag_all<'mw>(req: &mut Request,
                 res: Response<'mw>)
                 -> MiddlewareResult<'mw> {
-    use rphotos::schema::tags::dsl::{id, tag_name, tags};
+    use schema::tags::dsl::{id, tag_name, tags};
     let c: &PgConnection = &req.db_conn();
     let query = tags.into_boxed();
     let query = if req.authorized_user().is_some() {
         query
     } else {
-        use rphotos::schema::photo_tags::dsl as tp;
-        use rphotos::schema::photos::dsl as p;
+        use schema::photo_tags::dsl as tp;
+        use schema::photos::dsl as p;
         query.filter(id.eq_any(tp::photo_tags
                                .select(tp::tag_id)
                                .filter(tp::photo_id
@@ -284,11 +284,11 @@ fn tag_one<'mw>(req: &mut Request,
                 res: Response<'mw>,
                 tslug: String)
                 -> MiddlewareResult<'mw> {
-    use rphotos::schema::tags::dsl::{slug, tags};
+    use schema::tags::dsl::{slug, tags};
     let c: &PgConnection = &req.db_conn();
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
-        use rphotos::schema::photos::dsl::{date, grade, id};
-        use rphotos::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
+        use schema::photos::dsl::{date, grade, id};
+        use schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         return res.ok(|o| {
             templates::tag(o,
                            req,
@@ -307,13 +307,13 @@ fn tag_one<'mw>(req: &mut Request,
 fn place_all<'mw>(req: &mut Request,
                   res: Response<'mw>)
                   -> MiddlewareResult<'mw> {
-    use rphotos::schema::places::dsl::{id, place_name, places};
+    use schema::places::dsl::{id, place_name, places};
     let query = places.into_boxed();
     let query = if req.authorized_user().is_some() {
         query
     } else {
-        use rphotos::schema::photo_places::dsl as pp;
-        use rphotos::schema::photos::dsl as p;
+        use schema::photo_places::dsl as pp;
+        use schema::photos::dsl as p;
         query.filter(id.eq_any(pp::photo_places
                                .select(pp::place_id)
                                .filter(pp::photo_id
@@ -345,11 +345,11 @@ fn place_one<'mw>(req: &mut Request,
                   res: Response<'mw>,
                   tslug: String)
                   -> MiddlewareResult<'mw> {
-    use rphotos::schema::places::dsl::{places, slug};
+    use schema::places::dsl::{places, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
-        use rphotos::schema::photos::dsl::{date, grade, id};
-        use rphotos::schema::photo_places::dsl::{photo_id, photo_places,
+        use schema::photos::dsl::{date, grade, id};
+        use schema::photo_places::dsl::{photo_id, photo_places,
                                                  place_id};
         return res.ok(|o| templates::place(
             o,
@@ -367,13 +367,13 @@ fn place_one<'mw>(req: &mut Request,
 fn person_all<'mw>(req: &mut Request,
                    res: Response<'mw>)
                    -> MiddlewareResult<'mw> {
-    use rphotos::schema::people::dsl::{id, people, person_name};
+    use schema::people::dsl::{id, people, person_name};
     let query = people.into_boxed();
     let query = if req.authorized_user().is_some() {
         query
     } else {
-        use rphotos::schema::photo_people::dsl as pp;
-        use rphotos::schema::photos::dsl as p;
+        use schema::photo_people::dsl as pp;
+        use schema::photos::dsl as p;
         query.filter(id.eq_any(pp::photo_people
                                .select(pp::person_id)
                                .filter(pp::photo_id
@@ -392,11 +392,11 @@ fn person_one<'mw>(req: &mut Request,
                    res: Response<'mw>,
                    tslug: String)
                    -> MiddlewareResult<'mw> {
-    use rphotos::schema::people::dsl::{people, slug};
+    use schema::people::dsl::{people, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
-        use rphotos::schema::photos::dsl::{date, grade, id};
-        use rphotos::schema::photo_people::dsl::{person_id, photo_id,
+        use schema::photos::dsl::{date, grade, id};
+        use schema::photo_people::dsl::{person_id, photo_id,
                                                  photo_people};
         return res.ok(|o| templates::person(
             o,
@@ -415,7 +415,7 @@ fn photo_details<'mw>(req: &mut Request,
                       res: Response<'mw>,
                       id: i32)
                       -> MiddlewareResult<'mw> {
-    use rphotos::schema::photos::dsl::photos;
+    use schema::photos::dsl::photos;
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
@@ -428,28 +428,28 @@ fn photo_details<'mw>(req: &mut Request,
                                   Link::day(d.year(), d.month(), d.day())])
                     .unwrap_or_else(|| vec![]),
                 &{
-                    use rphotos::schema::people::dsl::{people, id};
-                    use rphotos::schema::photo_people::dsl::{photo_people, photo_id, person_id};
+                    use schema::people::dsl::{people, id};
+                    use schema::photo_people::dsl::{photo_people, photo_id, person_id};
                     people.filter(id.eq_any(photo_people.select(person_id)
                                             .filter(photo_id.eq(tphoto.id))))
                         .load(c).unwrap()
                 },
                 &{
-                    use rphotos::schema::places::dsl::{places, id};
-                    use rphotos::schema::photo_places::dsl::{photo_places, photo_id, place_id};
+                    use schema::places::dsl::{places, id};
+                    use schema::photo_places::dsl::{photo_places, photo_id, place_id};
                     places.filter(id.eq_any(photo_places.select(place_id)
                                             .filter(photo_id.eq(tphoto.id))))
                         .load(c).unwrap()
                 },
                 &{
-                    use rphotos::schema::tags::dsl::{tags, id};
-                    use rphotos::schema::photo_tags::dsl::{photo_tags, photo_id, tag_id};
+                    use schema::tags::dsl::{tags, id};
+                    use schema::photo_tags::dsl::{photo_tags, photo_id, tag_id};
                     tags.filter(id.eq_any(photo_tags.select(tag_id)
                                           .filter(photo_id.eq(tphoto.id))))
                         .load(c).unwrap()
                 },
                 {
-                    use rphotos::schema::positions::dsl::*;
+                    use schema::positions::dsl::*;
                     match positions.filter(photo_id.eq(tphoto.id))
                         .select((latitude, longitude))
                         .first::<(i32, i32)>(c) {
@@ -465,13 +465,13 @@ fn photo_details<'mw>(req: &mut Request,
                         }
                 },
                 {
-                    use rphotos::schema::attributions::dsl::*;
+                    use schema::attributions::dsl::*;
                     tphoto.attribution_id.map(|i| {
                         attributions.find(i).select(name).first(c).unwrap()
                     })
                 },
                 {
-                    use rphotos::schema::cameras::dsl::*;
+                    use schema::cameras::dsl::*;
                     tphoto.camera_id.map(|i| {
                         cameras.find(i).first(c).unwrap()
                     })

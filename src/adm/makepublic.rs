@@ -4,14 +4,14 @@ use diesel::prelude::*;
 use diesel::result::Error as DieselError;
 use diesel::update;
 use photosdir::PhotosDir;
-use rphotos::models::{Modification, Photo};
+use models::{Modification, Photo};
 use std::io::prelude::*;
 
 pub fn one(db: &PgConnection,
            photodir: &PhotosDir,
            tpath: &str)
            -> Result<(), Error> {
-    use rphotos::schema::photos::dsl::*;
+    use schema::photos::dsl::*;
     match update(photos.filter(path.eq(&tpath)))
         .set(is_public.eq(true))
         .get_result::<Photo>(db) {
@@ -45,7 +45,7 @@ pub fn by_file_list<In: BufRead + Sized>(db: &PgConnection,
 fn register_photo(db: &PgConnection,
                   tpath: &str)
                   -> Result<Photo, DieselError> {
-    use rphotos::schema::photos::dsl::{photos, is_public};
+    use schema::photos::dsl::{photos, is_public};
     let photo =
         match Photo::create_or_set_basics(&db, &tpath, None, 0, None)? {
             Modification::Created(photo) => photo,
