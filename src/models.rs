@@ -1,4 +1,4 @@
-use chrono::naive::datetime::NaiveDateTime;
+use chrono::naive::NaiveDateTime;
 use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 

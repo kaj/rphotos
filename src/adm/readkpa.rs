@@ -1,5 +1,5 @@
 use adm::result::Error;
-use chrono::naive::datetime::NaiveDateTime;
+use chrono::naive::NaiveDateTime;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;

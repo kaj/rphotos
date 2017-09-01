@@ -19,7 +19,7 @@ hyper = "~0.10.0"
 env_logger = "*"
 libc = "*"
 log = "*"
-chrono = "^0.3" # Must match version used by diesel
+chrono = "~0.4.0" # Must match version used by diesel
 clap = "^2.19"
 typemap = "*"
 plugin = "*"
@@ -27,11 +27,11 @@ image = "*"
 time = "*"
 xml-rs = "*"
 rexif = "^0.3.4"
-diesel = { version = "^0.12", features = ["chrono", "postgres"] }
-diesel_codegen = { version = "^0.12", features = ["postgres"] }
-dotenv = "^0.8"
-r2d2-diesel = "^0.12"
+diesel = { version = "~0.16.0", features = ["chrono", "postgres"] }
+diesel_codegen = { version = "~0.16.0", features = ["postgres"] }
+r2d2-diesel = "~0.16.0"
 r2d2 = "*"
+dotenv = "~0.10.1"
 djangohashers = "*"
 rand = "*"
 memcached-rs = "^0.1"

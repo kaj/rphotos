@@ -1,6 +1,6 @@
 use {Group, Link};
 use chrono::Duration as ChDuration;
-use chrono::naive::date::NaiveDate;
+use chrono::naive::NaiveDate;
 use diesel::expression::sql_literal::SqlLiteral;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
