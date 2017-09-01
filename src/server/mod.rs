@@ -1,33 +1,17 @@
 #[macro_use]
-extern crate nickel;
-#[macro_use]
-extern crate log;
-extern crate djangohashers;
-extern crate env_logger;
-extern crate nickel_jwt_session;
-extern crate typemap;
-extern crate plugin;
-extern crate image;
-extern crate hyper;
-extern crate time;
-extern crate chrono;
-extern crate clap;
-extern crate libc;
-extern crate rexif;
-extern crate rphotos;
-extern crate r2d2;
-extern crate diesel;
-extern crate r2d2_diesel;
-extern crate dotenv;
-extern crate memcached;
-extern crate regex;
+mod nickelext;
+mod views_by_date;
 
+use adm::result::Error;
 use chrono::Datelike;
-use clap::{App, Arg};
+use clap::ArgMatches;
 use diesel::pg::PgConnection;
+use diesel;
 use diesel::prelude::*;
-use dotenv::dotenv;
+use djangohashers;
 use hyper::header::ContentType;
+use image;
+use memcachemiddleware::MemcacheMiddleware;
 use nickel::{Action, Continue, FormBody, Halt, HttpRouter, MediaType,
              MiddlewareResult, Nickel, NickelError, QueryString, Request,
              Response};
@@ -39,63 +23,36 @@ use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
 use r2d2::NopErrorHandler;
 use rphotos::models::{Person, Photo, Place, Tag};
 
-mod env;
 use env::{dburl, env_or, jwt_key, photos_dir};
 
-mod nickel_diesel;
-
-mod photosdir;
-
-mod requestloggermiddleware;
 use requestloggermiddleware::RequestLoggerMiddleware;
 
-mod photosdirmiddleware;
 use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
 
-mod memcachemiddleware;
 use memcachemiddleware::*;
 
-mod pidfiles;
 use pidfiles::handle_pid_file;
+use templates;
 
-#[macro_use]
-mod nickelext;
-use nickelext::{FromSlug, MyResponse, far_expires};
+use self::nickelext::{FromSlug, MyResponse, far_expires};
 
-mod views_by_date;
-use views_by_date::*;
+use self::views_by_date::*;
 
 #[derive(Debug, Clone)]
 pub struct Group {
-    title: String,
-    url: String,
-    count: i64,
-    photo: Photo,
+    pub title: String,
+    pub url: String,
+    pub count: i64,
+    pub photo: Photo,
 }
 
 #[derive(Debug, Clone)]
 pub struct Coord {
-    x: f64,
-    y: f64,
+    pub x: f64,
+    pub y: f64,
 }
 
-fn main() {
-    dotenv().ok();
-    env_logger::init().unwrap();
-    info!("Initalized logger");
-    let args = App::new("rphotoserver")
-        .about("RPhotos web server")
-        .version(env!("CARGO_PKG_VERSION"))
-        .arg(Arg::with_name("PIDFILE")
-             .long("pidfile")
-             .takes_value(true)
-             .help("Write (and read, if --replace) a pid file with the name \
-                    given as <PIDFILE>."))
-        .arg(Arg::with_name("REPLACE")
-             .long("replace")
-             .help("Kill old server (identified by pid file) before running"))
-        .get_matches();
-
+pub fn run(args: &ArgMatches) -> Result<(), Error> {
     if let Some(pidfile) = args.value_of("PIDFILE") {
         handle_pid_file(pidfile, args.is_present("REPLACE"))
             .unwrap()
@@ -136,7 +93,8 @@ fn main() {
     server.handle_error(custom_handler);
 
     server.listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"))
-        .expect("listen");
+        .map_err(|e| Error::Other(format!("listen: {}", e)))?;
+    Ok(())
 }
 
 
@@ -551,5 +509,3 @@ impl Link {
         }
     }
 }
-
-include!(concat!(env!("OUT_DIR"), "/templates.rs"));

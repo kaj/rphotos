@@ -4,6 +4,7 @@ use flate2::{Compression, FlateWriteExt};
 use std::fs::{File, create_dir_all};
 use std::io::prelude::*;
 use std::path::Path;
+use templates::statics::STATICS;
 
 pub fn to_dir(dir: &str) -> Result<(), Error> {
     let dir: &Path = dir.as_ref();
@@ -22,5 +23,3 @@ pub fn to_dir(dir: &str) -> Result<(), Error> {
     }
     Ok(())
 }
-
-include!(concat!(env!("OUT_DIR"), "/templates/statics.rs"));

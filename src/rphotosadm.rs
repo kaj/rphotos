@@ -1,4 +1,3 @@
-//! Just fooling around with different ways to count images per year.
 extern crate rphotos;
 extern crate brotli2;
 extern crate clap;
@@ -9,8 +8,20 @@ extern crate djangohashers;
 extern crate dotenv;
 extern crate env_logger;
 extern crate flate2;
+extern crate hyper;
+extern crate libc;
+extern crate memcached;
+#[macro_use]
+extern crate nickel;
+extern crate nickel_jwt_session;
+extern crate plugin;
+extern crate r2d2;
+extern crate r2d2_diesel;
 extern crate rand;
+extern crate regex;
 extern crate rexif;
+extern crate time;
+extern crate typemap;
 #[macro_use]
 extern crate log;
 extern crate image;
@@ -18,7 +29,13 @@ extern crate xml;
 
 mod adm;
 mod env;
+mod memcachemiddleware;
+mod nickel_diesel;
 mod photosdir;
+mod photosdirmiddleware;
+mod pidfiles;
+mod requestloggermiddleware;
+mod server;
 
 use adm::{findphotos, makepublic, readkpa, users, storestatics};
 use adm::result::Error;
@@ -33,6 +50,8 @@ use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::Path;
 use std::process::exit;
+
+pub use server::{Coord, Group, Link};
 
 fn main() {
     dotenv().ok();
@@ -74,6 +93,18 @@ fn main() {
             .arg(Arg::with_name("DIR")
                 .required(true)
                 .help("Directory to store the files in")))
+        .subcommand(SubCommand::with_name("runserver")
+            .about("RPhotos web server")
+            .version(env!("CARGO_PKG_VERSION"))
+            .arg(Arg::with_name("PIDFILE")
+                .long("pidfile")
+                .takes_value(true)
+                .help("Write (and read, if --replace) a pid file with the \
+                       name given as <PIDFILE>."))
+                .arg(Arg::with_name("REPLACE")
+                    .long("replace")
+                    .help("Kill old server (identified by pid file) \
+                           before running")))
         .get_matches();
 
     match run(args) {
@@ -136,6 +167,9 @@ fn run(args: ArgMatches) -> Result<(), Error> {
         ("storestatics", Some(args)) => {
             storestatics::to_dir(args.value_of("DIR").unwrap())
         }
+        ("runserver", Some(args)) => {
+            server::run(args)
+        }
         _ => Ok(println!("No subcommand given.\n\n{}", args.usage())),
     }
 }
@@ -143,3 +177,5 @@ fn run(args: ArgMatches) -> Result<(), Error> {
 fn get_db() -> Result<PgConnection, ConnectionError> {
     PgConnection::establish(&dburl())
 }
+
+include!(concat!(env!("OUT_DIR"), "/templates.rs"));

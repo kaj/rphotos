@@ -9,10 +9,6 @@ build = "src/build.rs"
 ructe = { version = "^0.3.2", features = ["sass", "mime02"] }
 
 [[bin]]
-name = "rphotoserver"
-path = "src/main.rs"
-
-[[bin]]
 name = "rphotosadm"
 path = "src/rphotosadm.rs"
 

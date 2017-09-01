@@ -7,7 +7,7 @@ use diesel::prelude::*;
 use nickel::{MiddlewareResult, Request, Response};
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
-use nickelext::MyResponse;
+use server::nickelext::MyResponse;
 use rphotos::models::Photo;
 use templates;
 use time;
