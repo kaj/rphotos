@@ -1,6 +1,7 @@
 use chrono::naive::NaiveDateTime;
 use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
+use server::SizeTag;
 
 #[derive(Debug, Clone, Queryable)]
 pub struct Photo {
@@ -38,12 +39,17 @@ impl Photo {
         self.is_public
     }
 
+    pub fn cache_key(&self, size: &SizeTag) -> String {
+        format!("rp{}{:?}", self.id, size)
+    }
+
     #[allow(dead_code)]
     pub fn query<'a>(auth: bool) -> photos::BoxedQuery<'a, Pg> {
         use super::schema::photos::dsl::{is_public, photos, path};
         use diesel::prelude::*;
         let result = photos
             .filter(path.not_like("%.CR2"))
+            .filter(path.not_like("%.dng"))
             .into_boxed();
         if !auth {
             result.filter(is_public)

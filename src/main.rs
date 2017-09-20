@@ -41,7 +41,7 @@ mod requestloggermiddleware;
 mod schema;
 mod server;
 
-use adm::{findphotos, makepublic, readkpa, users, storestatics};
+use adm::{findphotos, makepublic, readkpa, users, precache, storestatics};
 use adm::result::Error;
 use adm::stats::show_stats;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -92,6 +92,9 @@ fn main() {
                 .help("Image path to make public"))
             .after_help("The image path(s) are relative to the \
                          image root."))
+        .subcommand(SubCommand::with_name("precache")
+            .about("Make sure (a subset of) the photos has thumbnails stored \
+                    in cache."))
         .subcommand(SubCommand::with_name("storestatics")
             .about("Store statics as files for a web server")
             .arg(Arg::with_name("DIR")
@@ -167,6 +170,9 @@ fn run(args: ArgMatches) -> Result<(), Error> {
         ("userlist", Some(_args)) => users::list(&get_db()?),
         ("userpass", Some(args)) => {
             users::passwd(&get_db()?, args.value_of("USER").unwrap())
+        }
+        ("precache", _) => {
+            precache::precache(&get_db()?, &PhotosDir::new(photos_dir()))
         }
         ("storestatics", Some(args)) => {
             storestatics::to_dir(args.value_of("DIR").unwrap())

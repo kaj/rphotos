@@ -16,11 +16,11 @@ impl PhotosDir {
 
     #[allow(dead_code)]
     pub fn scale_image(&self,
-                       photo: Photo,
+                       photo: &Photo,
                        width: u32,
                        height: u32)
                        -> Result<Vec<u8>, ImageError> {
-        let path = self.basedir.join(photo.path);
+        let path = self.basedir.join(&photo.path);
         info!("Should open {:?}", path);
         let img = image::open(path)?;
         let img = if width < img.width() || height < img.height() {

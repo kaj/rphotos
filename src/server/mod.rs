@@ -192,13 +192,13 @@ fn logout<'mw>(_req: &mut Request,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum SizeTag {
+pub enum SizeTag {
     Small,
     Medium,
     Large,
 }
 impl SizeTag {
-    fn px(&self) -> u32 {
+    pub fn px(&self) -> u32 {
         match *self {
             SizeTag::Small => 240,
             SizeTag::Medium => 960,
@@ -249,9 +249,9 @@ fn get_image_data(req: &Request,
                   size: SizeTag)
                   -> Result<Vec<u8>, image::ImageError>
 {
-    req.cached_or(&format!("rp{}{:?}", photo.id, size), || {
+    req.cached_or(&photo.cache_key(&size), || {
         let size = size.px();
-        req.photos().scale_image(photo, size, size)
+        req.photos().scale_image(&photo, size, size)
     })
 }
 

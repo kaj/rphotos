@@ -1,6 +1,7 @@
 use chrono::ParseError as ChronoParseError;
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
+use memcached::proto::Error as MemcachedError;
 use std::{io, fmt};
 use std::convert::From;
 use std::num::ParseIntError;
@@ -13,6 +14,7 @@ pub enum Error {
     UnknownOrientation(u16),
     BadTimeFormat(ChronoParseError),
     BadIntFormat(ParseIntError),
+    Cache(MemcachedError),
     Other(String),
 }
 
@@ -27,8 +29,15 @@ impl fmt::Display for Error {
             }
             &Error::BadTimeFormat(ref e) => write!(f, "Bad time value: {}", e),
             &Error::BadIntFormat(ref e) => write!(f, "Bad int value: {}", e),
+            &Error::Cache(ref e) => write!(f, "Memcached error: {}", e),
             &Error::Other(ref s) => write!(f, "Error: {}", s),
         }
+    }
+}
+
+impl From<MemcachedError> for Error {
+    fn from(e: MemcachedError) -> Self {
+        Error::Cache(e)
     }
 }
 
