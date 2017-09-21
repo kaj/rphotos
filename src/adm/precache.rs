@@ -8,6 +8,12 @@ use photosdir::PhotosDir;
 use schema::photos::dsl::{is_public, date};
 use server::SizeTag;
 
+/// Make sure all photos are stored in the cache.
+///
+/// The work are intentionally handled sequentially, to not
+/// overwhelm the host while precaching.
+/// The images are handled in public first, new first order, to have
+/// the probably most requested images precached as soon as possible.
 pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
     let mut cache = Client::connect(&[("tcp://127.0.0.1:11211", 1)],
                                     ProtoType::Binary)?;
@@ -16,6 +22,7 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
     let photos = Photo::query(true)
         .order((is_public.desc(), date.desc().nulls_last()))
         .load::<Photo>(db)?;
+    let cache_seconds = 90 * 24 * 60 * 60;
     for photo in photos {
         n = n + 1;
         let key = &photo.cache_key(&size);
@@ -29,7 +36,7 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
                     Error::Other(format!("Failed to scale #{} ({}): {}",
                                          photo.id, photo.path, e))
                 })?;
-            cache.set(key.as_bytes(), &data, 0, 7 * 24 * 60 * 60)?;
+            cache.set(key.as_bytes(), &data, 0, cache_seconds)?;
             info!("Cache: stored {}", key);
             n_stored = n_stored + 1;
             if n_stored % 64 == 0 {

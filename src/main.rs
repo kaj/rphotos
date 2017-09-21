@@ -93,8 +93,7 @@ fn main() {
             .after_help("The image path(s) are relative to the \
                          image root."))
         .subcommand(SubCommand::with_name("precache")
-            .about("Make sure (a subset of) the photos has thumbnails stored \
-                    in cache."))
+            .about("Make sure the photos has thumbnails stored in cache."))
         .subcommand(SubCommand::with_name("storestatics")
             .about("Store statics as files for a web server")
             .arg(Arg::with_name("DIR")
