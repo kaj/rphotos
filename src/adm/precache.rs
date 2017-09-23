@@ -22,13 +22,12 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
     let photos = Photo::query(true)
         .order((is_public.desc(), date.desc().nulls_last()))
         .load::<Photo>(db)?;
-    let cache_seconds = 90 * 24 * 60 * 60;
+    let no_expire = 0;
     for photo in photos {
         n = n + 1;
         let key = &photo.cache_key(&size);
-        debug!("Cache: {:?} for {}.", key, photo.path);
         if cache.get(&key.as_bytes()).is_ok() {
-            debug!("Cache: {} found", key);
+            debug!("Cache: {} found for {}", key, photo.path);
         } else {
             let size = size.px();
             let data = pd.scale_image(&photo, size, size)
@@ -36,8 +35,8 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
                     Error::Other(format!("Failed to scale #{} ({}): {}",
                                          photo.id, photo.path, e))
                 })?;
-            cache.set(key.as_bytes(), &data, 0, cache_seconds)?;
-            info!("Cache: stored {}", key);
+            cache.set(key.as_bytes(), &data, 0, no_expire)?;
+            debug!("Cache: stored {} for {}", key, photo.path);
             n_stored = n_stored + 1;
             if n_stored % 64 == 0 {
                 info!("{} images of {} updated in cache ...", n_stored, n);
