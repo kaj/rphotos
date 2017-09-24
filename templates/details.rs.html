@@ -6,7 +6,7 @@
 
 @(req: &Request, lpath: &[Link], people: &[Person], places: &[Place], tags: &[Tag], position: Option<Coord>, attribution: Option<String>, camera: Option<Camera>, photo: Photo)
 @:page_base(req, "Photo details", lpath, {
-  <div class="details">
+  <div class="details" data-imgid="@photo.id">
     <div class="item"><img src="/img/@photo.id-m.jpg"></div>
     <div class="meta">
     @if req.authorized_user().is_some() {
@@ -47,10 +47,10 @@
     <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript" async onload="initmap()">
     </script>
     }
-    <script type="text/javascript">
-      var e = document.querySelector('.details .item');
-      e.addEventListener('click', function()@{ e.classList.toggle('zoom');@});
-    </script>
     </div>
   </div>
+  <script type="text/javascript">
+    var e = document.querySelector('.details .item');
+    e.addEventListener('click', function()@{ e.classList.toggle('zoom');@});
+  </script>
 })

@@ -1,6 +1,7 @@
 #[macro_use]
 mod nickelext;
 mod views_by_date;
+mod admin;
 
 use adm::result::Error;
 use chrono::Datelike;
@@ -73,6 +74,8 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.post "/login",           do_login);
     wrap3!(server.get  "/logout",          logout);
     wrap3!(server.get "/",                 all_years);
+    use self::admin::rotate;
+    wrap3!(server.post "/adm/rotate",      rotate);
     wrap3!(server.get "/img/{}[-]{}\\.jpg", show_image: id, size);
     wrap3!(server.get "/img/{}",           photo_details: id);
     wrap3!(server.get "/tag/",             tag_all);

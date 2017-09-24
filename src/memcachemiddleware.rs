@@ -37,6 +37,7 @@ pub trait MemcacheRequestExtensions {
 
     fn cached_or<F, E>(&self, key: &str, calculate: F) -> Result<Vec<u8>, E>
         where F: FnOnce() -> Result<Vec<u8>, E>;
+    fn clear_cache(&self, key: &str);
 }
 
 #[derive(Debug)]
@@ -116,6 +117,15 @@ impl<'a, 'b, D> MemcacheRequestExtensions for Request<'a, 'b, D> {
             Err(err) => {
                 warn!("Error connecting to memcached: {}", err);
                 init()
+            }
+        }
+    }
+
+    fn clear_cache(&self, key: &str) {
+        if let Ok(mut client) = self.cache() {
+            match client.delete(key.as_bytes()) {
+                Ok(()) => debug!("Cache: deleted {}", key),
+                Err(e) => warn!("Cache: Failed to delete {}: {}", key, e),
             }
         }
     }

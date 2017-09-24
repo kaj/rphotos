@@ -3,7 +3,7 @@ use diesel::pg::PgConnection;
 use diesel::result::Error as DieselError;
 use server::SizeTag;
 
-#[derive(Debug, Clone, Queryable)]
+#[derive(AsChangeset, Clone, Debug, Identifiable, Queryable)]
 pub struct Photo {
     pub id: i32,
     pub path: String,

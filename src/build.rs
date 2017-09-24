@@ -9,5 +9,6 @@ fn main() {
     let base_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let mut statics = StaticFiles::new(&out_dir).unwrap();
     statics.add_sass_file(&base_dir.join("photos.scss")).unwrap();
+    statics.add_file(&base_dir.join("admin.js")).unwrap();
     compile_templates(&base_dir.join("templates"), &out_dir).unwrap();
 }

@@ -1,7 +1,8 @@
 @use ::Link;
 @use nickel::Request;
+@use nickel_jwt_session::SessionRequestExtensions;
 @use templates::head;
-@use templates::statics::photos_css;
+@use templates::statics::{photos_css, admin_js};
 
 @(req: &Request, title: &str, lpath: &[Link], content: Content)
 
@@ -12,6 +13,11 @@
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/@photos_css.name" type="text/css"/>
+    @if req.authorized_user().is_some() {
+        <script language="javascript" src="/static/@admin_js.name"
+		type="text/javascript" async onload="rpadmin()">
+	</script>
+    }
   </head>
   <body>
     @:head(req, lpath)
