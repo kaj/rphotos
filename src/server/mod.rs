@@ -117,7 +117,7 @@ fn login<'mw>(req: &mut Request,
               -> MiddlewareResult<'mw> {
     res.clear_jwt();
     let next = sanitize_next(req.query().get("next")).map(String::from);
-    res.ok(|o| templates::login(o, req, next))
+    res.ok(|o| templates::login(o, req, next, None))
 }
 
 fn do_login<'mw>(req: &mut Request,
@@ -128,25 +128,28 @@ fn do_login<'mw>(req: &mut Request,
     let form_data = try_with!(res, req.form_body());
     let next = sanitize_next(form_data.get("next")).map(String::from);
     if let (Some(user), Some(pw)) = (form_data.get("user"),
-                                     form_data.get("password")) {
+                                     form_data.get("password"))
+    {
         use schema::users::dsl::*;
         if let Ok(hash) = users.filter(username.eq(user))
-                               .select(password)
-                               .first::<String>(c) {
+            .select(password)
+            .first::<String>(c)
+        {
             debug!("Hash for {} is {}", user, hash);
             if djangohashers::check_password_tolerant(pw, &hash) {
                 info!("User {} logged in", user);
                 res.set_jwt_user(user);
                 return res.redirect(next.unwrap_or("/".to_string()));
             }
-            debug!("Password verification failed");
+            info!("Login failed: Password verification failed for {:?}", user);
         } else {
-            debug!("No hash found for {}", user);
+            info!("Login failed: No hash found for {:?}", user);
         }
     }
         next
     };
-    res.ok(|o| templates::login(o, req, next))
+    let message = Some("Login failed, please try again");
+    res.ok(|o| templates::login(o, req, next, message))
 }
 
 fn sanitize_next(next: Option<&str>) -> Option<&str> {
