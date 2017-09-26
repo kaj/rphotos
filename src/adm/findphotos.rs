@@ -10,13 +10,14 @@ use std::path::Path;
 
 pub fn crawl(db: &PgConnection, photos: &PhotosDir, only_in: &Path)
              -> Result<(), Error> {
-    photos.find_files(only_in,
-                      &|path, exif| {
-        match save_photo(&db, path, &exif) {
-            Ok(()) => debug!("Saved photo {}", path),
-            Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
-        }
-    })?;
+    photos.find_files(
+        only_in,
+        &|path, exif| {
+            match save_photo(db, path, exif) {
+                Ok(()) => debug!("Saved photo {}", path),
+                Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
+            }
+        })?;
     Ok(())
 }
 
@@ -26,8 +27,8 @@ fn save_photo(db: &PgConnection,
               -> Result<(), Error> {
     let photo =
         match Photo::create_or_set_basics(db, file_path,
-                                          find_date(&exif).ok(),
-                                          find_rotation(&exif)?,
+                                          find_date(exif).ok(),
+                                          find_rotation(exif)?,
                                           find_camera(db, exif)?)? {
             Modification::Created(photo) => {
                 info!("Created {:?}", photo);
@@ -42,7 +43,7 @@ fn save_photo(db: &PgConnection,
                 photo
             }
     };
-    if let Some((lat, long)) = find_position(&exif)? {
+    if let Some((lat, long)) = find_position(exif)? {
         debug!("Position for {} is {} {}", file_path, lat, long);
         use schema::positions::dsl::*;
         if let Ok((pos, clat, clong)) =
@@ -89,7 +90,7 @@ fn find_camera(db: &PgConnection,
 }
 
 fn find_rotation(exif: &ExifData) -> Result<i16, Error> {
-    if let Some(ref value) = find_entry(exif, &ExifTag::Orientation) {
+    if let Some(value) = find_entry(exif, &ExifTag::Orientation) {
         if let TagValue::U16(ref v) = value.value {
             let n = v[0];
             debug!("Raw orientation is {}", n);

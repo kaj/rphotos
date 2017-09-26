@@ -42,7 +42,7 @@ fn fmt_elapsed(t: Duration) -> String {
     } else {
         let ns = t.num_nanoseconds().unwrap();
         if ns > 10_000_000 {
-            format!("{} ms", ns / 1000_000)
+            format!("{} ms", ns / 1_000_000)
         } else if ns > 10_000 {
             format!("{} µs", ns / 1000)
         } else {
@@ -63,7 +63,7 @@ impl<D> Middleware<D> for RequestLoggerMiddleware {
         let mu = format!("{} {}", req.origin.method, req.origin.uri);
         let status = Arc::new(Mutex::new(StatusCode::Continue));
         req.extensions_mut().insert::<RequestLoggerMiddleware>(
-            RequestLogger::new(mu, status.clone()));
+            RequestLogger::new(mu, Arc::clone(&status)));
         res.on_send(move |r| {
             if let Ok(mut sw) = status.lock() {
                 *sw = r.status();

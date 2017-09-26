@@ -28,7 +28,7 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
         0 => {
             use models::NewUser;
             insert(&NewUser {
-                    username: &uname,
+                    username: uname,
                     password: &hashword,
                 })
                 .into(users)
@@ -47,13 +47,13 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
 
 fn random_password(len: usize) -> String {
     let rng = &mut OsRng::new().expect("Init rng");
-    let nlc = 'z' as u8 - 'a' as u8 + 1;
+    let nlc = b'z' - b'a' + 1;
     let x = Range::new(0, 6 * nlc + 4 * 10 + 1);
     (0..len)
         .map(|_| match x.ind_sample(rng) {
-            n if n < (1 * nlc) => ('A' as u8 + (n % nlc)) as char,
-            n if n < (6 * nlc) => ('a' as u8 + (n % nlc)) as char,
-            n => ('0' as u8 + n % 10) as char,
+            n if n < (1 * nlc) => (b'A' + (n % nlc)) as char,
+            n if n < (6 * nlc) => (b'a' + (n % nlc)) as char,
+            n => (b'0' + n % 10) as char,
         })
         .collect()
 }

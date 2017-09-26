@@ -197,7 +197,7 @@ fn logout<'mw>(_req: &mut Request,
     res.redirect("/")
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SizeTag {
     Small,
     Medium,
@@ -240,7 +240,7 @@ fn show_image<'mw>(req: &Request,
                     return res.send_file(path);
                 }
             } else {
-                let data = get_image_data(req, tphoto, size)
+                let data = get_image_data(req, &tphoto, size)
                     .expect("Get image data");
                 res.set((MediaType::Jpeg, far_expires()));
                 return res.send(data);
@@ -251,13 +251,13 @@ fn show_image<'mw>(req: &Request,
 }
 
 fn get_image_data(req: &Request,
-                  photo: Photo,
+                  photo: &Photo,
                   size: SizeTag)
                   -> Result<Vec<u8>, image::ImageError>
 {
     req.cached_or(&photo.cache_key(&size), || {
         let size = size.px();
-        req.photos().scale_image(&photo, size, size)
+        req.photos().scale_image(photo, size, size)
     })
 }
 
@@ -304,7 +304,7 @@ fn tag_one<'mw>(req: &mut Request,
                            .order((grade.desc().nulls_last(),
                                    date.desc().nulls_last()))
                            .load(c).unwrap(),
-                           tag)
+                           &tag)
         })
     }
     res.not_found("Not a tag")
@@ -365,7 +365,7 @@ fn place_one<'mw>(req: &mut Request,
                                               .filter(place_id.eq(place.id))))
                 .order((grade.desc().nulls_last(), date.desc().nulls_last()))
                 .load(c).unwrap(),
-            place));
+            &place));
     }
     res.not_found("Not a place")
 }
@@ -412,7 +412,7 @@ fn person_one<'mw>(req: &mut Request,
                                               .filter(person_id.eq(person.id))))
                 .order((grade.desc().nulls_last(), date.desc().nulls_last()))
                 .load(c).unwrap(),
-            person));
+            &person));
     }
     res.not_found("Not a person")
 }
@@ -460,8 +460,8 @@ fn photo_details<'mw>(req: &mut Request,
                         .select((latitude, longitude))
                         .first::<(i32, i32)>(c) {
                             Ok((tlat, tlong)) => Some(Coord {
-                                x: tlat as f64 / 1e6,
-                                y: tlong as f64 / 1e6,
+                                x: f64::from(tlat) / 1e6,
+                                y: f64::from(tlong) / 1e6,
                             }),
                             Err(diesel::NotFound) => None,
                             Err(err) => {

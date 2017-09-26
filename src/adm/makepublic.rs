@@ -24,7 +24,7 @@ pub fn one(db: &PgConnection,
                 return Err(Error::Other(format!("File {} does not exist",
                                                 tpath)));
             }
-            let photo = register_photo(db, &tpath)?;
+            let photo = register_photo(db, tpath)?;
             println!("New photo {:?} is public.", photo);
             Ok(())
         }
@@ -47,7 +47,7 @@ fn register_photo(db: &PgConnection,
                   -> Result<Photo, DieselError> {
     use schema::photos::dsl::{photos, is_public};
     let photo =
-        match Photo::create_or_set_basics(&db, &tpath, None, 0, None)? {
+        match Photo::create_or_set_basics(db, tpath, None, 0, None)? {
             Modification::Created(photo) => photo,
             Modification::Updated(photo) => photo,
             Modification::Unchanged(photo) => photo,

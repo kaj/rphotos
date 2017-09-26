@@ -35,7 +35,7 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                                              .unwrap_or("0")
                                              .parse::<i16>()?;
                             let date = find_image_date(attributes);
-                            match photo_by_path(db, &file, date, angle) {
+                            match photo_by_path(db, file, date, angle) {
                                 Ok(p) => { photo = Some(p) }
                                 Err(e) => {
                                     error!("{}", e);
@@ -53,16 +53,16 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                                     option.as_ref().map(|s| s.as_ref()),
                                     find_attr("value", attributes)) {
                             (Some(p), Some("Nyckelord"), Some(v)) => {
-                                tag_photo(db, p, &v)
+                                tag_photo(db, p, v)
                             }
                             (Some(p), Some("Personer"), Some(v)) => {
-                                person_photo(db, p, &v)
+                                person_photo(db, p, v)
                             }
                             (Some(p), Some("Platser"), Some(v)) => {
-                                place_photo(db, p, &v)
+                                place_photo(db, p, v)
                             }
                             (Some(p), Some("Betyg"), Some(v)) => {
-                                grade_photo(db, p, &v)
+                                grade_photo(db, p, v)
                             }
                             (None, _option, _value_in_categories) => Ok(()),
                             (p, o, v) => {
@@ -79,11 +79,8 @@ pub fn readkpa(db: &PgConnection, dir: &Path) -> Result<()> {
                 }
             }
             XmlEvent::EndElement { ref name } => {
-                match &*name.local_name {
-                    "option" => {
-                        option = None;
-                    }
-                    _ => {}
+                if name.local_name == "option" {
+                    option = None;
                 }
             }
             _ => {}
@@ -252,9 +249,8 @@ fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) -> Result<()> {
 fn slugify(val: &str) -> String {
     val.chars()
         .map(|c| match c {
-            c @ '0'...'9' => c,
-            c @ 'a'...'z' => c,
-            c @ 'A'...'Z' => (c as u8 - 'A' as u8 + 'a' as u8) as char,
+            c @ '0'...'9' | c @ 'a'...'z'=> c,
+            c @ 'A'...'Z' => (c as u8 - b'A' + b'a') as char,
             'Å' | 'å' | 'Ä' | 'ä' => 'a',
             'Ö' | 'ö' | 'Ô' | 'ô' => 'o',
             'É' | 'é' | 'Ë' | 'ë' | 'Ê' | 'ê' => 'e',
@@ -264,7 +260,7 @@ fn slugify(val: &str) -> String {
         .collect()
 }
 
-fn find_image_date(attributes: &Vec<OwnedAttribute>) -> Option<NaiveDateTime> {
+fn find_image_date(attributes: &[OwnedAttribute]) -> Option<NaiveDateTime> {
     let start_date = find_attr("startDate", attributes).unwrap_or("");
     let end_date = find_attr("endDate", attributes).unwrap_or("");
     let format = "%FT%T";

@@ -113,7 +113,7 @@ fn main() {
                            before running")))
         .get_matches();
 
-    match run(args) {
+    match run(&args) {
         Ok(()) => (),
         Err(err) => {
             println!("{}", err);
@@ -122,7 +122,7 @@ fn main() {
     }
 }
 
-fn run(args: ArgMatches) -> Result<(), Error> {
+fn run(args: &ArgMatches) -> Result<(), Error> {
     match args.subcommand() {
         ("findphotos", Some(args)) => {
             let pd = PhotosDir::new(photos_dir());

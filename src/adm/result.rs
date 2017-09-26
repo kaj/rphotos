@@ -20,17 +20,17 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Error::Connection(ref e) => write!(f, "Connection error: {}", e),
-            &Error::Db(ref e) => write!(f, "Database error: {}", e),
-            &Error::Io(ref e) => write!(f, "I/O error: {}", e),
-            &Error::UnknownOrientation(ref o) => {
+        match *self {
+            Error::Connection(ref e) => write!(f, "Connection error: {}", e),
+            Error::Db(ref e) => write!(f, "Database error: {}", e),
+            Error::Io(ref e) => write!(f, "I/O error: {}", e),
+            Error::UnknownOrientation(ref o) => {
                 write!(f, "Unknown image orientation: {:?}", o)
             }
-            &Error::BadTimeFormat(ref e) => write!(f, "Bad time value: {}", e),
-            &Error::BadIntFormat(ref e) => write!(f, "Bad int value: {}", e),
-            &Error::Cache(ref e) => write!(f, "Memcached error: {}", e),
-            &Error::Other(ref s) => write!(f, "Error: {}", s),
+            Error::BadTimeFormat(ref e) => write!(f, "Bad time value: {}", e),
+            Error::BadIntFormat(ref e) => write!(f, "Bad int value: {}", e),
+            Error::Cache(ref e) => write!(f, "Memcached error: {}", e),
+            Error::Other(ref s) => write!(f, "Error: {}", s),
         }
     }
 }

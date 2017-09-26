@@ -9,10 +9,8 @@ pub fn handle_pid_file(pidfile: &str, replace: bool) -> Result<(), String> {
             info!("Killing old pid {}.", oldpid);
             unsafe { kill(oldpid, SIGHUP); }
         }
-    } else {
-        if Path::new(pidfile).exists() {
-            return Err(format!("Pid file {:?} exists.", pidfile))
-        }
+    } else if Path::new(pidfile).exists() {
+        return Err(format!("Pid file {:?} exists.", pidfile))
     }
     let pid = unsafe { getpid() };
     debug!("Should write pid {} to {}", pid, pidfile);

@@ -24,9 +24,9 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
         .load::<Photo>(db)?;
     let no_expire = 0;
     for photo in photos {
-        n = n + 1;
+        n += 1;
         let key = &photo.cache_key(&size);
-        if cache.get(&key.as_bytes()).is_ok() {
+        if cache.get(key.as_bytes()).is_ok() {
             debug!("Cache: {} found for {}", key, photo.path);
         } else {
             let size = size.px();
@@ -37,7 +37,7 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
                 })?;
             cache.set(key.as_bytes(), &data, 0, no_expire)?;
             debug!("Cache: stored {} for {}", key, photo.path);
-            n_stored = n_stored + 1;
+            n_stored += 1;
             if n_stored % 64 == 0 {
                 info!("{} images of {} updated in cache ...", n_stored, n);
             }

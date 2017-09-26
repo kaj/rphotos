@@ -48,22 +48,22 @@ pub enum McError {
 
 impl fmt::Display for McError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &McError::UninitializedMiddleware => {
+        match *self {
+            McError::UninitializedMiddleware => {
                 write!(f, "middleware not properly initialized")
             }
-            &McError::IoError(ref err) => write!(f, "{}", err.description()),
+            McError::IoError(ref err) => write!(f, "{}", err.description()),
         }
     }
 }
 
 impl Error for McError {
     fn description(&self) -> &str {
-        match self {
-            &McError::UninitializedMiddleware => {
+        match *self {
+            McError::UninitializedMiddleware => {
                 "middleware not properly initialized"
             }
-            &McError::IoError(ref err) => err.description(),
+            McError::IoError(ref err) => err.description(),
         }
     }
 }
@@ -93,7 +93,7 @@ impl<'a, 'b, D> MemcacheRequestExtensions for Request<'a, 'b, D> {
     {
         match self.cache() {
             Ok(mut client) => {
-                match client.get(&key.as_bytes()) {
+                match client.get(key.as_bytes()) {
                     Ok((data, _flags)) => {
                         debug!("Cache: {} found", key);
                         return Ok(data);

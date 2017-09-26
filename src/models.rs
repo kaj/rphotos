@@ -86,7 +86,7 @@ impl Photo {
                                .set(rotation.eq(exifrotation))
                                .get_result::<Photo>(db)?;
             }
-            if let &Some(ref camera) = camera {
+            if let Some(ref camera) = *camera {
                 if pic.camera_id != Some(camera.id) {
                     change = true;
                     pic = diesel::update(photos.find(pic.id))
@@ -117,7 +117,7 @@ impl Photo {
             Ok(result)
         } else {
             let pic = NewPhoto {
-                path: &file_path,
+                path: file_path,
                 date: exifdate,
                 rotation: exifrotation,
                 camera_id: camera.map(|c| c.id),

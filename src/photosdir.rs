@@ -67,23 +67,19 @@ impl PhotosDir {
                 let path = entry?.path();
                 if fs::metadata(&path)?.is_dir() {
                     self.find_files(&path, cb)?;
+                } else if let Ok(exif) = rexif::parse_file(&path) {
+                    let path = path.to_str().unwrap();
+                    cb(&path[bl..], &exif);
+                } else if image::open(&path).is_ok() {
+                    let none = ExifData {
+                        mime: "".into(),
+                        entries: vec![],
+                    };
+                    info!("{:?} seems like a pic with no exif.", path);
+                    let path = path.to_str().unwrap();
+                    cb(&path[bl..], &none);
                 } else {
-                    if let Ok(exif) = rexif::parse_file(&path) {
-                        let path = path.to_str().unwrap();
-                        cb(&path[bl..], &exif);
-                    } else {
-                        if image::open(&path).is_ok() {
-                            let none = ExifData {
-                                mime: "".into(),
-                                entries: vec![],
-                            };
-                            info!("{:?} seems like a pic with no exif.", path);
-                            let path = path.to_str().unwrap();
-                            cb(&path[bl..], &none);
-                        } else {
-                            debug!("{:?} is no pic.", path)
-                        }
-                    }
+                    debug!("{:?} is no pic.", path)
                 }
             }
         }

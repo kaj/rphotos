@@ -161,7 +161,7 @@ pub fn all_null_date<'mw>(req: &mut Request,
     res.ok(|o| templates::index(
         o,
         req,
-        &"Photos without a date",
+        "Photos without a date",
         &[],
         &Photo::query(req.authorized_user().is_some())
             .filter(date.is_null())
@@ -282,7 +282,7 @@ pub fn part_for_day<'mw>(
                     Link::month(year, month),
                     Link::day(year, month, day),
                 ],
-                &photos,
+                photos,
                 ))
         } else {
             res.not_found("No such image")

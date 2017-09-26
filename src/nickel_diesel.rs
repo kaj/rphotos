@@ -52,7 +52,7 @@ impl<T, D> Middleware<D> for DieselMiddleware<T> where
    T: Connection + Send + Any
 {
     fn invoke<'mw, 'conn>(&self, req: &mut Request<'mw, 'conn, D>, res: Response<'mw, D>) -> MiddlewareResult<'mw, D> {
-        req.extensions_mut().insert::<DieselMiddleware<T>>(self.pool.clone());
+        req.extensions_mut().insert::<DieselMiddleware<T>>(Arc::clone(&self.pool));
         Ok(Continue(res))
     }
 }
