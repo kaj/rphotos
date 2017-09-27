@@ -38,6 +38,7 @@ function rpadmin() {
 	r.dataset.angle = "-90";
 	r.title = "Rotate left";
 	p.appendChild(r);
+	p.appendChild(document.createTextNode(" "));
 	r = document.createElement("button");
 	r.onclick = rotate;
 	r.innerHTML = "\u27f3";
