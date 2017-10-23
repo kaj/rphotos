@@ -19,9 +19,9 @@ chrono = "~0.4.0" # Must match version used by diesel
 clap = "^2.19"
 typemap = "*"
 plugin = "*"
-image = "*"
+image = "^0.16.0"
 time = "*"
-xml-rs = "*"
+xml-rs = "^0.6.0"
 rexif = "^0.3.4"
 diesel = { version = "~0.16.0", features = ["chrono", "postgres"] }
 diesel_codegen = { version = "~0.16.0", features = ["postgres"] }
