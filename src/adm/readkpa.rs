@@ -261,26 +261,21 @@ pub fn slugify(val: &str) -> String {
 }
 
 fn find_image_date(attributes: &[OwnedAttribute]) -> Option<NaiveDateTime> {
-    let start_date = find_attr("startDate", attributes).unwrap_or("");
-    let end_date = find_attr("endDate", attributes).unwrap_or("");
-    let format = "%FT%T";
-    if let Ok(start_t) = NaiveDateTime::parse_from_str(&*start_date, format) {
-        if let Ok(end_t) = NaiveDateTime::parse_from_str(&*end_date, format) {
+    fn parse(value: &str) -> Option<NaiveDateTime> {
+        NaiveDateTime::parse_from_str(value, "%FT%T").ok()
+    }
+    let start_date = find_attr("startDate", attributes).and_then(parse);
+    let end_date = find_attr("endDate", attributes).and_then(parse);
+    match (start_date, end_date) {
+        (Some(start_t), Some(end_t)) => {
             if start_t != end_t {
                 println!("Found interval {} - {}", start_t, end_t);
-                Some(end_t)
-            } else {
-                Some(start_t)
             }
-        } else {
-            Some(start_t)
-        }
-    } else {
-        if let Ok(end_t) = NaiveDateTime::parse_from_str(&*end_date, format) {
             Some(end_t)
-        } else {
-            None
         }
+        (Some(start_t), None) => Some(start_t),
+        (None, Some(end_t)) => Some(end_t),
+        (None, None) => None,
     }
 }
 
