@@ -74,8 +74,10 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.post "/login",           do_login);
     wrap3!(server.get  "/logout",          logout);
     wrap3!(server.get "/",                 all_years);
-    use self::admin::rotate;
+    use self::admin::{rotate, tag};
+    wrap3!(server.get "/ac",               auto_complete);
     wrap3!(server.post "/adm/rotate",      rotate);
+    wrap3!(server.post "/adm/tag",         tag);
     wrap3!(server.get "/img/{}[-]{}\\.jpg", show_image: id, size);
     wrap3!(server.get "/img/{}",           photo_details: id);
     wrap3!(server.get "/tag/",             tag_all);
@@ -530,5 +532,22 @@ impl Link {
             url: format!("/{}/{}/{}", year, month, day),
             name: format!("{}", day),
         }
+    }
+}
+
+fn auto_complete<'mw>(req: &mut Request,
+                      res: Response<'mw>)
+                      -> MiddlewareResult<'mw> {
+    if let Some(q) = req.query().get("q").map(String::from) {
+        use rustc_serialize::json::ToJson;
+        use schema::tags::dsl::{tags, tag_name};
+        let c: &PgConnection = &req.db_conn();
+        let q = tags.select(tag_name)
+            .filter(tag_name.ilike(q + "%"))
+            .order(tag_name)
+            .limit(15);
+        res.send(q.load::<String>(c).unwrap().to_json())
+    } else {
+        res.not_found("No such tag")
     }
 }

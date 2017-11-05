@@ -29,6 +29,84 @@ function rpadmin() {
         r.send("angle=" + angle + "&image=" + imgid)
     }
 
+    var list;
+
+    function tag_form(event) {
+	event.target.disabled = true;
+	var imgid = details.dataset.imgid;
+	var f = document.createElement("form");
+	f.action = "/adm/tag";
+	f.method = "post";
+	var i = document.createElement("input");
+	i.type="hidden";
+	i.name="image";
+	i.value = imgid;
+	f.appendChild(i);
+	i = document.createElement("input");
+	i.type = "text";
+        i.autocomplete="off";
+        i.tabindex="1";
+	i.name = "tag";
+	i.addEventListener('keyup', do_complete);
+	f.appendChild(i);
+	list = document.createElement("div");
+	list.className = "completions";
+	f.appendChild(list);
+        f.addEventListener('keypress', e => {
+            let t = e.target;
+            switch(e.code) {
+            case 'ArrowUp':
+	        (t.parentNode == list && t.previousSibling || list.querySelector('a:last-child')).focus();
+	        break;
+            case 'ArrowDown':
+	        (t.parentNode == list && t.nextSibling || list.querySelector('a:first-child')).focus();
+	        break;
+            case 'Escape':
+	        i.focus();
+	        break;
+            default:
+	        return true;
+            };
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        });
+	meta.appendChild(f);
+        i.focus();
+    }
+
+    function do_complete(e) {
+        let c = e.code;
+        if (c == 'ArrowUp' || c == 'ArrowDown' || c == 'Escape' || c == 'Enter') {
+            return true;
+        }
+        let v = e.target.value;
+        if (v.length > 0) {
+            let r = new XMLHttpRequest();
+            r.onload = function() {
+                let t = JSON.parse(this.responseText);
+                list.innerHTML = '';
+                t.map(x => {
+                    let a = document.createElement('a');
+                    a.innerHTML = x;
+                    a.tabIndex = 2;
+                    a.onclick = function() {
+                        e.target.value = x;
+                        list.innerHTML = '';
+                    }
+                    list.appendChild(a)
+                })
+            };
+            r.open('GET', document.location.origin + '/ac?q=' + encodeURIComponent(v));
+            r.send(null);
+        } else {
+            list.innerHTML = '';
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+
     var meta = details.querySelector('.meta');
     if (meta) {
 	p = document.createElement("p");
@@ -44,6 +122,13 @@ function rpadmin() {
 	r.innerHTML = "\u27f3";
 	r.dataset.angle = "90";
 	r.title = "Rotate right";
+	p.appendChild(r);
+
+	p.appendChild(document.createTextNode(" "));
+	r = document.createElement("button");
+	r.onclick = tag_form;
+	r.innerHTML = "&#x1f3f7;";
+	r.title = "Tag photo";
 	p.appendChild(r);
 	meta.appendChild(p);
     }

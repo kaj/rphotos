@@ -246,12 +246,12 @@ fn grade_photo(db: &PgConnection, photo: &mut Photo, name: &str) -> Result<()> {
     Ok(())
 }
 
-fn slugify(val: &str) -> String {
+pub fn slugify(val: &str) -> String {
     val.chars()
         .map(|c| match c {
             c @ '0'...'9' | c @ 'a'...'z'=> c,
             c @ 'A'...'Z' => (c as u8 - b'A' + b'a') as char,
-            'Å' | 'å' | 'Ä' | 'ä' => 'a',
+            'Å' | 'å' | 'Ä' | 'ä' | 'Â' | 'â' => 'a',
             'Ö' | 'ö' | 'Ô' | 'ô' => 'o',
             'É' | 'é' | 'Ë' | 'ë' | 'Ê' | 'ê' => 'e',
             'Ü' | 'ü' | 'Û' | 'û' => 'u',

@@ -27,6 +27,7 @@ diesel = { version = "~0.16.0", features = ["chrono", "postgres"] }
 diesel_codegen = { version = "~0.16.0", features = ["postgres"] }
 r2d2-diesel = "~0.16.0"
 r2d2 = "*"
+rustc-serialize = "0.3.24" # Must match version used by nickel
 dotenv = "~0.10.1"
 djangohashers = "*"
 rand = "*"

@@ -149,3 +149,26 @@ form {
 	padding: .2em 1em .2em 0;
     }
 }
+
+div.completions {
+    border-bottom: solid 1px #888;
+    box-shadow: .2em .1em .5em rgba(0, 0, 0, .7);
+    display: block;
+    margin-left: .5em;
+    position: absolute;
+    z-index: 17;
+
+    a {
+	background: rgba(255,255,255,0.95);
+	border-color: #888;
+	border-style: solid;
+	border-width: 1px 1px 0;
+	display: block;
+	padding: .2em .5em; // .2em 2.2em;
+	color: black;
+	text-decoration: none;
+    }
+    a:focus {
+	background-color: #aaaaff;
+    }
+}

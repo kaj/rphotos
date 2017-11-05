@@ -22,6 +22,7 @@ extern crate r2d2_diesel;
 extern crate rand;
 extern crate regex;
 extern crate rexif;
+extern crate rustc_serialize;
 extern crate time;
 extern crate typemap;
 #[macro_use]

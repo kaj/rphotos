@@ -1,5 +1,6 @@
 //! Admin-only views, generally called by javascript.
 use nickel::{BodyError, FormBody, MiddlewareResult, Request, Response};
+use nickel::extensions::Redirect;
 use nickel::status::StatusCode;
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
@@ -46,4 +47,59 @@ pub fn rotate_params(req: &mut Request)
     let form_data = req.form_body()?;
     Ok((form_data.get("image").and_then(|s| s.parse().ok()),
         form_data.get("angle").and_then(|s| s.parse().ok())))
+}
+
+pub fn tag<'mw>(req: &mut Request,
+                   res: Response<'mw>)
+                   -> MiddlewareResult<'mw> {
+    if !req.authorized_user().is_some() {
+        return res.error(StatusCode::Unauthorized, "permission denied");
+    }
+    if let (Some(image), Some(tag)) = try_with!(res, tag_params(req)) {
+        let c: &PgConnection = &req.db_conn();
+        use models::{NewPhotoTag, NewTag, PhotoTag, Tag};
+        use adm::readkpa::slugify;
+        use diesel;
+        let tag = {
+            use schema::tags::dsl::*;
+            tags.filter(tag_name.ilike(&tag))
+                .first::<Tag>(c)
+                .or_else(|_| {
+                             diesel::insert(&NewTag {
+                                 tag_name: &tag,
+                                 slug: &slugify(&tag),
+                         })
+                        .into(tags)
+                        .get_result::<Tag>(c)
+                })
+                .expect("Find or create tag")
+        };
+        use schema::photo_tags::dsl::*;
+        let q = photo_tags.filter(photo_id.eq(image))
+            .filter(tag_id.eq(tag.id));
+        if q.first::<PhotoTag>(c).is_ok() {
+            info!("Photo #{} already has {:?}", image, tag);
+        } else {
+            info!("Add {:?} on photo #{}!", tag, image);
+            diesel::insert(&NewPhotoTag {
+                    photo_id: image,
+                    tag_id: tag.id,
+                })
+                .into(photo_tags)
+                .execute(c)
+                .expect("Tag a photo");
+        }
+        return res.redirect(format!("/img/{}", image));
+    }
+    info!("Missing image and/or angle to rotate or image not found");
+    res.not_found("")
+}
+
+pub fn tag_params(req: &mut Request)
+                     -> Result<(Option<i32>, Option<String>),
+                               (StatusCode, BodyError)>
+{
+    let form_data = req.form_body()?;
+    Ok((form_data.get("image").and_then(|s| s.parse().ok()),
+        form_data.get("tag").map(String::from)))
 }
