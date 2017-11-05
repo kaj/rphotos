@@ -84,6 +84,7 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.get "/place/{}",         place_one: slug);
     wrap3!(server.get "/person/",          person_all);
     wrap3!(server.get "/person/{}",        person_one: slug);
+    wrap3!(server.get "/random",           random_image);
     wrap3!(server.get "/0/",               all_null_date);
     wrap3!(server.get "/{}/",              months_in_year: year);
     wrap3!(server.get "/{}/{}/",           days_in_month: year, month);
@@ -415,6 +416,22 @@ fn person_one<'mw>(req: &mut Request,
             &person));
     }
     res.not_found("Not a person")
+}
+
+fn random_image<'mw>(req: &mut Request,
+                     res: Response<'mw>)
+                     -> MiddlewareResult<'mw> {
+    use schema::photos::dsl::id;
+    use diesel::expression::dsl::sql;
+    use diesel::types::Integer;
+    let c: &PgConnection = &req.db_conn();
+    let photo: i32 = Photo::query(req.authorized_user().is_some())
+        .select(id)
+        .limit(1)
+        .order(sql::<Integer>("random()"))
+        .first(c).unwrap();
+    info!("Random: {:?}", photo);
+    photo_details(req, res, photo)
 }
 
 fn photo_details<'mw>(req: &mut Request,
