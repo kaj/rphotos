@@ -1,4 +1,7 @@
 @use models::Photo;
 
 @(photo: &Photo)
-<p class="item"><a href="/img/@photo.id"><img src="/img/@photo.id-s.jpg"></a></p>
+<p class="item">
+  <a href="/img/@photo.id"><img src="/img/@photo.id-s.jpg"></a>
+  @if let Some(d) = photo.date {<br/>@d.format("%F %T")}
+</p>
