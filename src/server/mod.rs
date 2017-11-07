@@ -433,7 +433,7 @@ fn random_image<'mw>(req: &mut Request,
         .order(sql::<Integer>("random()"))
         .first(c).unwrap();
     info!("Random: {:?}", photo);
-    return res.redirect(format!("/img/{}", photo)); // to photo_details
+    res.redirect(format!("/img/{}", photo)) // to photo_details
 }
 
 fn photo_details<'mw>(req: &mut Request,
