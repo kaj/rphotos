@@ -12,6 +12,7 @@
 <span>· <a href="/person/">People</a></span>
 <span>· <a href="/place/">Places</a></span>
 <span>· <a href="/thisday">On this day</a></span>
+<span>· <a href="/random">Random pic</a></span>
 @if let Some(ref u) = req.authorized_user() {<span class="user">@u (<a href="/logout">log out</a>)</span>}
 else {<span class="user">(<a href="/login@if let Some(p) = req.path_without_query() {?next=@p}">log in</a>)</span>}
 </header>
