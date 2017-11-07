@@ -21,7 +21,6 @@ typemap = "*"
 plugin = "*"
 image = "^0.16.0"
 time = "*"
-xml-rs = "^0.6.0"
 rexif = "^0.3.4"
 diesel = { version = "~0.16.0", features = ["chrono", "postgres"] }
 diesel_codegen = { version = "~0.16.0", features = ["postgres"] }

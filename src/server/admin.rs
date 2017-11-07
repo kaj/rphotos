@@ -58,7 +58,6 @@ pub fn tag<'mw>(req: &mut Request,
     if let (Some(image), Some(tag)) = try_with!(res, tag_params(req)) {
         let c: &PgConnection = &req.db_conn();
         use models::{NewPhotoTag, NewTag, PhotoTag, Tag};
-        use adm::readkpa::slugify;
         use diesel;
         let tag = {
             use schema::tags::dsl::*;
@@ -102,4 +101,18 @@ pub fn tag_params(req: &mut Request)
     let form_data = req.form_body()?;
     Ok((form_data.get("image").and_then(|s| s.parse().ok()),
         form_data.get("tag").map(String::from)))
+}
+
+pub fn slugify(val: &str) -> String {
+    val.chars()
+        .map(|c| match c {
+            c @ '0'...'9' | c @ 'a'...'z'=> c,
+            c @ 'A'...'Z' => (c as u8 - b'A' + b'a') as char,
+            'Å' | 'å' | 'Ä' | 'ä' | 'Â' | 'â' => 'a',
+            'Ö' | 'ö' | 'Ô' | 'ô' => 'o',
+            'É' | 'é' | 'Ë' | 'ë' | 'Ê' | 'ê' => 'e',
+            'Ü' | 'ü' | 'Û' | 'û' => 'u',
+            _ => '_',
+        })
+        .collect()
 }

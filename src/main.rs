@@ -28,7 +28,6 @@ extern crate typemap;
 #[macro_use]
 extern crate log;
 extern crate image;
-extern crate xml;
 
 mod adm;
 mod env;
@@ -42,7 +41,7 @@ mod requestloggermiddleware;
 mod schema;
 mod server;
 
-use adm::{findphotos, makepublic, readkpa, users, precache, storestatics};
+use adm::{findphotos, makepublic, users, precache, storestatics};
 use adm::result::Error;
 use adm::stats::show_stats;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -70,8 +69,6 @@ fn main() {
                 .multiple(true)
                 .help("Base directory to search in (relative to the \
                        image root).")))
-        .subcommand(SubCommand::with_name("readkpa")
-            .about("Read metadata from my kphotoalbum"))
         .subcommand(SubCommand::with_name("stats")
             .about("Show some statistics from the database"))
         .subcommand(SubCommand::with_name("userlist")
@@ -162,9 +159,6 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
                     makepublic::one(&db, &pd, args.value_of("IMAGE").unwrap())
                 }
             }
-        }
-        ("readkpa", Some(_args)) => {
-            readkpa::readkpa(&get_db()?, &photos_dir())
         }
         ("stats", Some(_args)) => show_stats(&get_db()?),
         ("userlist", Some(_args)) => users::list(&get_db()?),
