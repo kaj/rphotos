@@ -16,7 +16,6 @@ matrix:
      env: TASK=rustfmt
      before_script:
       - export PATH="$PATH:$HOME/.cargo/bin"
-      - if [[ $(rustfmt --version) < '0.2.15' ]]; then cargo install -f rustfmt-nightly; fi
-      - rustfmt --version
+      - cargo install -f rustfmt-nightly
      script:
       - cargo fmt -- --write-mode=diff
