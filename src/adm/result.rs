@@ -2,7 +2,7 @@ use chrono::ParseError as ChronoParseError;
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
 use memcached::proto::Error as MemcachedError;
-use std::{io, fmt};
+use std::{fmt, io};
 use std::convert::From;
 use std::num::ParseIntError;
 

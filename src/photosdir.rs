@@ -1,6 +1,6 @@
 use image::{self, FilterType, GenericImage, ImageError, ImageFormat};
-use rexif::{self, ExifData};
 use models::Photo;
+use rexif::{self, ExifData};
 use std::{fs, io};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -15,11 +15,12 @@ impl PhotosDir {
     }
 
     #[allow(dead_code)]
-    pub fn scale_image(&self,
-                       photo: &Photo,
-                       width: u32,
-                       height: u32)
-                       -> Result<Vec<u8>, ImageError> {
+    pub fn scale_image(
+        &self,
+        photo: &Photo,
+        width: u32,
+        height: u32,
+    ) -> Result<Vec<u8>, ImageError> {
         let path = self.basedir.join(&photo.path);
         info!("Should open {:?}", path);
         let img = image::open(path)?;
@@ -55,10 +56,11 @@ impl PhotosDir {
     }
 
     #[allow(dead_code)]
-    pub fn find_files(&self,
-                      dir: &Path,
-                      cb: &Fn(&str, &ExifData))
-                      -> io::Result<()> {
+    pub fn find_files(
+        &self,
+        dir: &Path,
+        cb: &Fn(&str, &ExifData),
+    ) -> io::Result<()> {
         let absdir = self.basedir.join(dir);
         if fs::metadata(&absdir)?.is_dir() {
             let bl = self.basedir.to_str().unwrap().len() + 1;
@@ -71,10 +73,7 @@ impl PhotosDir {
                     let path = path.to_str().unwrap();
                     cb(&path[bl..], &exif);
                 } else if image::open(&path).is_ok() {
-                    let none = ExifData {
-                        mime: "".into(),
-                        entries: vec![],
-                    };
+                    let none = ExifData { mime: "".into(), entries: vec![] };
                     info!("{:?} seems like a pic with no exif.", path);
                     let path = path.to_str().unwrap();
                     cb(&path[bl..], &none);

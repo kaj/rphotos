@@ -19,10 +19,11 @@ impl Key for PhotosDirMiddleware {
 }
 
 impl<D> Middleware<D> for PhotosDirMiddleware {
-    fn invoke<'mw, 'conn>(&self,
-                          req: &mut Request<'mw, 'conn, D>,
-                          res: Response<'mw, D>)
-                          -> MiddlewareResult<'mw, D> {
+    fn invoke<'mw, 'conn>(
+        &self,
+        req: &mut Request<'mw, 'conn, D>,
+        res: Response<'mw, D>,
+    ) -> MiddlewareResult<'mw, D> {
         req.extensions_mut()
             .insert::<PhotosDirMiddleware>(PhotosDir::new(self.dir.clone()));
         Ok(Continue(res))

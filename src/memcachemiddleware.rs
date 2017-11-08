@@ -1,5 +1,5 @@
 use memcached::Client;
-use memcached::proto::{Operation, ProtoType, Error as MprotError};
+use memcached::proto::{Error as MprotError, Operation, ProtoType};
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use plugin::Extensible;
 use std::{fmt, io};
@@ -22,10 +22,11 @@ impl Key for MemcacheMiddleware {
 }
 
 impl<D> Middleware<D> for MemcacheMiddleware {
-    fn invoke<'mw, 'conn>(&self,
-                          req: &mut Request<'mw, 'conn, D>,
-                          res: Response<'mw, D>)
-                          -> MiddlewareResult<'mw, D> {
+    fn invoke<'mw, 'conn>(
+        &self,
+        req: &mut Request<'mw, 'conn, D>,
+        res: Response<'mw, D>,
+    ) -> MiddlewareResult<'mw, D> {
         req.extensions_mut()
             .insert::<MemcacheMiddleware>(self.servers.clone());
         Ok(Continue(res))
@@ -36,7 +37,8 @@ pub trait MemcacheRequestExtensions {
     fn cache(&self) -> Result<Client, McError>;
 
     fn cached_or<F, E>(&self, key: &str, calculate: F) -> Result<Vec<u8>, E>
-        where F: FnOnce() -> Result<Vec<u8>, E>;
+    where
+        F: FnOnce() -> Result<Vec<u8>, E>;
     fn clear_cache(&self, key: &str);
 }
 
@@ -89,7 +91,8 @@ impl<'a, 'b, D> MemcacheRequestExtensions for Request<'a, 'b, D> {
     }
 
     fn cached_or<F, E>(&self, key: &str, init: F) -> Result<Vec<u8>, E>
-        where F: FnOnce() -> Result<Vec<u8>, E>
+    where
+        F: FnOnce() -> Result<Vec<u8>, E>,
     {
         match self.cache() {
             Ok(mut client) => {
@@ -99,8 +102,8 @@ impl<'a, 'b, D> MemcacheRequestExtensions for Request<'a, 'b, D> {
                         return Ok(data);
                     }
                     Err(MprotError::BinaryProtoError(ref err))
-                        if err.description() ==
-                           "key not found" => {
+                        if err.description() == "key not found" =>
+                    {
                         debug!("Cache: {} not found", key);
                     }
                     Err(err) => {

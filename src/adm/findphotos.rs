@@ -3,70 +3,77 @@ use chrono::naive::NaiveDateTime;
 use diesel::insert;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use models::{Camera, Modification, Photo};
 use photosdir::PhotosDir;
 use rexif::{ExifData, ExifEntry, ExifTag, TagValue};
-use models::{Modification, Photo, Camera};
 use std::path::Path;
 
-pub fn crawl(db: &PgConnection, photos: &PhotosDir, only_in: &Path)
-             -> Result<(), Error> {
+pub fn crawl(
+    db: &PgConnection,
+    photos: &PhotosDir,
+    only_in: &Path,
+) -> Result<(), Error> {
     photos.find_files(
         only_in,
-        &|path, exif| {
-            match save_photo(db, path, exif) {
-                Ok(()) => debug!("Saved photo {}", path),
-                Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
-            }
-        })?;
+        &|path, exif| match save_photo(db, path, exif) {
+            Ok(()) => debug!("Saved photo {}", path),
+            Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
+        },
+    )?;
     Ok(())
 }
 
-fn save_photo(db: &PgConnection,
-              file_path: &str,
-              exif: &ExifData)
-              -> Result<(), Error> {
-    let photo =
-        match Photo::create_or_set_basics(db, file_path,
-                                          find_date(exif).ok(),
-                                          find_rotation(exif)?,
-                                          find_camera(db, exif)?)? {
-            Modification::Created(photo) => {
-                info!("Created {:?}", photo);
-                photo
-            }
-            Modification::Updated(photo) => {
-                info!("Modified {:?}", photo);
-                photo
-            }
-            Modification::Unchanged(photo) => {
-                debug!("No change for {:?}", photo);
-                photo
-            }
+fn save_photo(
+    db: &PgConnection,
+    file_path: &str,
+    exif: &ExifData,
+) -> Result<(), Error> {
+    let photo = match Photo::create_or_set_basics(
+        db,
+        file_path,
+        find_date(exif).ok(),
+        find_rotation(exif)?,
+        find_camera(db, exif)?,
+    )? {
+        Modification::Created(photo) => {
+            info!("Created {:?}", photo);
+            photo
+        }
+        Modification::Updated(photo) => {
+            info!("Modified {:?}", photo);
+            photo
+        }
+        Modification::Unchanged(photo) => {
+            debug!("No change for {:?}", photo);
+            photo
+        }
     };
     if let Some((lat, long)) = find_position(exif)? {
         debug!("Position for {} is {} {}", file_path, lat, long);
         use schema::positions::dsl::*;
-        if let Ok((pos, clat, clong)) =
-            positions.filter(photo_id.eq(photo.id))
-                .select((id, latitude, longitude))
-                .first::<(i32, i32, i32)>(db) {
+        if let Ok((pos, clat, clong)) = positions
+            .filter(photo_id.eq(photo.id))
+            .select((id, latitude, longitude))
+            .first::<(i32, i32, i32)>(db)
+        {
             if (clat != (lat * 1e6) as i32) || (clong != (long * 1e6) as i32) {
-                panic!("TODO Should update position #{} from {} {} to {} {}",
-                       pos,
-                       clat,
-                       clong,
-                       lat,
-                       long)
+                panic!(
+                    "TODO Should update position #{} from {} {} to {} {}",
+                    pos,
+                    clat,
+                    clong,
+                    lat,
+                    long
+                )
             }
         } else {
             info!("Position for {} is {} {}", file_path, lat, long);
             use models::NewPosition;
             insert(&NewPosition {
-                    photo_id: photo.id,
-                    latitude: (lat * 1e6) as i32,
-                    longitude: (long * 1e6) as i32,
-                })
-                .into(positions)
+                photo_id: photo.id,
+                latitude: (lat * 1e6) as i32,
+                longitude: (long * 1e6) as i32,
+            }).into(positions)
                 .execute(db)
                 .expect("Insert image position");
         }
@@ -74,13 +81,16 @@ fn save_photo(db: &PgConnection,
     Ok(())
 }
 
-fn find_camera(db: &PgConnection,
-               exif: &ExifData)
-               -> Result<Option<Camera>, Error> {
+fn find_camera(
+    db: &PgConnection,
+    exif: &ExifData,
+) -> Result<Option<Camera>, Error> {
     if let (Some(maketag), Some(modeltag)) =
-        (find_entry(exif, &ExifTag::Make), find_entry(exif, &ExifTag::Model)) {
+        (find_entry(exif, &ExifTag::Make), find_entry(exif, &ExifTag::Model))
+    {
         if let (TagValue::Ascii(make), TagValue::Ascii(model)) =
-            (maketag.clone().value, modeltag.clone().value) {
+            (maketag.clone().value, modeltag.clone().value)
+        {
             let cam = Camera::get_or_create(db, &make, &model)?;
             return Ok(Some(cam));
         }
@@ -102,8 +112,9 @@ fn find_rotation(exif: &ExifData) -> Result<i16, Error> {
                 x => Err(Error::UnknownOrientation(x)),
             }
         } else {
-            Err(Error::Other(format!("Exif of unexpectedType {:?}",
-                                     value.value)))
+            Err(Error::Other(
+                format!("Exif of unexpectedType {:?}", value.value),
+            ))
         }
     } else {
         info!("Orientation tag missing, default to 0 degrees");
@@ -118,18 +129,22 @@ fn find_date(exif: &ExifData) -> Result<NaiveDateTime, Error> {
         .map(|value| {
             debug!("Found {:?}", value);
             if let TagValue::Ascii(ref str) = value.value {
-                debug!("Try to parse {:?} (from {:?}) as datetime",
-                       str,
-                       value.tag);
+                debug!(
+                    "Try to parse {:?} (from {:?}) as datetime",
+                    str,
+                    value.tag
+                );
                 Ok(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")?)
             } else {
-                Err(Error::Other(format!("Exif of unexpectedType {:?}",
-                                         value.value)))
+                Err(Error::Other(
+                    format!("Exif of unexpectedType {:?}", value.value),
+                ))
             }
         })
         .unwrap_or_else(|| {
-            Err(Error::Other(format!("Exif tag missing: {:?}",
-                                     ExifTag::DateTimeOriginal)))
+            Err(Error::Other(
+                format!("Exif tag missing: {:?}", ExifTag::DateTimeOriginal),
+            ))
         })
 }
 
@@ -145,8 +160,9 @@ fn find_position(exif: &ExifData) -> Result<Option<(f64, f64)>, Error> {
 fn rat2float(val: &TagValue) -> Result<f64, Error> {
     if let TagValue::URational(ref v) = *val {
         if v.len() == 3 {
-            return Ok(v[0].value() +
-                      (v[1].value() + v[2].value() / 60.0) / 60.0);
+            return Ok(
+                v[0].value() + (v[1].value() + v[2].value() / 60.0) / 60.0,
+            );
         }
     }
     Err(Error::Other(format!("Bad lat/long value: {:?}", val)))

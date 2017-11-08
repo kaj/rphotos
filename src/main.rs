@@ -1,7 +1,7 @@
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 extern crate brotli2;
-extern crate clap;
 extern crate chrono;
+extern crate clap;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
@@ -11,7 +11,10 @@ extern crate dotenv;
 extern crate env_logger;
 extern crate flate2;
 extern crate hyper;
+extern crate image;
 extern crate libc;
+#[macro_use]
+extern crate log;
 extern crate memcached;
 #[macro_use]
 extern crate nickel;
@@ -25,9 +28,6 @@ extern crate rexif;
 extern crate rustc_serialize;
 extern crate time;
 extern crate typemap;
-#[macro_use]
-extern crate log;
-extern crate image;
 
 mod adm;
 mod env;
@@ -41,7 +41,7 @@ mod requestloggermiddleware;
 mod schema;
 mod server;
 
-use adm::{findphotos, makepublic, users, precache, storestatics};
+use adm::{findphotos, makepublic, precache, storestatics, users};
 use adm::result::Error;
 use adm::stats::show_stats;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -50,12 +50,11 @@ use diesel::prelude::*;
 use dotenv::dotenv;
 use env::{dburl, photos_dir};
 use photosdir::PhotosDir;
+pub use server::{Coord, Group, Link};
 use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::Path;
 use std::process::exit;
-
-pub use server::{Coord, Group, Link};
 
 fn main() {
     dotenv().ok();
@@ -63,52 +62,81 @@ fn main() {
     let args = App::new("rphotosadm")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Command line interface for rphotos")
-        .subcommand(SubCommand::with_name("findphotos")
-            .about("Find new photos in the photo directory")
-            .arg(Arg::with_name("BASE")
-                .multiple(true)
-                .help("Base directory to search in (relative to the \
-                       image root).")))
-        .subcommand(SubCommand::with_name("stats")
-            .about("Show some statistics from the database"))
-        .subcommand(SubCommand::with_name("userlist")
-            .about("List existing users"))
-        .subcommand(SubCommand::with_name("userpass")
-            .about("Set password for a (new or existing) user")
-            .arg(Arg::with_name("USER")
-                .required(true)
-                .help("Username to set password for")))
-        .subcommand(SubCommand::with_name("makepublic")
-            .about("make specific image(s) public")
-            .arg(Arg::with_name("LIST")
-                .long("list")
-                .short("l")
-                .takes_value(true)
-                .help("File listing image paths to make public"))
-            .arg(Arg::with_name("IMAGE")
-                .required_unless("LIST")
-                .help("Image path to make public"))
-            .after_help("The image path(s) are relative to the \
-                         image root."))
-        .subcommand(SubCommand::with_name("precache")
-            .about("Make sure the photos has thumbnails stored in cache."))
-        .subcommand(SubCommand::with_name("storestatics")
-            .about("Store statics as files for a web server")
-            .arg(Arg::with_name("DIR")
-                .required(true)
-                .help("Directory to store the files in")))
-        .subcommand(SubCommand::with_name("runserver")
-            .about("RPhotos web server")
-            .version(env!("CARGO_PKG_VERSION"))
-            .arg(Arg::with_name("PIDFILE")
-                .long("pidfile")
-                .takes_value(true)
-                .help("Write (and read, if --replace) a pid file with the \
-                       name given as <PIDFILE>."))
-                .arg(Arg::with_name("REPLACE")
-                    .long("replace")
-                    .help("Kill old server (identified by pid file) \
-                           before running")))
+        .subcommand(
+            SubCommand::with_name("findphotos")
+                .about("Find new photos in the photo directory")
+                .arg(Arg::with_name("BASE").multiple(true).help(
+                    "Base directory to search in (relative to the \
+                     image root).",
+                )),
+        )
+        .subcommand(
+            SubCommand::with_name("stats")
+                .about("Show some statistics from the database"),
+        )
+        .subcommand(
+            SubCommand::with_name("userlist").about("List existing users"),
+        )
+        .subcommand(
+            SubCommand::with_name("userpass")
+                .about("Set password for a (new or existing) user")
+                .arg(
+                    Arg::with_name("USER")
+                        .required(true)
+                        .help("Username to set password for"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("makepublic")
+                .about("make specific image(s) public")
+                .arg(
+                    Arg::with_name("LIST")
+                        .long("list")
+                        .short("l")
+                        .takes_value(true)
+                        .help("File listing image paths to make public"),
+                )
+                .arg(
+                    Arg::with_name("IMAGE")
+                        .required_unless("LIST")
+                        .help("Image path to make public"),
+                )
+                .after_help(
+                    "The image path(s) are relative to the \
+                     image root.",
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("precache")
+                .about("Make sure the photos has thumbnails stored in cache."),
+        )
+        .subcommand(
+            SubCommand::with_name("storestatics")
+                .about("Store statics as files for a web server")
+                .arg(
+                    Arg::with_name("DIR")
+                        .required(true)
+                        .help("Directory to store the files in"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("runserver")
+                .about("RPhotos web server")
+                .version(env!("CARGO_PKG_VERSION"))
+                .arg(
+                    Arg::with_name("PIDFILE")
+                        .long("pidfile")
+                        .takes_value(true)
+                        .help(
+                            "Write (and read, if --replace) a pid file \
+                             with the name given as <PIDFILE>.",
+                        ),
+                )
+                .arg(Arg::with_name("REPLACE").long("replace").help(
+                    "Kill old server (identified by pid file) \
+                     before running",
+                )),
+        )
         .get_matches();
 
     match run(&args) {
@@ -127,17 +155,18 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
             let db = get_db()?;
             if let Some(bases) = args.values_of("BASE") {
                 for base in bases {
-                    findphotos::crawl(&db, &pd, Path::new(&base))
-                         .map_err(|e| {
-                             Error::Other(format!("Failed to crawl {}: {}",
-                                                  base,
-                                                  e))
-                         })?;
+                    findphotos::crawl(&db, &pd, Path::new(&base)).map_err(
+                        |e| {
+                            Error::Other(
+                                format!("Failed to crawl {}: {}", base, e),
+                            )
+                        },
+                    )?;
                 }
             } else {
-                findphotos::crawl(&db, &pd, Path::new(""))
-                     .map_err(|e| Error::Other(
-                         format!("Failed to crawl: {}", e)))?;
+                findphotos::crawl(&db, &pd, Path::new("")).map_err(
+                    |e| Error::Other(format!("Failed to crawl: {}", e)),
+                )?;
             }
             Ok(())
         }
@@ -171,9 +200,7 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
         ("storestatics", Some(args)) => {
             storestatics::to_dir(args.value_of("DIR").unwrap())
         }
-        ("runserver", Some(args)) => {
-            server::run(args)
-        }
+        ("runserver", Some(args)) => server::run(args),
         _ => Ok(println!("No subcommand given.\n\n{}", args.usage())),
     }
 }

@@ -5,7 +5,7 @@ use hyper::header::{Expires, HttpDate};
 use nickel::{Halt, MiddlewareResult, Response};
 use nickel::status::StatusCode;
 use std::io::{self, Write};
-use time::{Duration, now};
+use time::{now, Duration};
 
 macro_rules! wrap3 {
     ($server:ident.$method:ident $url:expr,
@@ -15,11 +15,12 @@ macro_rules! wrap3 {
                          res: Response<'mw>)
                          -> MiddlewareResult<'mw> {
              if let ($(Some($param),)*) =
-                 ($(req.param(stringify!($param)).and_then(FromSlug::parse),)*) {
-                     $handler(req, res, $($param),*)
-                 } else {
-                     res.not_found("Parameter mismatch")
-                 }
+                 ($(req.param(stringify!($param)).and_then(FromSlug::parse),)*)
+             {
+                 $handler(req, res, $($param),*)
+             } else {
+                 res.not_found("Parameter mismatch")
+             }
          }
          let matcher = format!($url, $(concat!(":", stringify!($param))),+);
          info!("Route {} {} to {}",
@@ -74,19 +75,23 @@ impl FromSlug for usize {
 
 pub trait MyResponse<'mw> {
     fn ok<F>(self, do_render: F) -> MiddlewareResult<'mw>
-        where F: FnOnce(&mut Write) -> io::Result<()>;
+    where
+        F: FnOnce(&mut Write) -> io::Result<()>;
 
     fn not_found(self, msg: &'static str) -> MiddlewareResult<'mw>;
 }
 
 impl<'mw> MyResponse<'mw> for Response<'mw> {
     fn ok<F>(self, do_render: F) -> MiddlewareResult<'mw>
-        where F: FnOnce(&mut Write) -> io::Result<()>
+    where
+        F: FnOnce(&mut Write) -> io::Result<()>,
     {
         let mut stream = self.start()?;
         match do_render(&mut stream) {
             Ok(()) => Ok(Halt(stream)),
-            Err(e) => stream.bail(format!("Error rendering template: {:?}", e)),
+            Err(e) => {
+                stream.bail(format!("Error rendering template: {:?}", e))
+            }
         }
     }
 

@@ -10,3 +10,12 @@ before_script:
  - echo "DATABASE_URL=postgres://localhost/rphotos" > .env
  - cargo install -v diesel_cli --no-default-features --features postgres || true
  - $HOME/.cargo/bin/diesel setup
+matrix:
+  include:
+   - rust: nightly
+     env: TASK=rustfmt
+     before_script:
+      - export PATH="$PATH:$HOME/.cargo/bin"
+      - which rustfmt || cargo install rustfmt-nightly
+     script:
+      - cargo fmt -- --write-mode=diff

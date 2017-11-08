@@ -10,8 +10,10 @@ use std::iter::Iterator;
 
 pub fn list(db: &PgConnection) -> Result<(), Error> {
     use schema::users::dsl::*;
-    println!("Existing users: {:?}.",
-             users.select(username).load::<String>(db)?);
+    println!(
+        "Existing users: {:?}.",
+        users.select(username).load::<String>(db)?
+    );
     Ok(())
 }
 
@@ -21,25 +23,25 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
     use schema::users::dsl::*;
     match update(users.filter(username.eq(&uname)))
         .set(password.eq(&hashword))
-        .execute(db)? {
+        .execute(db)?
+    {
         1 => {
             println!("Updated password for {:?} to {:?}", uname, pword);
         }
         0 => {
             use models::NewUser;
-            insert(&NewUser {
-                    username: uname,
-                    password: &hashword,
-                })
+            insert(&NewUser { username: uname, password: &hashword })
                 .into(users)
                 .execute(db)?;
             println!("Created user {:?} with password {:?}", uname, pword);
         }
         n => {
-            println!("Strange, updated {} passwords for {:?} to {:?}",
-                     n,
-                     uname,
-                     pword);
+            println!(
+                "Strange, updated {} passwords for {:?} to {:?}",
+                n,
+                uname,
+                pword
+            );
         }
     };
     Ok(())
