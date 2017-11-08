@@ -16,14 +16,14 @@ sql_function!(date_part,
 pub fn show_stats(db: &PgConnection) -> Result<(), Error> {
     println!(
         "There are {} photos in total.",
-        photos.select(count_star()).first::<i64>(db)?
+        photos.select(count_star()).first::<i64>(db)?,
     );
 
     println!(
         "There are {} persons, {} places, and {} tags mentioned.",
         people.select(count_star()).first::<i64>(db)?,
         places.select(count_star()).first::<i64>(db)?,
-        tags.select(count_star()).first::<i64>(db)?
+        tags.select(count_star()).first::<i64>(db)?,
     );
 
     // Something like this should be possible, I guess?
@@ -47,7 +47,7 @@ pub fn show_stats(db: &PgConnection) -> Result<(), Error> {
             .load::<(Option<f64>, i64)>(db)?
             .iter()
             .map(|&(y, n)| format!("{}: {}", y.unwrap_or(0.0), n))
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>(),
     );
 
     Ok(())

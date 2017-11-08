@@ -13,14 +13,13 @@ pub fn crawl(
     photos: &PhotosDir,
     only_in: &Path,
 ) -> Result<(), Error> {
-    photos.find_files(
+    Ok(photos.find_files(
         only_in,
         &|path, exif| match save_photo(db, path, exif) {
             Ok(()) => debug!("Saved photo {}", path),
             Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
         },
-    )?;
-    Ok(())
+    )?)
 }
 
 fn save_photo(
@@ -63,7 +62,7 @@ fn save_photo(
                     clat,
                     clong,
                     lat,
-                    long
+                    long,
                 )
             }
         } else {
@@ -132,7 +131,7 @@ fn find_date(exif: &ExifData) -> Result<NaiveDateTime, Error> {
                 debug!(
                     "Try to parse {:?} (from {:?}) as datetime",
                     str,
-                    value.tag
+                    value.tag,
                 );
                 Ok(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")?)
             } else {

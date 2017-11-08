@@ -151,7 +151,7 @@ fn do_login<'mw>(
                 }
                 info!(
                     "Login failed: Password verification failed for {:?}",
-                    user
+                    user,
                 );
             } else {
                 info!("Login failed: No hash found for {:?}", user);

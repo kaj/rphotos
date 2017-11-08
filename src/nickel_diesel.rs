@@ -32,7 +32,7 @@ where
             .error_handler(error_handler)
             .build();
 
-        let pool = try!(Pool::new(config, manager));
+        let pool = Pool::new(config, manager)?;
 
         Ok(DieselMiddleware { pool: Arc::new(pool) })
     }

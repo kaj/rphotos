@@ -12,7 +12,7 @@ pub fn list(db: &PgConnection) -> Result<(), Error> {
     use schema::users::dsl::*;
     println!(
         "Existing users: {:?}.",
-        users.select(username).load::<String>(db)?
+        users.select(username).load::<String>(db)?,
     );
     Ok(())
 }
@@ -40,7 +40,7 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
                 "Strange, updated {} passwords for {:?} to {:?}",
                 n,
                 uname,
-                pword
+                pword,
             );
         }
     };

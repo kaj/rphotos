@@ -59,7 +59,7 @@ use std::process::exit;
 fn main() {
     dotenv().ok();
     env_logger::init().unwrap();
-    let args = App::new("rphotosadm")
+    let args = App::new("rphotos")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Command line interface for rphotos")
         .subcommand(
@@ -102,8 +102,7 @@ fn main() {
                         .help("Image path to make public"),
                 )
                 .after_help(
-                    "The image path(s) are relative to the \
-                     image root.",
+                    "The image path(s) are relative to the image root.",
                 ),
         )
         .subcommand(
@@ -121,20 +120,17 @@ fn main() {
         )
         .subcommand(
             SubCommand::with_name("runserver")
-                .about("RPhotos web server")
-                .version(env!("CARGO_PKG_VERSION"))
                 .arg(
                     Arg::with_name("PIDFILE")
                         .long("pidfile")
                         .takes_value(true)
                         .help(
-                            "Write (and read, if --replace) a pid file \
-                             with the name given as <PIDFILE>.",
+                            "Write (and read, if --replace) a pid file with \
+                             the name given as <PIDFILE>.",
                         ),
                 )
                 .arg(Arg::with_name("REPLACE").long("replace").help(
-                    "Kill old server (identified by pid file) \
-                     before running",
+                    "Kill old server (identified by pid file) before running",
                 )),
         )
         .get_matches();

@@ -41,13 +41,13 @@ pub fn rotate<'mw>(
     res.not_found("")
 }
 
-pub fn rotate_params(
-    req: &mut Request,
-) -> Result<(Option<i32>, Option<i16>), (StatusCode, BodyError)> {
-    let form_data = req.form_body()?;
+type QResult<T> = Result<T, (StatusCode, BodyError)>;
+
+fn rotate_params(req: &mut Request) -> QResult<(Option<i32>, Option<i16>)> {
+    let data = req.form_body()?;
     Ok((
-        form_data.get("image").and_then(|s| s.parse().ok()),
-        form_data.get("angle").and_then(|s| s.parse().ok()),
+        data.get("image").and_then(|s| s.parse().ok()),
+        data.get("angle").and_then(|s| s.parse().ok()),
     ))
 }
 
@@ -93,13 +93,11 @@ pub fn tag<'mw>(
     res.not_found("")
 }
 
-pub fn tag_params(
-    req: &mut Request,
-) -> Result<(Option<i32>, Option<String>), (StatusCode, BodyError)> {
-    let form_data = req.form_body()?;
+fn tag_params(req: &mut Request) -> QResult<(Option<i32>, Option<String>)> {
+    let data = req.form_body()?;
     Ok((
-        form_data.get("image").and_then(|s| s.parse().ok()),
-        form_data.get("tag").map(String::from),
+        data.get("image").and_then(|s| s.parse().ok()),
+        data.get("tag").map(String::from),
     ))
 }
 

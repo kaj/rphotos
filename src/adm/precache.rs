@@ -35,7 +35,7 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
                     "Failed to scale #{} ({}): {}",
                     photo.id,
                     photo.path,
-                    e
+                    e,
                 ))
             })?;
             cache.set(key.as_bytes(), &data, 0, no_expire)?;
