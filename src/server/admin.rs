@@ -51,7 +51,7 @@ fn rotate_params(req: &mut Request) -> QResult<(Option<i32>, Option<i16>)> {
     ))
 }
 
-pub fn tag<'mw>(
+pub fn set_tag<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
@@ -98,6 +98,59 @@ fn tag_params(req: &mut Request) -> QResult<(Option<i32>, Option<String>)> {
     Ok((
         data.get("image").and_then(|s| s.parse().ok()),
         data.get("tag").map(String::from),
+    ))
+}
+
+pub fn set_person<'mw>(
+    req: &mut Request,
+    res: Response<'mw>,
+) -> MiddlewareResult<'mw> {
+    if !req.authorized_user().is_some() {
+        return res.error(StatusCode::Unauthorized, "permission denied");
+    }
+    if let (Some(image), Some(name)) = try_with!(res, person_params(req)) {
+        let c: &PgConnection = &req.db_conn();
+        use diesel;
+        use models::{NewPerson, NewPhotoPerson, Person, PhotoPerson};
+        let person = {
+            use schema::people::dsl::*;
+            people
+                .filter(person_name.ilike(&name))
+                .first::<Person>(c)
+                .or_else(|_| {
+                    diesel::insert(&NewPerson {
+                        person_name: &name,
+                        slug: &slugify(&name),
+                    }).into(people)
+                        .get_result::<Person>(c)
+                })
+                .expect("Find or create tag")
+        };
+        use schema::photo_people::dsl::*;
+        let q = photo_people
+            .filter(photo_id.eq(image))
+            .filter(person_id.eq(person.id));
+        if q.first::<PhotoPerson>(c).is_ok() {
+            info!("Photo #{} already has {:?}", image, person);
+        } else {
+            info!("Add {:?} on photo #{}!", person, image);
+            diesel::insert(
+                &NewPhotoPerson { photo_id: image, person_id: person.id },
+            ).into(photo_people)
+                .execute(c)
+                .expect("Name person in photo");
+        }
+        return res.redirect(format!("/img/{}", image));
+    }
+    info!("Missing image and/or angle to rotate or image not found");
+    res.not_found("")
+}
+
+fn person_params(req: &mut Request) -> QResult<(Option<i32>, Option<String>)> {
+    let data = req.form_body()?;
+    Ok((
+        data.get("image").and_then(|s| s.parse().ok()),
+        data.get("person").map(String::from),
     ))
 }
 

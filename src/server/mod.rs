@@ -33,6 +33,7 @@ use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
 use memcachemiddleware::*;
 
 use pidfiles::handle_pid_file;
+use rustc_serialize::json::ToJson;
 use templates;
 
 use self::nickelext::{FromSlug, MyResponse, far_expires};
@@ -74,10 +75,12 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.post "/login",         do_login);
     wrap3!(server.get  "/logout",        logout);
     wrap3!(server.get "/",               all_years);
-    use self::admin::{rotate, tag};
-    wrap3!(server.get "/ac",             auto_complete);
+    use self::admin::{rotate, set_person, set_tag};
+    wrap3!(server.get "/ac/tag",         auto_complete_tag);
+    wrap3!(server.get "/ac/person",      auto_complete_person);
     wrap3!(server.post "/adm/rotate",    rotate);
-    wrap3!(server.post "/adm/tag",       tag);
+    wrap3!(server.post "/adm/tag",       set_tag);
+    wrap3!(server.post "/adm/person",    set_person);
     wrap3!(server.get "/img/{}[-]{}\\.jpg", show_image: id, size);
     wrap3!(server.get "/img/{}",         photo_details: id);
     wrap3!(server.get "/tag/",           tag_all);
@@ -609,17 +612,34 @@ impl Link {
     }
 }
 
-fn auto_complete<'mw>(
+fn auto_complete_tag<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
     if let Some(q) = req.query().get("q").map(String::from) {
-        use rustc_serialize::json::ToJson;
         use schema::tags::dsl::{tag_name, tags};
         let c: &PgConnection = &req.db_conn();
         let q = tags.select(tag_name)
             .filter(tag_name.ilike(q + "%"))
             .order(tag_name)
+            .limit(15);
+        res.send(q.load::<String>(c).unwrap().to_json())
+    } else {
+        res.not_found("No such tag")
+    }
+}
+
+fn auto_complete_person<'mw>(
+    req: &mut Request,
+    res: Response<'mw>,
+) -> MiddlewareResult<'mw> {
+    if let Some(q) = req.query().get("q").map(String::from) {
+        use schema::people::dsl::{people, person_name};
+        let c: &PgConnection = &req.db_conn();
+        let q = people
+            .select(person_name)
+            .filter(person_name.ilike(q + "%"))
+            .order(person_name)
             .limit(15);
         res.send(q.load::<String>(c).unwrap().to_json())
     } else {
