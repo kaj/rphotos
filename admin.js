@@ -35,9 +35,12 @@ function rpadmin() {
         event.target.disabled = true;
         var imgid = details.dataset.imgid;
         var f = document.createElement("form");
-        f.className = category;
+        f.className = "admin " + category;
         f.action = "/adm/" + category;
         f.method = "post";
+        var l = document.createElement("label");
+        l.innerHTML = event.target.title;
+        f.appendChild(l);
         var i = document.createElement("input");
         i.type="hidden";
         i.name="image";
@@ -48,6 +51,8 @@ function rpadmin() {
         i.autocomplete="off";
         i.tabindex="1";
         i.name = category;
+        i.id = category+'name';
+        l.htmlFor = i.id;
         i.addEventListener('keyup', e => {
             let c = e.code;
             if (c == 'ArrowUp' || c == 'ArrowDown' || c == 'Escape' || c == 'Enter') {
@@ -58,6 +63,8 @@ function rpadmin() {
 		let r = new XMLHttpRequest();
 		r.onload = function() {
                     let t = JSON.parse(this.responseText);
+                    list.style.top = i.offsetTop + i.offsetHeight + "px"
+                    list.style.left = i.offsetLeft + "px"
                     list.innerHTML = '';
                     t.map(x => {
 			let a = document.createElement('a');
@@ -98,8 +105,14 @@ function rpadmin() {
                 (t.parentNode == list && t.nextSibling || list.querySelector('a:first-child')).focus();
                 break;
             case 'Escape':
-                list.innerHTML = '';
-                i.focus();
+                if (i.value) {
+                    list.innerHTML = '';
+                    i.focus();
+                } else { // close form
+                    e.target.closest('form').remove();
+                    event.target.disabled = false;
+                    event.target.focus();
+                }
                 break;
             default:
                 return true;
@@ -108,6 +121,20 @@ function rpadmin() {
             e.stopPropagation();
             return false;
         });
+        let s = document.createElement("button");
+        s.innerHTML = "Ok";
+        s.type = "submit";
+        f.appendChild(s);
+        let c = document.createElement("button");
+        c.innerHTML = "&#x1f5d9;";
+        c.className = 'close';
+        c.title = 'close';
+        c.onclick = e => {
+            e.target.closest('form').remove();
+            event.target.disabled = false; // The old event creating this form
+            event.target.focus();
+        };
+        f.appendChild(c);
         meta.appendChild(f);
         i.focus();
     }
@@ -133,7 +160,7 @@ function rpadmin() {
         r = document.createElement("button");
         r.onclick = e => tag_form(e, 'tag');
         r.innerHTML = "&#x1f3f7;";
-        r.title = "Tag photo";
+        r.title = "Tag";
         r.accessKey = "T";
         p.appendChild(r);
 
@@ -141,7 +168,7 @@ function rpadmin() {
         r = document.createElement("button");
         r.onclick = e => tag_form(e, 'person');
         r.innerHTML = "\u263a";
-        r.title = "Person in picture";
+        r.title = "Person";
         r.accessKey = "P";
         p.appendChild(r);
         meta.appendChild(p);
