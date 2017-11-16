@@ -150,6 +150,22 @@ form {
     }
 }
 
+#help {
+    position: fixed;
+    bottom: 2em;
+    left: 2em;
+    border: solid 1px black;
+    padding: 1ex 1em;
+    background: #fafafa;
+    box-shadow: .3em .2em 1em;
+    display: none;
+
+    &:target {
+	display: block;
+    }
+    h2 { margin: 0; }
+}
+
 // Relevant for admin forms only.  Move to separate file?
 form.admin {
     position: relative;

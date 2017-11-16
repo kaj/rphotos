@@ -12,5 +12,6 @@ fn main() {
         .add_sass_file(&base_dir.join("photos.scss"))
         .unwrap();
     statics.add_file(&base_dir.join("admin.js")).unwrap();
+    statics.add_file(&base_dir.join("ux.js")).unwrap();
     compile_templates(&base_dir.join("templates"), &out_dir).unwrap();
 }

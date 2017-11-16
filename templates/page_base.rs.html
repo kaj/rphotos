@@ -2,7 +2,7 @@
 @use nickel::Request;
 @use nickel_jwt_session::SessionRequestExtensions;
 @use templates::head;
-@use templates::statics::{photos_css, admin_js};
+@use templates::statics::{photos_css, admin_js, ux_js};
 
 @(req: &Request, title: &str, lpath: &[Link], content: Content)
 
@@ -14,10 +14,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/@photos_css.name" type="text/css"/>
     @if req.authorized_user().is_some() {
-        <script language="javascript" src="/static/@admin_js.name"
-		type="text/javascript" async onload="rpadmin()">
+        <script src="/static/@admin_js.name" type="text/javascript"
+		async defer onload="rpadmin()">
 	</script>
     }
+    <script src="/static/@ux_js.name" type="text/javascript" defer>
+    </script>
   </head>
   <body>
     @:head(req, lpath)

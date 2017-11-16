@@ -161,7 +161,7 @@ function rpadmin() {
         r.onclick = e => tag_form(e, 'tag');
         r.innerHTML = "&#x1f3f7;";
         r.title = "Tag";
-        r.accessKey = "T";
+        r.accessKey = "t";
         p.appendChild(r);
 
         p.appendChild(document.createTextNode(" "));
@@ -169,7 +169,7 @@ function rpadmin() {
         r.onclick = e => tag_form(e, 'person');
         r.innerHTML = "\u263a";
         r.title = "Person";
-        r.accessKey = "P";
+        r.accessKey = "p";
         p.appendChild(r);
         meta.appendChild(p);
     }
