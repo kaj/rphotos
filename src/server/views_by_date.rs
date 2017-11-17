@@ -1,11 +1,12 @@
 use {Group, Link};
 use chrono::Duration as ChDuration;
-use chrono::naive::NaiveDate;
+use chrono::naive::{NaiveDate, NaiveDateTime};
 use diesel::expression::sql_literal::SqlLiteral;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use models::Photo;
-use nickel::{MiddlewareResult, Request, Response};
+use nickel::{MiddlewareResult, QueryString, Request, Response};
+use nickel::extensions::response::Redirect;
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
 use server::nickelext::MyResponse;
@@ -395,6 +396,51 @@ pub fn on_this_day<'mw>(
                 .collect::<Vec<_>>(),
         )
     })
+}
+
+pub fn next_image<'mw>(
+    req: &mut Request,
+    res: Response<'mw>,
+) -> MiddlewareResult<'mw> {
+    use schema::photos::dsl::{date, id};
+    let q = Photo::query(req.authorized_user().is_some())
+        .select(id)
+        .filter(date.gt(from_date(req)))
+        .order(date);
+    let c: &PgConnection = &req.db_conn();
+    if let Ok(photo) = q.first::<i32>(c) {
+        res.redirect(format!("/img/{}", photo)) // to photo_details
+    } else {
+        res.not_found("No such image")
+    }
+}
+
+pub fn prev_image<'mw>(
+    req: &mut Request,
+    res: Response<'mw>,
+) -> MiddlewareResult<'mw> {
+    use schema::photos::dsl::{date, id};
+    let q = Photo::query(req.authorized_user().is_some())
+        .select(id)
+        .filter(date.lt(from_date(req)))
+        .order(date.desc().nulls_last());
+    let c: &PgConnection = &req.db_conn();
+    if let Ok(photo) = q.first::<i32>(c) {
+        res.redirect(format!("/img/{}", photo)) // to photo_details
+    } else {
+        res.not_found("No such image")
+    }
+}
+
+fn from_date(req: &mut Request) -> Option<NaiveDateTime> {
+    req.query()
+        .get("from")
+        .and_then(|s| s.parse().ok())
+        .and_then(|i: i32| {
+            use schema::photos::dsl::{date, photos};
+            let c: &PgConnection = &req.db_conn();
+            photos.find(i).select(date).first(c).unwrap_or(None)
+        })
 }
 
 fn monthname(n: u32) -> &'static str {

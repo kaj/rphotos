@@ -83,6 +83,8 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.post "/adm/person",    set_person);
     wrap3!(server.get "/img/{}[-]{}\\.jpg", show_image: id, size);
     wrap3!(server.get "/img/{}",         photo_details: id);
+    wrap3!(server.get "/next",           next_image);
+    wrap3!(server.get "/prev",           prev_image);
     wrap3!(server.get "/tag/",           tag_all);
     wrap3!(server.get "/tag/{}",         tag_one: tag);
     wrap3!(server.get "/place/",         place_all);
@@ -502,6 +504,14 @@ fn photo_details<'mw>(
                                 Link::year(d.year()),
                                 Link::month(d.year(), d.month()),
                                 Link::day(d.year(), d.month(), d.day()),
+                                Link {
+                                    url: format!("/prev?from={}", tphoto.id),
+                                    name: "<".into(),
+                                },
+                                Link {
+                                    url: format!("/next?from={}", tphoto.id),
+                                    name: ">".into(),
+                                },
                             ]
                         })
                         .unwrap_or_else(|| vec![]),
