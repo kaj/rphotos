@@ -433,8 +433,11 @@ pub fn prev_image<'mw>(
 }
 
 fn from_date(req: &mut Request) -> Option<NaiveDateTime> {
+    query_date(req, "from")
+}
+pub fn query_date(req: &mut Request, name: &str) -> Option<NaiveDateTime> {
     req.query()
-        .get("from")
+        .get(name)
         .and_then(|s| s.parse().ok())
         .and_then(|i: i32| {
             use schema::photos::dsl::{date, photos};

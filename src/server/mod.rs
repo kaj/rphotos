@@ -1,7 +1,8 @@
 #[macro_use]
 mod nickelext;
-mod views_by_date;
 mod admin;
+mod splitlist;
+mod views_by_date;
 
 use adm::result::Error;
 use chrono::Datelike;
@@ -27,7 +28,6 @@ use models::{Person, Photo, Place, Tag};
 use env::{dburl, env_or, jwt_key, photos_dir};
 
 use requestloggermiddleware::RequestLoggerMiddleware;
-
 use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
 
 use memcachemiddleware::*;
@@ -37,8 +37,55 @@ use rustc_serialize::json::ToJson;
 use templates;
 
 use self::nickelext::{FromSlug, MyResponse, far_expires};
-
+use self::splitlist::*;
 use self::views_by_date::*;
+
+pub struct PhotoLink {
+    pub href: String,
+    pub id: i32,
+    pub lable: Option<String>,
+}
+
+impl PhotoLink {
+    fn for_group(g: &[Photo], base_url: &str) -> PhotoLink {
+        PhotoLink {
+            href: format!(
+                "{}?from={}&to={}",
+                base_url,
+                g.last().map(|p| p.id).unwrap_or(0),
+                g.first().map(|p| p.id).unwrap_or(0),
+            ),
+            id: g.iter()
+                .max_by_key(
+                    |p| p.grade.unwrap_or(2) + if p.is_public { 3 } else { 0 },
+                )
+                .map(|p| p.id)
+                .unwrap_or(0),
+            lable: Some(format!(
+                "{} - {} ({})",
+                g.last()
+                    .and_then(|p| p.date)
+                    .map(|d| format!("{}", d.format("%F %T")))
+                    .unwrap_or("-".into()),
+                g.first()
+                    .and_then(|p| p.date)
+                    .map(|d| format!("{}", d.format("%F %T")))
+                    .unwrap_or("-".into()),
+                g.len(),
+            )),
+        }
+    }
+}
+
+impl<'a> From<&'a Photo> for PhotoLink {
+    fn from(p: &'a Photo) -> PhotoLink {
+        PhotoLink {
+            href: format!("/img/{}", p.id),
+            id: p.id,
+            lable: p.date.map(|d| format!("{}", d.format("%F %T"))),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Group {
@@ -440,28 +487,54 @@ fn person_one<'mw>(
     use schema::people::dsl::{people, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
+        let from_date = query_date(req, "from");
+        let to_date = query_date(req, "to");
         use schema::photo_people::dsl::{person_id, photo_id, photo_people};
-        use schema::photos::dsl::{date, grade, id};
-        return res.ok(|o| {
-            templates::person(
-                o,
-                req,
-                &Photo::query(req.authorized_user().is_some())
-                    .filter(
-                        id.eq_any(
-                            photo_people
-                                .select(photo_id)
-                                .filter(person_id.eq(person.id)),
-                        ),
-                    )
-                    .order(
-                        (grade.desc().nulls_last(), date.desc().nulls_last()),
-                    )
-                    .load(c)
-                    .unwrap(),
-                &person,
-            )
-        });
+        use schema::photos::dsl::{date, id};
+        let photos = Photo::query(req.authorized_user().is_some()).filter(
+            id.eq_any(
+                photo_people
+                    .select(photo_id)
+                    .filter(person_id.eq(person.id)),
+            ),
+        );
+        let photos = if let Some(from_date) = from_date {
+            photos.filter(date.ge(from_date))
+        } else {
+            photos
+        };
+        let photos = if let Some(to_date) = to_date {
+            photos.filter(date.le(to_date))
+        } else {
+            photos
+        };
+        let photos = photos
+            .order(date.desc().nulls_last())
+            .load::<Photo>(c)
+            .unwrap();
+        if photos.len() < 42 {
+            return res.ok(|o| {
+                templates::person(
+                    o,
+                    req,
+                    &photos.iter().map(PhotoLink::from).collect::<Vec<_>>(),
+                    &person,
+                )
+            });
+        } else {
+            return res.ok(|o| {
+                let path = req.path_without_query().unwrap_or("/");
+                templates::person(
+                    o,
+                    req,
+                    &split_to_groups(&photos)
+                        .iter()
+                        .map(|g| PhotoLink::for_group(g, path))
+                        .collect::<Vec<_>>(),
+                    &person,
+                )
+            });
+        }
     }
     res.not_found("Not a person")
 }
