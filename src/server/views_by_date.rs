@@ -1,3 +1,5 @@
+use super::PhotoLink;
+use super::splitlist::links_by_time;
 use {Group, Link};
 use chrono::Duration as ChDuration;
 use chrono::naive::{NaiveDate, NaiveDateTime};
@@ -184,7 +186,10 @@ pub fn all_null_date<'mw>(
                 .order(path.asc())
                 .limit(500)
                 .load(c)
-                .unwrap(),
+                .unwrap()
+                .iter()
+                .map(PhotoLink::from)
+                .collect::<Vec<_>>(),
         )
     })
 }
@@ -199,144 +204,23 @@ pub fn all_for_day<'mw>(
     let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
     use schema::photos::dsl::date;
 
-    let c: &PgConnection = &req.db_conn();
-
-    let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
+    let photos = Photo::query(req.authorized_user().is_some())
         .filter(date.ge(thedate))
-        .filter(date.lt(thedate + ChDuration::days(1)))
-        .order(date.desc())
-        .load(c)
-        .unwrap();
+        .filter(date.lt(thedate + ChDuration::days(1)));
+    let links = links_by_time(req, photos);
 
-    if photos.is_empty() {
+    if links.is_empty() {
         res.not_found("No such image")
     } else {
-        let n = photos.len();
-        if n > 50 {
-            warn!("Got {} photos, way to many", n);
-            res.ok(|o| {
-                templates::groups(
-                    o,
-                    req,
-                    &format!("Photos from {} {}", day, monthname(month)),
-                    &[Link::year(year), Link::month(year, month)],
-                    &(photos
-                        .chunks((n as f64).sqrt() as usize)
-                        .enumerate()
-                        .map(|(i, chunk)| {
-                            Group {
-                                title: format!(
-                                    "{} - {}",
-                                    chunk
-                                        .last()
-                                        .and_then(|p| p.date)
-                                        .map(|t| t.format("%H:%M").to_string())
-                                        .unwrap_or("?".to_string()),
-                                    chunk
-                                        .first()
-                                        .and_then(|p| p.date)
-                                        .map(|t| t.format("%H:%M").to_string())
-                                        .unwrap_or("?".to_string()),
-                                ),
-                                url: format!(
-                                    "/{}/{}/{}/{}",
-                                    year,
-                                    month,
-                                    day,
-                                    i
-                                ),
-                                count: chunk.len() as i64,
-                                photo: chunk
-                                    .into_iter()
-                                    .max_by_key(|p| {
-                                        p.grade.unwrap_or(2) + if p.is_public {
-                                            3
-                                        } else {
-                                            0
-                                        }
-                                    })
-                                    .unwrap()
-                                    .clone(),
-                            }
-                        })
-                        .collect::<Vec<_>>()),
-                )
-            })
-        } else {
-            res.ok(|o| {
-                templates::index(
-                    o,
-                    req,
-                    &format!(
-                        "Photos from {} {} {}",
-                        day,
-                        monthname(month),
-                        year
-                    ),
-                    &[Link::year(year), Link::month(year, month)],
-                    &photos,
-                )
-            })
-        }
-    }
-}
-
-pub fn part_for_day<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-    year: i32,
-    month: u32,
-    day: u32,
-    part: usize,
-) -> MiddlewareResult<'mw> {
-    let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
-    use schema::photos::dsl::date;
-
-    let c: &PgConnection = &req.db_conn();
-
-    let photos: Vec<Photo> = Photo::query(req.authorized_user().is_some())
-        .filter(date.ge(thedate))
-        .filter(date.lt(thedate + ChDuration::days(1)))
-        .order(date.desc())
-        .load(c)
-        .unwrap();
-
-    if photos.is_empty() {
-        res.not_found("No such image")
-    } else {
-        let mut chunks = photos.chunks((photos.len() as f64).sqrt() as usize);
-        if let Some(photos) = chunks.nth(part) {
-            res.ok(|o| {
-                templates::index(
-                    o,
-                    req,
-                    &format!(
-                        "Photos from {} {} {}, {} - {}",
-                        day,
-                        monthname(month),
-                        year,
-                        photos
-                            .last()
-                            .and_then(|p| p.date)
-                            .map(|t| t.format("%H:%M").to_string())
-                            .unwrap_or("?".to_string()),
-                        photos
-                            .first()
-                            .and_then(|p| p.date)
-                            .map(|t| t.format("%H:%M").to_string())
-                            .unwrap_or("?".to_string()),
-                    ),
-                    &[
-                        Link::year(year),
-                        Link::month(year, month),
-                        Link::day(year, month, day),
-                    ],
-                    photos,
-                )
-            })
-        } else {
-            res.not_found("No such image")
-        }
+        res.ok(|o| {
+            templates::index(
+                o,
+                req,
+                &format!("Photos from {} {} {}", day, monthname(month), year),
+                &[Link::year(year), Link::month(year, month)],
+                &links,
+            )
+        })
     }
 }
 
