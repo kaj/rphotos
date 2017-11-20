@@ -1,10 +1,11 @@
 @use nickel::Request;
-@use models::{Photo, Place};
-@use templates::{page_base, img_link};
+@use models::{Place};
+@use server::PhotoLink;
+@use templates::{page_base, photo_link};
 
-@(req: &Request, photos: &[Photo], place: &Place)
+@(req: &Request, photos: &[PhotoLink], place: &Place)
 @:page_base(req, &format!("Photos from {}", place.place_name), &[], {
   <div class="group">
-    @for p in photos {@:img_link(p)}
+    @for p in photos {@:photo_link(p)}
   </div>
 })

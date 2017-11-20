@@ -450,27 +450,44 @@ fn place_one<'mw>(
     let c: &PgConnection = &req.db_conn();
     if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
         use schema::photo_places::dsl::{photo_id, photo_places, place_id};
-        use schema::photos::dsl::{date, grade, id};
-        return res.ok(|o| {
-            templates::place(
-                o,
-                req,
-                &Photo::query(req.authorized_user().is_some())
-                    .filter(
-                        id.eq_any(
-                            photo_places
-                                .select(photo_id)
-                                .filter(place_id.eq(place.id)),
-                        ),
-                    )
-                    .order(
-                        (grade.desc().nulls_last(), date.desc().nulls_last()),
-                    )
-                    .load(c)
-                    .unwrap(),
-                &place,
-            )
-        });
+        use schema::photos::dsl::{date, id};
+        let photos = Photo::query(req.authorized_user().is_some()).filter(
+            id.eq_any(photo_places.select(photo_id).filter(place_id.eq(place.id))),
+        );
+        let photos = if let Some(from_date) = query_date(req, "from") {
+            photos.filter(date.ge(from_date))
+        } else {
+            photos
+        };
+        let photos = if let Some(to_date) = query_date(req, "to") {
+            photos.filter(date.le(to_date))
+        } else {
+            photos
+        };
+        let photos = photos.order(date.desc().nulls_last()).load(c).unwrap();
+        if let Some(groups) = split_to_groups(&photos) {
+            return res.ok(|o| {
+                let path = req.path_without_query().unwrap_or("/");
+                templates::place(
+                    o,
+                    req,
+                    &groups
+                        .iter()
+                        .map(|g| PhotoLink::for_group(g, path))
+                        .collect::<Vec<_>>(),
+                    &place,
+                )
+            });
+        } else {
+            return res.ok(|o| {
+                templates::place(
+                    o,
+                    req,
+                    &photos.iter().map(PhotoLink::from).collect::<Vec<_>>(),
+                    &place,
+                )
+            });
+        }
     }
     res.not_found("Not a place")
 }
