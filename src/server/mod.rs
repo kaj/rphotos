@@ -512,25 +512,25 @@ fn person_one<'mw>(
             .order(date.desc().nulls_last())
             .load::<Photo>(c)
             .unwrap();
-        if photos.len() < 42 {
-            return res.ok(|o| {
-                templates::person(
-                    o,
-                    req,
-                    &photos.iter().map(PhotoLink::from).collect::<Vec<_>>(),
-                    &person,
-                )
-            });
-        } else {
+        if let Some(groups) = split_to_groups(&photos) {
             return res.ok(|o| {
                 let path = req.path_without_query().unwrap_or("/");
                 templates::person(
                     o,
                     req,
-                    &split_to_groups(&photos)
+                    &groups
                         .iter()
                         .map(|g| PhotoLink::for_group(g, path))
                         .collect::<Vec<_>>(),
+                    &person,
+                )
+            });
+        } else {
+            return res.ok(|o| {
+                templates::person(
+                    o,
+                    req,
+                    &photos.iter().map(PhotoLink::from).collect::<Vec<_>>(),
                     &person,
                 )
             });

@@ -1,6 +1,9 @@
 use models::Photo;
 
-pub fn split_to_groups(photos: &[Photo]) -> Vec<&[Photo]> {
+pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
+    if photos.len() < 42 {
+        return None;
+    }
     let wanted_groups = (photos.len() as f64).sqrt() as usize;
     let mut groups = vec![&photos[..]];
     while groups.len() < wanted_groups {
@@ -9,7 +12,7 @@ pub fn split_to_groups(photos: &[Photo]) -> Vec<&[Photo]> {
         groups[i] = a;
         groups.insert(i + 1, b);
     }
-    groups
+    Some(groups)
 }
 
 fn find_largest(groups: &[&[Photo]]) -> usize {
