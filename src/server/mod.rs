@@ -360,23 +360,44 @@ fn tag_one<'mw>(
     let c: &PgConnection = &req.db_conn();
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
         use schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
-        use schema::photos::dsl::{date, grade, id};
-        return res.ok(|o| {
-            templates::tag(
-                o,
-                req,
-                &Photo::query(req.authorized_user().is_some())
-                    .filter(id.eq_any(
-                        photo_tags.select(photo_id).filter(tag_id.eq(tag.id)),
-                    ))
-                    .order(
-                        (grade.desc().nulls_last(), date.desc().nulls_last()),
-                    )
-                    .load(c)
-                    .unwrap(),
-                &tag,
-            )
-        });
+        use schema::photos::dsl::{date, id};
+        let photos = Photo::query(req.authorized_user().is_some()).filter(
+            id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
+        );
+        let photos = if let Some(from_date) = query_date(req, "from") {
+            photos.filter(date.ge(from_date))
+        } else {
+            photos
+        };
+        let photos = if let Some(to_date) = query_date(req, "to") {
+            photos.filter(date.le(to_date))
+        } else {
+            photos
+        };
+        let photos = photos.order(date.desc().nulls_last()).load(c).unwrap();
+        if let Some(groups) = split_to_groups(&photos) {
+            return res.ok(|o| {
+                let path = req.path_without_query().unwrap_or("/");
+                templates::tag(
+                    o,
+                    req,
+                    &groups
+                        .iter()
+                        .map(|g| PhotoLink::for_group(g, path))
+                        .collect::<Vec<_>>(),
+                    &tag,
+                )
+            });
+        } else {
+            return res.ok(|o| {
+                templates::tag(
+                    o,
+                    req,
+                    &photos.iter().map(PhotoLink::from).collect::<Vec<_>>(),
+                    &tag,
+                )
+            });
+        }
     }
     res.not_found("Not a tag")
 }
@@ -487,8 +508,6 @@ fn person_one<'mw>(
     use schema::people::dsl::{people, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
-        let from_date = query_date(req, "from");
-        let to_date = query_date(req, "to");
         use schema::photo_people::dsl::{person_id, photo_id, photo_people};
         use schema::photos::dsl::{date, id};
         let photos = Photo::query(req.authorized_user().is_some()).filter(
@@ -498,12 +517,12 @@ fn person_one<'mw>(
                     .filter(person_id.eq(person.id)),
             ),
         );
-        let photos = if let Some(from_date) = from_date {
+        let photos = if let Some(from_date) = query_date(req, "from") {
             photos.filter(date.ge(from_date))
         } else {
             photos
         };
-        let photos = if let Some(to_date) = to_date {
+        let photos = if let Some(to_date) = query_date(req, "to") {
             photos.filter(date.le(to_date))
         } else {
             photos
