@@ -1,4 +1,39 @@
+use super::PhotoLink;
+use super::views_by_date::query_date;
+use diesel::pg::{Pg, PgConnection};
+use diesel::prelude::*;
 use models::Photo;
+use nickel::Request;
+use nickel_diesel::DieselRequestExtensions;
+use schema::photos;
+
+pub fn links_by_time<'a>(
+    req: &mut Request,
+    photos: photos::BoxedQuery<'a, Pg>,
+) -> Vec<PhotoLink> {
+    let c: &PgConnection = &req.db_conn();
+    use schema::photos::dsl::date;
+    let photos = if let Some(from_date) = query_date(req, "from") {
+        photos.filter(date.ge(from_date))
+    } else {
+        photos
+    };
+    let photos = if let Some(to_date) = query_date(req, "to") {
+        photos.filter(date.le(to_date))
+    } else {
+        photos
+    };
+    let photos = photos.order(date.desc().nulls_last()).load(c).unwrap();
+    if let Some(groups) = split_to_groups(&photos) {
+        let path = req.path_without_query().unwrap_or("/");
+        groups
+            .iter()
+            .map(|g| PhotoLink::for_group(g, path))
+            .collect::<Vec<_>>()
+    } else {
+        photos.iter().map(PhotoLink::from).collect::<Vec<_>>()
+    }
+}
 
 pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
     if photos.len() < 42 {
