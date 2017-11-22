@@ -139,6 +139,66 @@ function rpadmin() {
         i.focus();
     }
 
+    function grade_form(event) {
+        event.target.disabled = true;
+        var imgid = details.dataset.imgid;
+        var grade = details.dataset.grade;
+        var f = document.createElement("form");
+        f.className = "admin grade";
+        f.action = "/adm/grade";
+        f.method = "post";
+        var l = document.createElement("label");
+        l.innerHTML = event.target.title;
+        f.appendChild(l);
+        var i = document.createElement("input");
+        i.type="hidden";
+        i.name="image";
+        i.value = imgid;
+        f.appendChild(i);
+        i = document.createElement("input");
+        i.type="range";
+        i.name="grade";
+        if (grade) {
+            i.value=grade;
+        }
+        i.min=0;
+        i.max=100;
+        f.appendChild(i);
+        let s = document.createElement("button");
+        s.innerHTML = "Ok";
+        s.type = "submit";
+        f.appendChild(s);
+        let c = document.createElement("button");
+        c.innerHTML = "&#x1f5d9;";
+        c.className = 'close';
+        c.title = 'close';
+        c.onclick = e => {
+            e.target.closest('form').remove();
+            event.target.disabled = false; // The old event creating this form
+            event.target.focus();
+        };
+        f.appendChild(c);
+        f.addEventListener('keypress', e => {
+            switch(e.code) {
+            case 'Escape':
+                e.target.closest('form').remove();
+                event.target.disabled = false;
+                event.target.focus();
+                break;
+            case 'Enter':
+                f.submit();
+                break;
+            default:
+                return true;
+            };
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        });
+        meta.appendChild(f);
+        i.focus();
+    }
+
     var meta = details.querySelector('.meta');
     if (meta) {
         p = document.createElement("p");
@@ -170,6 +230,14 @@ function rpadmin() {
         r.innerHTML = "\u263a";
         r.title = "Person";
         r.accessKey = "p";
+        p.appendChild(r);
+
+        p.appendChild(document.createTextNode(" "));
+        r = document.createElement("button");
+        r.onclick = e => grade_form(e);
+        r.innerHTML = "\u2606";
+        r.title = "Grade";
+        r.accessKey = "g";
         p.appendChild(r);
         meta.appendChild(p);
     }

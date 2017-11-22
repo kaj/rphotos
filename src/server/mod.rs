@@ -56,9 +56,9 @@ impl PhotoLink {
                 g.first().map(|p| p.id).unwrap_or(0),
             ),
             id: g.iter()
-                .max_by_key(
-                    |p| p.grade.unwrap_or(2) + if p.is_public { 3 } else { 0 },
-                )
+                .max_by_key(|p| {
+                    p.grade.unwrap_or(27) + if p.is_public { 38 } else { 0 }
+                })
                 .map(|p| p.id)
                 .unwrap_or(0),
             lable: Some(format!(
@@ -122,12 +122,13 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.post "/login",         do_login);
     wrap3!(server.get  "/logout",        logout);
     wrap3!(server.get "/",               all_years);
-    use self::admin::{rotate, set_person, set_tag};
+    use self::admin::{rotate, set_grade, set_person, set_tag};
     wrap3!(server.get "/ac/tag",         auto_complete_tag);
     wrap3!(server.get "/ac/person",      auto_complete_person);
+    wrap3!(server.post "/adm/grade",     set_grade);
+    wrap3!(server.post "/adm/person",    set_person);
     wrap3!(server.post "/adm/rotate",    rotate);
     wrap3!(server.post "/adm/tag",       set_tag);
-    wrap3!(server.post "/adm/person",    set_person);
     wrap3!(server.get "/img/{}[-]{}\\.jpg", show_image: id, size);
     wrap3!(server.get "/img/{}",         photo_details: id);
     wrap3!(server.get "/next",           next_image);

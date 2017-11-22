@@ -167,3 +167,45 @@ pub fn slugify(val: &str) -> String {
         })
         .collect()
 }
+
+pub fn set_grade<'mw>(
+    req: &mut Request,
+    res: Response<'mw>,
+) -> MiddlewareResult<'mw> {
+    if !req.authorized_user().is_some() {
+        return res.error(StatusCode::Unauthorized, "permission denied");
+    }
+    if let (Some(image), Some(newgrade)) = try_with!(res, grade_params(req)) {
+        if newgrade >= 0 && newgrade <= 100 {
+            info!("Should set grade of #{} to {}", image, newgrade);
+            use diesel;
+            use schema::photos::dsl::{grade, photos};
+            let c: &PgConnection = &req.db_conn();
+            let q = diesel::update(photos.find(image)).set(grade.eq(newgrade));
+            match q.execute(c) {
+                Ok(1) => {
+                    return res.redirect(format!("/img/{}", image));
+                }
+                Ok(0) => (),
+                Ok(n) => {
+                    warn!("Strange, updated {} images with id {}", n, image);
+                }
+                Err(error) => {
+                    warn!("Failed set grade of image #{}: {}", image, error);
+                }
+            }
+        } else {
+            info!("Grade {} is out of range for image #{}", newgrade, image);
+        }
+    }
+    info!("Missing image and/or angle to rotate or image not found");
+    res.not_found("")
+}
+
+fn grade_params(req: &mut Request) -> QResult<(Option<i32>, Option<i16>)> {
+    let data = req.form_body()?;
+    Ok((
+        data.get("image").and_then(|s| s.parse().ok()),
+        data.get("grade").and_then(|s| s.parse().ok()),
+    ))
+}
