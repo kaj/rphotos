@@ -10,6 +10,7 @@ extern crate env_logger;
 extern crate exif;
 extern crate flate2;
 extern crate hyper;
+extern crate hyper_tls;
 extern crate image;
 extern crate libc;
 #[macro_use]
