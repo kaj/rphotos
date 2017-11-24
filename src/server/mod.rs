@@ -18,7 +18,7 @@ use nickel::{Action, Continue, FormBody, Halt, HttpRouter, MediaType,
              MiddlewareResult, Nickel, NickelError, QueryString, Request,
              Response};
 use nickel::extensions::response::Redirect;
-use nickel::status::StatusCode::NotFound;
+use nickel::status::StatusCode;
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
@@ -160,7 +160,7 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
 
 fn custom_errors(err: &mut NickelError, req: &mut Request) -> Action {
     if let Some(ref mut res) = err.stream {
-        if res.status() == NotFound {
+        if res.status() == StatusCode::NotFound {
             templates::not_found(res, req).unwrap();
             return Halt(());
         }
@@ -643,10 +643,10 @@ fn auto_complete_tag<'mw>(
         let q = tags.select(tag_name)
             .filter(tag_name.ilike(q + "%"))
             .order(tag_name)
-            .limit(15);
+            .limit(10);
         res.send(q.load::<String>(c).unwrap().to_json())
     } else {
-        res.not_found("No such tag")
+        res.error(StatusCode::BadRequest, "Missing 'q' parameter")
     }
 }
 
@@ -661,9 +661,9 @@ fn auto_complete_person<'mw>(
             .select(person_name)
             .filter(person_name.ilike(q + "%"))
             .order(person_name)
-            .limit(15);
+            .limit(10);
         res.send(q.load::<String>(c).unwrap().to_json())
     } else {
-        res.not_found("No such tag")
+        res.error(StatusCode::BadRequest, "Missing 'q' parameter")
     }
 }
