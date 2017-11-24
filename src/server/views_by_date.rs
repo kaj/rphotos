@@ -49,7 +49,7 @@ pub fn all_years<'mw>(
             };
             Group {
                 title: year.map(|y| format!("{}", y))
-                    .unwrap_or("-".to_string()),
+                    .unwrap_or_else(|| "-".to_string()),
                 url: format!("/{}/", year.unwrap_or(0)),
                 count: count,
                 photo: photo.first::<Photo>(c).unwrap(),

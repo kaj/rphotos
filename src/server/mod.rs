@@ -66,11 +66,11 @@ impl PhotoLink {
                 g.last()
                     .and_then(|p| p.date)
                     .map(|d| format!("{}", d.format("%F %T")))
-                    .unwrap_or("-".into()),
+                    .unwrap_or_else(|| "-".to_string()),
                 g.first()
                     .and_then(|p| p.date)
                     .map(|d| format!("{}", d.format("%F %T")))
-                    .unwrap_or("-".into()),
+                    .unwrap_or_else(|| "-".to_string()),
                 g.len(),
             )),
         }
@@ -199,7 +199,7 @@ fn do_login<'mw>(
                 if djangohashers::check_password_tolerant(pw, &hash) {
                     info!("User {} logged in", user);
                     res.set_jwt_user(user);
-                    return res.redirect(next.unwrap_or("/".to_string()));
+                    return res.redirect(next.unwrap_or_else(|| "/".into()));
                 }
                 info!(
                     "Login failed: Password verification failed for {:?}",

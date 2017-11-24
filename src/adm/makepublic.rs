@@ -52,9 +52,9 @@ fn register_photo(
 ) -> Result<Photo, DieselError> {
     use schema::photos::dsl::{is_public, photos};
     let photo = match Photo::create_or_set_basics(db, tpath, None, 0, None)? {
-        Modification::Created(photo) => photo,
-        Modification::Updated(photo) => photo,
-        Modification::Unchanged(photo) => photo,
+        Modification::Created(photo)
+        | Modification::Updated(photo)
+        | Modification::Unchanged(photo) => photo,
     };
     update(photos.find(photo.id))
         .set(is_public.eq(true))

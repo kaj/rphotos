@@ -28,5 +28,5 @@ pub fn photos_dir() -> PathBuf {
 
 #[allow(dead_code)]
 pub fn env_or(name: &str, default: &str) -> String {
-    var(name).unwrap_or(default.to_string())
+    var(name).unwrap_or_else(|_err| default.to_string())
 }

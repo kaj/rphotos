@@ -30,11 +30,10 @@ impl PhotosDir {
             img
         };
         let img = match photo.rotation {
-            _x @ 0...44 => img,
+            _x @ 0...44 | _x @ 315...360 => img,
             _x @ 45...134 => img.rotate90(),
             _x @ 135...224 => img.rotate180(),
             _x @ 225...314 => img.rotate270(),
-            _x @ 315...360 => img,
             x => {
                 warn!("Should rotate photo {} deg, which is unsupported", x);
                 img
