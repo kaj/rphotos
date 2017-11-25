@@ -1,9 +1,4 @@
 (function(d) {
-  let n = document.querySelector('header a[href*="next"]');
-  if (n) {
-    n.title="Next image (by time)";
-    n.accessKey="n";
-  }
   let f = d.querySelector('footer');
   f.insertAdjacentHTML(
     'afterbegin',

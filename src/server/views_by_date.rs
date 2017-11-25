@@ -330,7 +330,7 @@ pub fn query_date(req: &mut Request, name: &str) -> Option<NaiveDateTime> {
         })
 }
 
-fn monthname(n: u32) -> &'static str {
+pub fn monthname(n: u32) -> &'static str {
     match n {
         1 => "january",
         2 => "february",

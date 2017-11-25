@@ -34,7 +34,7 @@ use memcachemiddleware::*;
 
 use pidfiles::handle_pid_file;
 use rustc_serialize::json::ToJson;
-use templates;
+use templates::{self, Html};
 
 use self::nickelext::{FromSlug, MyResponse, far_expires};
 use self::splitlist::*;
@@ -515,14 +515,8 @@ fn photo_details<'mw>(
                                 Link::year(d.year()),
                                 Link::month(d.year(), d.month()),
                                 Link::day(d.year(), d.month(), d.day()),
-                                Link {
-                                    url: format!("/prev?from={}", tphoto.id),
-                                    name: "\u{2190}".into(),
-                                },
-                                Link {
-                                    url: format!("/next?from={}", tphoto.id),
-                                    name: "\u{2192}".into(),
-                                },
+                                Link::prev(tphoto.id),
+                                Link::next(tphoto.id),
                             ]
                         })
                         .unwrap_or_else(|| vec![]),
@@ -608,28 +602,47 @@ fn photo_details<'mw>(
     res.not_found("Photo not found")
 }
 
-
-#[derive(Debug, Clone)]
-pub struct Link {
-    pub url: String,
-    pub name: String,
-}
+pub type Link = Html<String>;
 
 impl Link {
     fn year(year: i32) -> Self {
-        Link { url: format!("/{}/", year), name: format!("{}", year) }
+        Html(format!(
+            "<a href='/{0}/' title='Images from {0}' accessKey='y'>{0}</a>",
+            year,
+        ))
     }
     fn month(year: i32, month: u32) -> Self {
-        Link {
-            url: format!("/{}/{}/", year, month),
-            name: format!("{}", month),
-        }
+        Html(format!(
+            "<a href='/{0}/{1}/' title='Images from {2} {0}' \
+             accessKey='m'>{1}</a>",
+            year,
+            month,
+            monthname(month),
+        ))
     }
     fn day(year: i32, month: u32, day: u32) -> Self {
-        Link {
-            url: format!("/{}/{}/{}", year, month, day),
-            name: format!("{}", day),
-        }
+        Html(format!(
+            "<a href='/{0}/{1}/{2}' title='Images from {2} {3} {0}' \
+             accessKey='d'>{2}</a>",
+            year,
+            month,
+            day,
+            monthname(month),
+        ))
+    }
+    fn prev(from: i32) -> Self {
+        Html(format!(
+            "<a href='/prev?from={}' title='Previous image (by time)'>\
+             \u{2190}</a>",
+            from,
+        ))
+    }
+    fn next(from: i32) -> Self {
+        Html(format!(
+            "<a href='/next?from={}' title='Next image (by time)' \
+             accessKey='n'>\u{2192}</a>",
+            from,
+        ))
     }
 }
 
