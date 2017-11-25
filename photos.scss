@@ -53,6 +53,12 @@ header, footer {
         padding-left: 1em;
         text-align: right;
     }
+    a {
+	text-decoration: none;
+	&:focus, &:hover {
+	    text-decoration: underline;
+	}
+    }
 }
 
 main {

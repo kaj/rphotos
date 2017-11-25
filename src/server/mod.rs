@@ -517,11 +517,11 @@ fn photo_details<'mw>(
                                 Link::day(d.year(), d.month(), d.day()),
                                 Link {
                                     url: format!("/prev?from={}", tphoto.id),
-                                    name: "<".into(),
+                                    name: "\u{2190}".into(),
                                 },
                                 Link {
                                     url: format!("/next?from={}", tphoto.id),
-                                    name: ">".into(),
+                                    name: "\u{2192}".into(),
                                 },
                             ]
                         })
