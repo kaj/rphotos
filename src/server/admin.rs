@@ -9,6 +9,7 @@ use nickel::status::StatusCode;
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
 use server::nickelext::MyResponse;
+use slug::slugify;
 
 pub fn rotate<'mw>(
     req: &mut Request,
@@ -152,20 +153,6 @@ fn person_params(req: &mut Request) -> QResult<(Option<i32>, Option<String>)> {
         data.get("image").and_then(|s| s.parse().ok()),
         data.get("person").map(String::from),
     ))
-}
-
-pub fn slugify(val: &str) -> String {
-    val.chars()
-        .map(|c| match c {
-            c @ '0'...'9' | c @ 'a'...'z' => c,
-            c @ 'A'...'Z' => (c as u8 - b'A' + b'a') as char,
-            'Å' | 'å' | 'Ä' | 'ä' | 'Â' | 'â' => 'a',
-            'Ö' | 'ö' | 'Ô' | 'ô' => 'o',
-            'É' | 'é' | 'Ë' | 'ë' | 'Ê' | 'ê' => 'e',
-            'Ü' | 'ü' | 'Û' | 'û' => 'u',
-            _ => '_',
-        })
-        .collect()
 }
 
 pub fn set_grade<'mw>(
