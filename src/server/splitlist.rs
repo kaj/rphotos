@@ -36,10 +36,12 @@ pub fn links_by_time<'a>(
 }
 
 pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
-    if photos.len() < 42 {
-        return None;
-    }
-    let wanted_groups = (photos.len() as f64).sqrt() as usize;
+    let wanted_groups = match photos.len() {
+        l if l <= 16 => return None,
+        l if l < 81 => 8,
+        l if l >= 225 => 15,
+        l => (l as f64).sqrt() as usize,
+    };
     let mut groups = vec![&photos[..]];
     while groups.len() < wanted_groups {
         let i = find_largest(&groups);
@@ -52,10 +54,13 @@ pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
 
 fn find_largest(groups: &[&[Photo]]) -> usize {
     let mut found = 0;
-    let mut largest = 0;
+    let mut largest = 0.0;
     for (i, g) in groups.iter().enumerate() {
-        if g.len() > largest {
-            largest = g.len();
+        let time = 1 + g.first().map(|p| timestamp(p)).unwrap_or(0)
+            - g.last().map(|p| timestamp(p)).unwrap_or(0);
+        let score = (g.len() as f64).powi(3) * (time as f64);
+        if score > largest {
+            largest = score;
             found = i;
         }
     }
@@ -64,9 +69,10 @@ fn find_largest(groups: &[&[Photo]]) -> usize {
 
 fn split(group: &[Photo]) -> (&[Photo], &[Photo]) {
     let l = group.len();
+    let edge = l / 16;
     let mut pos = 0;
     let mut dist = 0;
-    for i in l / 8..l - l / 8 - 1 {
+    for i in edge..l - 1 - edge {
         let tttt = timestamp(&group[i]) - timestamp(&group[i + 1]);
         if tttt > dist {
             dist = tttt;

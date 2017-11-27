@@ -48,31 +48,36 @@ pub struct PhotoLink {
 
 impl PhotoLink {
     fn for_group(g: &[Photo], base_url: &str) -> PhotoLink {
-        PhotoLink {
-            href: format!(
-                "{}?from={}&to={}",
-                base_url,
-                g.last().map(|p| p.id).unwrap_or(0),
-                g.first().map(|p| p.id).unwrap_or(0),
-            ),
-            id: g.iter()
-                .max_by_key(|p| {
-                    p.grade.unwrap_or(27) + if p.is_public { 38 } else { 0 }
-                })
-                .map(|p| p.id)
-                .unwrap_or(0),
-            lable: Some(format!(
-                "{} - {} ({})",
-                g.last()
-                    .and_then(|p| p.date)
-                    .map(|d| format!("{}", d.format("%F %T")))
-                    .unwrap_or_else(|| "-".to_string()),
-                g.first()
-                    .and_then(|p| p.date)
-                    .map(|d| format!("{}", d.format("%F %T")))
-                    .unwrap_or_else(|| "-".to_string()),
-                g.len(),
-            )),
+        if g.len() == 1 {
+            PhotoLink::from(&g[0])
+        } else {
+            fn imgscore(p: &Photo) -> i16 {
+                p.grade.unwrap_or(27) + if p.is_public { 38 } else { 0 }
+            }
+            PhotoLink {
+                href: format!(
+                    "{}?from={}&to={}",
+                    base_url,
+                    g.last().map(|p| p.id).unwrap_or(0),
+                    g.first().map(|p| p.id).unwrap_or(0),
+                ),
+                id: g.iter()
+                    .max_by_key(|ref p| imgscore(p))
+                    .map(|ref p| p.id)
+                    .unwrap_or(0),
+                lable: Some(format!(
+                    "{} - {} ({})",
+                    g.last()
+                        .and_then(|p| p.date)
+                        .map(|d| format!("{}", d.format("%F %T")))
+                        .unwrap_or_else(|| "-".to_string()),
+                    g.first()
+                        .and_then(|p| p.date)
+                        .map(|d| format!("{}", d.format("%F %T")))
+                        .unwrap_or_else(|| "-".to_string()),
+                    g.len(),
+                )),
+            }
         }
     }
 }
