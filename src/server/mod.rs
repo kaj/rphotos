@@ -4,16 +4,21 @@ mod admin;
 mod splitlist;
 mod views_by_date;
 
+use self::nickelext::{far_expires, FromSlug, MyResponse};
+use self::splitlist::*;
+use self::views_by_date::*;
 use adm::result::Error;
 use chrono::Datelike;
 use clap::ArgMatches;
-use diesel::pg::PgConnection;
 use diesel;
+use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use djangohashers;
+use env::{dburl, env_or, jwt_key, photos_dir};
 use hyper::header::ContentType;
 use image;
-use memcachemiddleware::MemcacheMiddleware;
+use memcachemiddleware::{MemcacheMiddleware, MemcacheRequestExtensions};
+use models::{Person, Photo, Place, Tag};
 use nickel::{Action, Continue, FormBody, Halt, HttpRouter, MediaType,
              MiddlewareResult, Nickel, NickelError, QueryString, Request,
              Response};
@@ -22,23 +27,12 @@ use nickel::status::StatusCode;
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
-use r2d2::NopErrorHandler;
-use models::{Person, Photo, Place, Tag};
-
-use env::{dburl, env_or, jwt_key, photos_dir};
-
-use requestloggermiddleware::RequestLoggerMiddleware;
 use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
-
-use memcachemiddleware::*;
-
 use pidfiles::handle_pid_file;
+use r2d2::NopErrorHandler;
+use requestloggermiddleware::RequestLoggerMiddleware;
 use rustc_serialize::json::ToJson;
 use templates::{self, Html};
-
-use self::nickelext::{FromSlug, MyResponse, far_expires};
-use self::splitlist::*;
-use self::views_by_date::*;
 
 pub struct PhotoLink {
     pub href: String,
@@ -114,9 +108,9 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
     wrap3!(server.get "/static/{}\\.{}", static_file: file, ext);
-    server.utilize(
-        MemcacheMiddleware::new(vec![("tcp://127.0.0.1:11211".into(), 1)]),
-    );
+    server.utilize(MemcacheMiddleware::new(vec![
+        ("tcp://127.0.0.1:11211".into(), 1),
+    ]));
     server.utilize(SessionMiddleware::new(&jwt_key()));
     let dm: DieselMiddleware<PgConnection> =
         DieselMiddleware::new(&dburl(), 5, Box::new(NopErrorHandler)).unwrap();
@@ -161,7 +155,6 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
         .map_err(|e| Error::Other(format!("listen: {}", e)))?;
     Ok(())
 }
-
 
 fn custom_errors(err: &mut NickelError, req: &mut Request) -> Action {
     if let Some(ref mut res) = err.stream {
@@ -445,9 +438,14 @@ fn person_all<'mw>(
     } else {
         use schema::photo_people::dsl as pp;
         use schema::photos::dsl as p;
-        query.filter(id.eq_any(pp::photo_people.select(pp::person_id).filter(
-            pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
-        )))
+        query.filter(
+            id.eq_any(
+                pp::photo_people.select(pp::person_id).filter(
+                    pp::photo_id
+                        .eq_any(p::photos.select(p::id).filter(p::is_public)),
+                ),
+            ),
+        )
     };
     let c: &PgConnection = &req.db_conn();
     res.ok(|o| {

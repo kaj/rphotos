@@ -38,7 +38,6 @@ macro_rules! wrap3 {
     };
 }
 
-
 pub trait FromSlug: Sized {
     fn parse(slug: &str) -> Option<Self>;
 }

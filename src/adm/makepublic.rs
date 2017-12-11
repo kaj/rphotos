@@ -23,9 +23,10 @@ pub fn one(
         }
         Err(DieselError::NotFound) => {
             if !photodir.has_file(&tpath) {
-                return Err(
-                    Error::Other(format!("File {} does not exist", tpath)),
-                );
+                return Err(Error::Other(format!(
+                    "File {} does not exist",
+                    tpath,
+                )));
             }
             let photo = register_photo(db, tpath)?;
             println!("New photo {:?} is public.", photo);

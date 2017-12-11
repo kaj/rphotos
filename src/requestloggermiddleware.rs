@@ -16,7 +16,11 @@ pub struct RequestLogger {
 impl RequestLogger {
     pub fn new(mu: String, status: Arc<Mutex<StatusCode>>) -> RequestLogger {
         debug!("Start handling {}", mu);
-        RequestLogger { start: get_time(), mu: mu, status: status }
+        RequestLogger {
+            start: get_time(),
+            mu: mu,
+            status: status,
+        }
     }
 }
 

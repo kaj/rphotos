@@ -72,7 +72,10 @@ impl PhotosDir {
                     let path = path.to_str().unwrap();
                     cb(&path[bl..], &exif);
                 } else if image::open(&path).is_ok() {
-                    let none = ExifData { mime: "".into(), entries: vec![] };
+                    let none = ExifData {
+                        mime: "".into(),
+                        entries: vec![],
+                    };
                     info!("{:?} seems like a pic with no exif.", path);
                     let path = path.to_str().unwrap();
                     cb(&path[bl..], &none);

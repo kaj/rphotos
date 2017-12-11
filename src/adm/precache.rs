@@ -33,9 +33,7 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
             let data = pd.scale_image(&photo, size, size).map_err(|e| {
                 Error::Other(format!(
                     "Failed to scale #{} ({}): {}",
-                    photo.id,
-                    photo.path,
-                    e,
+                    photo.id, photo.path, e,
                 ))
             })?;
             cache.set(key.as_bytes(), &data, 0, no_expire)?;

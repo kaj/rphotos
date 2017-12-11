@@ -15,7 +15,6 @@ use server::nickelext::MyResponse;
 use templates;
 use time;
 
-
 pub fn all_years<'mw>(
     req: &mut Request,
     res: Response<'mw>,
@@ -38,15 +37,16 @@ pub fn all_years<'mw>(
             let q = Photo::query(req.authorized_user().is_some())
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1);
-            let photo = if let Some(year) = year {
-                q.filter(
-                    date.ge(NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0)),
-                ).filter(date.lt(
+            let photo =
+                if let Some(year) = year {
+                    q.filter(date.ge(
+                        NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0),
+                    )).filter(date.lt(
                         NaiveDate::from_ymd(year + 1, 1, 1).and_hms(0, 0, 0),
                     ))
-            } else {
-                q.filter(date.is_null())
-            };
+                } else {
+                    q.filter(date.is_null())
+                };
             Group {
                 title: year.map(|y| format!("{}", y))
                     .unwrap_or_else(|| "-".to_string()),

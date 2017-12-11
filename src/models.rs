@@ -144,7 +144,6 @@ pub struct Tag {
     pub tag_name: String,
 }
 
-
 #[derive(Debug, Clone, Queryable)]
 pub struct PhotoTag {
     pub id: i32,
@@ -167,7 +166,6 @@ pub struct NewPhotoTag {
     pub photo_id: i32,
     pub tag_id: i32,
 }
-
 
 #[derive(Debug, Clone, Queryable)]
 pub struct Person {

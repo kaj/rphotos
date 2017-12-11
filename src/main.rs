@@ -154,16 +154,17 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
                 for base in bases {
                     findphotos::crawl(&db, &pd, Path::new(&base)).map_err(
                         |e| {
-                            Error::Other(
-                                format!("Failed to crawl {}: {}", base, e),
-                            )
+                            Error::Other(format!(
+                                "Failed to crawl {}: {}",
+                                base, e,
+                            ))
                         },
                     )?;
                 }
             } else {
-                findphotos::crawl(&db, &pd, Path::new("")).map_err(
-                    |e| Error::Other(format!("Failed to crawl: {}", e)),
-                )?;
+                findphotos::crawl(&db, &pd, Path::new("")).map_err(|e| {
+                    Error::Other(format!("Failed to crawl: {}", e))
+                })?;
             }
             Ok(())
         }

@@ -68,9 +68,10 @@ pub fn set_tag<'mw>(
             tags.filter(tag_name.ilike(&tag))
                 .first::<Tag>(c)
                 .or_else(|_| {
-                    diesel::insert(
-                        &NewTag { tag_name: &tag, slug: &slugify(&tag) },
-                    ).into(tags)
+                    diesel::insert(&NewTag {
+                        tag_name: &tag,
+                        slug: &slugify(&tag),
+                    }).into(tags)
                         .get_result::<Tag>(c)
                 })
                 .expect("Find or create tag")
@@ -83,8 +84,10 @@ pub fn set_tag<'mw>(
             info!("Photo #{} already has {:?}", image, tag);
         } else {
             info!("Add {:?} on photo #{}!", tag, image);
-            diesel::insert(&NewPhotoTag { photo_id: image, tag_id: tag.id })
-                .into(photo_tags)
+            diesel::insert(&NewPhotoTag {
+                photo_id: image,
+                tag_id: tag.id,
+            }).into(photo_tags)
                 .execute(c)
                 .expect("Tag a photo");
         }
@@ -135,9 +138,10 @@ pub fn set_person<'mw>(
             info!("Photo #{} already has {:?}", image, person);
         } else {
             info!("Add {:?} on photo #{}!", person, image);
-            diesel::insert(
-                &NewPhotoPerson { photo_id: image, person_id: person.id },
-            ).into(photo_people)
+            diesel::insert(&NewPhotoPerson {
+                photo_id: image,
+                person_id: person.id,
+            }).into(photo_people)
                 .execute(c)
                 .expect("Name person in photo");
         }

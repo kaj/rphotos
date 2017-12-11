@@ -27,9 +27,9 @@ fn read_pid_file(pidfile: &str) -> Result<Option<pid_t>, String> {
             let mut buf = String::new();
             f.read_to_string(&mut buf)
                 .map_err(|e| format!("Could not read {}: {}", pidfile, e))?;
-            Ok(Some(buf.trim()
-                .parse()
-                .map_err(|e| format!("Bad content in {}: {}", pidfile, e))?))
+            Ok(Some(buf.trim().parse().map_err(|e| {
+                format!("Bad content in {}: {}", pidfile, e)
+            })?))
         }
         Err(e) => if e.kind() == ErrorKind::NotFound {
             Ok(None)

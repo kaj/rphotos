@@ -13,13 +13,14 @@ pub fn crawl(
     photos: &PhotosDir,
     only_in: &Path,
 ) -> Result<(), Error> {
-    Ok(photos.find_files(
-        only_in,
-        &|path, exif| match save_photo(db, path, exif) {
-            Ok(()) => debug!("Saved photo {}", path),
-            Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
-        },
-    )?)
+    Ok(photos.find_files(only_in, &|path, exif| match save_photo(
+        db,
+        path,
+        exif,
+    ) {
+        Ok(()) => debug!("Saved photo {}", path),
+        Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
+    })?)
 }
 
 fn save_photo(
@@ -58,11 +59,7 @@ fn save_photo(
             if (clat != (lat * 1e6) as i32) || (clong != (long * 1e6) as i32) {
                 panic!(
                     "TODO Should update position #{} from {} {} to {} {}",
-                    pos,
-                    clat,
-                    clong,
-                    lat,
-                    long,
+                    pos, clat, clong, lat, long,
                 )
             }
         } else {
@@ -84,9 +81,10 @@ fn find_camera(
     db: &PgConnection,
     exif: &ExifData,
 ) -> Result<Option<Camera>, Error> {
-    if let (Some(maketag), Some(modeltag)) =
-        (find_entry(exif, &ExifTag::Make), find_entry(exif, &ExifTag::Model))
-    {
+    if let (Some(maketag), Some(modeltag)) = (
+        find_entry(exif, &ExifTag::Make),
+        find_entry(exif, &ExifTag::Model),
+    ) {
         if let (TagValue::Ascii(make), TagValue::Ascii(model)) =
             (maketag.clone().value, modeltag.clone().value)
         {
@@ -111,9 +109,10 @@ fn find_rotation(exif: &ExifData) -> Result<i16, Error> {
                 x => Err(Error::UnknownOrientation(x)),
             }
         } else {
-            Err(Error::Other(
-                format!("Exif of unexpectedType {:?}", value.value),
-            ))
+            Err(Error::Other(format!(
+                "Exif of unexpectedType {:?}",
+                value.value,
+            )))
         }
     } else {
         info!("Orientation tag missing, default to 0 degrees");
@@ -130,20 +129,21 @@ fn find_date(exif: &ExifData) -> Result<NaiveDateTime, Error> {
             if let TagValue::Ascii(ref str) = value.value {
                 debug!(
                     "Try to parse {:?} (from {:?}) as datetime",
-                    str,
-                    value.tag,
+                    str, value.tag,
                 );
                 Ok(NaiveDateTime::parse_from_str(str, "%Y:%m:%d %T")?)
             } else {
-                Err(Error::Other(
-                    format!("Exif of unexpectedType {:?}", value.value),
-                ))
+                Err(Error::Other(format!(
+                    "Exif of unexpectedType {:?}",
+                    value.value,
+                )))
             }
         })
         .unwrap_or_else(|| {
-            Err(Error::Other(
-                format!("Exif tag missing: {:?}", ExifTag::DateTimeOriginal),
-            ))
+            Err(Error::Other(format!(
+                "Exif tag missing: {:?}",
+                ExifTag::DateTimeOriginal,
+            )))
         })
 }
 
@@ -159,9 +159,8 @@ fn find_position(exif: &ExifData) -> Result<Option<(f64, f64)>, Error> {
 fn rat2float(val: &TagValue) -> Result<f64, Error> {
     if let TagValue::URational(ref v) = *val {
         if v.len() == 3 {
-            return Ok(
-                v[0].value() + (v[1].value() + v[2].value() / 60.0) / 60.0,
-            );
+            return Ok(v[0].value()
+                + (v[1].value() + v[2].value() / 60.0) / 60.0);
         }
     }
     Err(Error::Other(format!("Bad lat/long value: {:?}", val)))

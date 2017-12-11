@@ -8,7 +8,6 @@ use std::error::Error as StdError;
 use std::sync::Arc;
 use typemap::Key;
 
-
 pub struct DieselMiddleware<T>
 where
     T: Connection + Send + Any,
@@ -34,12 +33,16 @@ where
 
         let pool = Pool::new(config, manager)?;
 
-        Ok(DieselMiddleware { pool: Arc::new(pool) })
+        Ok(DieselMiddleware {
+            pool: Arc::new(pool),
+        })
     }
 
     #[allow(dead_code)]
     pub fn from_pool(pool: Pool<ConnectionManager<T>>) -> DieselMiddleware<T> {
-        DieselMiddleware { pool: Arc::new(pool) }
+        DieselMiddleware {
+            pool: Arc::new(pool),
+        }
     }
 }
 
