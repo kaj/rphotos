@@ -15,7 +15,7 @@ pub fn to_dir(dir: &str) -> Result<(), Error> {
         File::create(dir.join(format!("{}.gz", s.name)))
             .map(|f| GzBuilder::new().write(f, Compression::best()))
             .and_then(|mut gz| {
-                gz.write(s.content)?;
+                gz.write_all(s.content)?;
                 gz.finish()
             })?;
 
