@@ -1,6 +1,7 @@
 // Admin functionality for rphotos
 (function (d) {
     var details = d.querySelector('.details');
+    if (details) {
 
     function rotate(event) {
         var imgid = details.dataset.imgid;
@@ -238,5 +239,6 @@
         r.accessKey = "g";
         p.appendChild(r);
         meta.appendChild(p);
+    }
     }
 })(document)
