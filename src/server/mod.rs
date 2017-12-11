@@ -56,8 +56,8 @@ impl PhotoLink {
                     g.first().map(|p| p.id).unwrap_or(0),
                 ),
                 id: g.iter()
-                    .max_by_key(|ref p| imgscore(p))
-                    .map(|ref p| p.id)
+                    .max_by_key(|p| imgscore(p))
+                    .map(|p| p.id)
                     .unwrap_or(0),
                 lable: Some(format!(
                     "{} - {} ({})",
