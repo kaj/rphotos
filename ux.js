@@ -15,4 +15,8 @@
     }
     return true;
   };
+  let i = document.querySelector('.details .item');
+  if (i) {
+    i.addEventListener('click', e => { i.classList.toggle('zoom') });
+  }
 })(document)
