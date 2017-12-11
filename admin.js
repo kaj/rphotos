@@ -29,8 +29,6 @@ function rpadmin() {
         r.send("angle=" + angle + "&image=" + imgid)
     }
 
-    var list;
-
     function tag_form(event, category) {
         event.target.disabled = true;
         var imgid = details.dataset.imgid;
@@ -53,6 +51,8 @@ function rpadmin() {
         i.name = category;
         i.id = category+'name';
         l.htmlFor = i.id;
+        var list = document.createElement("div");
+        list.className = "completions";
         i.addEventListener('keyup', e => {
             let c = e.code;
             if (c == 'ArrowUp' || c == 'ArrowDown' || c == 'Escape' || c == 'Enter') {
@@ -92,8 +92,6 @@ function rpadmin() {
             return false;
 	});
         f.appendChild(i);
-        list = document.createElement("div");
-        list.className = "completions";
         f.appendChild(list);
         f.addEventListener('keypress', e => {
             let t = e.target;
