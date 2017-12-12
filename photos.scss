@@ -77,22 +77,26 @@ header, footer, main {
     img {
 	box-shadow: 0 .2em 1em -.2em #000;
 	vertical-align: middle;
+	max-width: 100%;
     }
 }
 
 div.group {
   display: flex;
   flex-flow: row-reverse wrap;
+  justify-content: space-between;
 
   .item {
     display: flex;
-    flex-basis: 210px;
     flex-flow: column;
     flex-grow: 1;
     justify-content: space-between;
     margin: .2em;
     padding: .2em;
     text-align: center;
+    // The unquote is a hack to avoid collapsing space around the minus.
+    // May not be needed with a future nicer version of rsass?
+    max-width: calc(50vw unquote('-') 1.6em);
 
     h2, p {
       margin: .2em;
@@ -114,9 +118,6 @@ div.details {
 	flex-grow: 4;
 	flex-basis: 30em;
 	text-align: center;
-	img {
-	    max-width: 100%;
-	}
 	&.zoom {
 	    flex-basis: auto;
 	}
