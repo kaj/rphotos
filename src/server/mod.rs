@@ -59,18 +59,36 @@ impl PhotoLink {
                     .max_by_key(|p| imgscore(p))
                     .map(|p| p.id)
                     .unwrap_or(0),
-                lable: Some(format!(
-                    "{} - {} ({})",
-                    g.last()
-                        .and_then(|p| p.date)
-                        .map(|d| format!("{}", d.format("%F %T")))
-                        .unwrap_or_else(|| "-".to_string()),
-                    g.first()
-                        .and_then(|p| p.date)
-                        .map(|d| format!("{}", d.format("%F %T")))
-                        .unwrap_or_else(|| "-".to_string()),
-                    g.len(),
-                )),
+                lable: {
+                    let from = g.last().and_then(|p| p.date);
+                    let to = g.first().and_then(|p| p.date);
+                    if let (Some(from), Some(to)) = (from, to) {
+                        if from.date() == to.date() {
+                            Some(format!(
+                                "{} - {} ({})",
+                                from.format("%F %R"),
+                                to.format("%R"),
+                                g.len(),
+                            ))
+                        } else {
+                            Some(format!(
+                                "{} - {} ({})",
+                                from.format("%F"),
+                                to.format("%F"),
+                                g.len(),
+                            ))
+                        }
+                    } else {
+                        Some(format!(
+                            "{} - {} ({})",
+                            from.map(|d| format!("{}", d.format("%F %R")))
+                                .unwrap_or_else(|| "-".to_string()),
+                            to.map(|d| format!("{}", d.format("%F %R")))
+                                .unwrap_or_else(|| "-".to_string()),
+                            g.len(),
+                        ))
+                    }
+                },
             }
         }
     }
