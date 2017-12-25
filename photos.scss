@@ -161,14 +161,15 @@ form {
 }
 
 #help {
-    position: fixed;
-    bottom: 2em;
-    left: 2em;
-    border: solid 1px black;
-    padding: 1ex 1em;
     background: #fafafa;
+    border: solid 1px black;
+    bottom: 2em;
     box-shadow: .3em .2em 1em;
     display: none;
+    left: 2em;
+    padding: 1ex 1em;
+    position: fixed;
+    z-index: 1111;
 
     &:target {
 	display: block;

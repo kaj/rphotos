@@ -3,7 +3,7 @@
   f.insertAdjacentHTML(
     'afterbegin',
     '<p><a href="#help" title="Help" accesskey="?">?</a></p>')
-  d.querySelector('[href="#help"]').onclick = e => {
+  f.querySelector('[href="#help"]').addEventListener('click', e => {
     if (d.getElementById('help') == null) {
       f.insertAdjacentHTML(
         'beforebegin',
@@ -14,8 +14,8 @@
         '</div>');
     }
     return true;
-  };
-  let i = document.querySelector('.details .item');
+  });
+  let i = d.querySelector('.details .item');
   if (i) {
     i.addEventListener('click', e => { i.classList.toggle('zoom') });
   }
