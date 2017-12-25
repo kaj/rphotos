@@ -234,7 +234,7 @@ fn do_login<'mw>(
 fn sanitize_next(next: Option<&str>) -> Option<&str> {
     if let Some(next) = next {
         use regex::Regex;
-        let re = Regex::new(r"^/([a-z0-9.-]+/?)*$").unwrap();
+        let re = Regex::new(r"^/([a-z0-9._-]+/?)*$").unwrap();
         if re.is_match(next) {
             return Some(next);
         }
