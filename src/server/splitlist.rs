@@ -42,7 +42,7 @@ pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
         l if l >= 225 => 15,
         l => (l as f64).sqrt() as usize,
     };
-    let mut groups = vec![&photos[..]];
+    let mut groups = vec![photos];
     while groups.len() < wanted_groups {
         let i = find_largest(&groups);
         let (a, b) = split(groups[i]);
@@ -71,11 +71,11 @@ fn split(group: &[Photo]) -> (&[Photo], &[Photo]) {
     let l = group.len();
     let edge = l / 16;
     let mut pos = 0;
-    let mut dist = 0;
+    let mut largest = 0;
     for i in edge..l - 1 - edge {
-        let tttt = timestamp(&group[i]) - timestamp(&group[i + 1]);
-        if tttt > dist {
-            dist = tttt;
+        let interval = timestamp(&group[i]) - timestamp(&group[i + 1]);
+        if interval > largest {
+            largest = interval;
             pos = i + 1;
         }
     }
