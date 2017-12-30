@@ -22,11 +22,11 @@
     <p>Places: @for p in places{<a href="/place/@p.slug">@p.place_name</a>, }</p>}
     @if !tags.is_empty() {
     <p>Tags: @for t in tags{<a href="/tag/@t.slug">@t.tag_name</a>, }</p>}
-    @if let &Some(ref pos) = position {<p>Position: @pos.x @pos.y</p>}
-    @if let &Some(ref a) = attribution {<p>Av: @a</p>}
-    @if let &Some(ref c) = camera{<p>Camera: @c.model (@c.manufacturer)</p>}
+    @if let Some(ref pos) = *position {<p>Position: @pos.x @pos.y</p>}
+    @if let Some(ref a) = *attribution {<p>Av: @a</p>}
+    @if let Some(ref c) = *camera{<p>Camera: @c.model (@c.manufacturer)</p>}
 
-    @if let &Some(ref pos) = position {
+    @if let Some(ref pos) = *position {
     <div id="map"></div>
     <script language="javascript" type="text/javascript">
     function initmap() @{
