@@ -1,9 +1,6 @@
 max_width = 79
 
-chain_one_line_max = 78
 reorder_imported_names = true
 reorder_imports = true
 report_fixme = "Always"
-struct_lit_width = 76
-fn_call_width = 72
 write_mode = "Diff"
