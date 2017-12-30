@@ -10,7 +10,6 @@ use self::views_by_date::*;
 use adm::result::Error;
 use chrono::Datelike;
 use clap::ArgMatches;
-use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use djangohashers;
@@ -110,12 +109,6 @@ pub struct Group {
     pub url: String,
     pub count: i64,
     pub photo: Photo,
-}
-
-#[derive(Debug, Clone)]
-pub struct Coord {
-    pub x: f64,
-    pub y: f64,
 }
 
 pub fn run(args: &ArgMatches) -> Result<(), Error> {
@@ -540,82 +533,14 @@ fn photo_details<'mw>(
                                 Link::next(tphoto.id),
                             ]
                         })
-                        .unwrap_or_else(|| vec![]),
-                    &{
-                        use schema::people::dsl::{id, people};
-                        use schema::photo_people::dsl::{person_id, photo_id,
-                                                        photo_people};
-                        people
-                            .filter(
-                                id.eq_any(
-                                    photo_people
-                                        .select(person_id)
-                                        .filter(photo_id.eq(tphoto.id)),
-                                ),
-                            )
-                            .load(c)
-                            .unwrap()
-                    },
-                    &{
-                        use schema::photo_places::dsl::{photo_id,
-                                                        photo_places,
-                                                        place_id};
-                        use schema::places::dsl::{id, places};
-                        places
-                            .filter(
-                                id.eq_any(
-                                    photo_places
-                                        .select(place_id)
-                                        .filter(photo_id.eq(tphoto.id)),
-                                ),
-                            )
-                            .load(c)
-                            .unwrap()
-                    },
-                    &{
-                        use schema::photo_tags::dsl::{photo_id, photo_tags,
-                                                      tag_id};
-                        use schema::tags::dsl::{id, tags};
-                        tags.filter(
-                            id.eq_any(
-                                photo_tags
-                                    .select(tag_id)
-                                    .filter(photo_id.eq(tphoto.id)),
-                            ),
-                        ).load(c)
-                            .unwrap()
-                    },
-                    {
-                        use schema::positions::dsl::*;
-                        match positions
-                            .filter(photo_id.eq(tphoto.id))
-                            .select((latitude, longitude))
-                            .first::<(i32, i32)>(c)
-                        {
-                            Ok((tlat, tlong)) => Some(Coord {
-                                x: f64::from(tlat) / 1e6,
-                                y: f64::from(tlong) / 1e6,
-                            }),
-                            Err(diesel::NotFound) => None,
-                            Err(err) => {
-                                error!("Failed to read position: {}", err);
-                                None
-                            }
-                        }
-                    },
-                    {
-                        use schema::attributions::dsl::*;
-                        tphoto.attribution_id.map(|i| {
-                            attributions.find(i).select(name).first(c).unwrap()
-                        })
-                    },
-                    {
-                        use schema::cameras::dsl::*;
-                        tphoto
-                            .camera_id
-                            .map(|i| cameras.find(i).first(c).unwrap())
-                    },
-                    tphoto,
+                        .unwrap_or_default(),
+                    &tphoto.load_people(c).unwrap(),
+                    &tphoto.load_places(c).unwrap(),
+                    &tphoto.load_tags(c).unwrap(),
+                    &tphoto.load_position(c),
+                    &tphoto.load_attribution(c),
+                    &tphoto.load_camera(c),
+                    &tphoto,
                 )
             });
         }

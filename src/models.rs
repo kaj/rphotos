@@ -1,5 +1,7 @@
 use chrono::naive::NaiveDateTime;
+use diesel;
 use diesel::pg::PgConnection;
+use diesel::prelude::*;
 use diesel::result::Error as DieselError;
 use server::SizeTag;
 
@@ -134,6 +136,70 @@ impl Photo {
                 diesel::insert(&pic).into(photos).get_result::<Photo>(db)?;
             Ok(Modification::Created(pic))
         }
+    }
+
+    pub fn load_people(
+        &self,
+        db: &PgConnection,
+    ) -> Result<Vec<Person>, DieselError> {
+        use schema::people::dsl::{id, people};
+        use schema::photo_people::dsl::{person_id, photo_id, photo_people};
+        people
+            .filter(id.eq_any(
+                photo_people.select(person_id).filter(photo_id.eq(self.id)),
+            ))
+            .load(db)
+    }
+
+    pub fn load_places(
+        &self,
+        db: &PgConnection,
+    ) -> Result<Vec<Place>, DieselError> {
+        use schema::photo_places::dsl::{photo_id, photo_places, place_id};
+        use schema::places::dsl::{id, places};
+        places
+            .filter(id.eq_any(
+                photo_places.select(place_id).filter(photo_id.eq(self.id)),
+            ))
+            .load(db)
+    }
+    pub fn load_tags(
+        &self,
+        db: &PgConnection,
+    ) -> Result<Vec<Tag>, DieselError> {
+        use schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
+        use schema::tags::dsl::{id, tags};
+        tags.filter(id.eq_any(
+            photo_tags.select(tag_id).filter(photo_id.eq(self.id)),
+        )).load(db)
+    }
+
+    pub fn load_position(&self, db: &PgConnection) -> Option<Coord> {
+        use schema::positions::dsl::*;
+        match positions
+            .filter(photo_id.eq(self.id))
+            .select((latitude, longitude))
+            .first::<(i32, i32)>(db)
+        {
+            Ok((tlat, tlong)) => Some(Coord {
+                x: f64::from(tlat) / 1e6,
+                y: f64::from(tlong) / 1e6,
+            }),
+            Err(diesel::NotFound) => None,
+            Err(err) => {
+                error!("Failed to read position: {}", err);
+                None
+            }
+        }
+    }
+    pub fn load_attribution(&self, db: &PgConnection) -> Option<String> {
+        use schema::attributions::dsl::*;
+        self.attribution_id
+            .and_then(|i| attributions.find(i).select(name).first(db).ok())
+    }
+    pub fn load_camera(&self, db: &PgConnection) -> Option<Camera> {
+        use schema::cameras::dsl::cameras;
+        self.camera_id.and_then(|i| cameras.find(i).first(db).ok())
     }
 }
 
@@ -282,4 +348,10 @@ impl Camera {
             diesel::insert(&camera).into(cameras).get_result(db)
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Coord {
+    pub x: f64,
+    pub y: f64,
 }
