@@ -126,14 +126,14 @@ impl Photo {
         )? {
             Ok(result)
         } else {
-            let pic = NewPhoto {
-                path: file_path,
-                date: exifdate,
-                rotation: exifrotation,
-                camera_id: camera.map(|c| c.id),
-            };
-            let pic =
-                diesel::insert_into(photos).values(&pic).get_result::<Photo>(db)?;
+            let pic = diesel::insert_into(photos)
+                .values(&NewPhoto {
+                    path: file_path,
+                    date: exifdate,
+                    rotation: exifrotation,
+                    camera_id: camera.map(|c| c.id),
+                })
+                .get_result::<Photo>(db)?;
             Ok(Modification::Created(pic))
         }
     }
