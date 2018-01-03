@@ -133,7 +133,7 @@ impl Photo {
                 camera_id: camera.map(|c| c.id),
             };
             let pic =
-                diesel::insert(&pic).into(photos).get_result::<Photo>(db)?;
+                diesel::insert_into(photos).values(&pic).get_result::<Photo>(db)?;
             Ok(Modification::Created(pic))
         }
     }
@@ -345,7 +345,7 @@ impl Camera {
                 manufacturer: make.to_string(),
                 model: modl.to_string(),
             };
-            diesel::insert(&camera).into(cameras).get_result(db)
+            diesel::insert_into(cameras).values(&camera).get_result(db)
         }
     }
 }

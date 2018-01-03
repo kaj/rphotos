@@ -68,10 +68,11 @@ pub fn set_tag<'mw>(
             tags.filter(tag_name.ilike(&tag))
                 .first::<Tag>(c)
                 .or_else(|_| {
-                    diesel::insert(&NewTag {
-                        tag_name: &tag,
-                        slug: &slugify(&tag),
-                    }).into(tags)
+                    diesel::insert_into(tags)
+                        .values(&NewTag {
+                            tag_name: &tag,
+                            slug: &slugify(&tag),
+                        })
                         .get_result::<Tag>(c)
                 })
                 .expect("Find or create tag")
@@ -84,10 +85,11 @@ pub fn set_tag<'mw>(
             info!("Photo #{} already has {:?}", image, tag);
         } else {
             info!("Add {:?} on photo #{}!", tag, image);
-            diesel::insert(&NewPhotoTag {
-                photo_id: image,
-                tag_id: tag.id,
-            }).into(photo_tags)
+            diesel::insert_into(photo_tags)
+                .values(&NewPhotoTag {
+                    photo_id: image,
+                    tag_id: tag.id,
+                })
                 .execute(c)
                 .expect("Tag a photo");
         }
@@ -122,10 +124,11 @@ pub fn set_person<'mw>(
                 .filter(person_name.ilike(&name))
                 .first::<Person>(c)
                 .or_else(|_| {
-                    diesel::insert(&NewPerson {
-                        person_name: &name,
-                        slug: &slugify(&name),
-                    }).into(people)
+                    diesel::insert_into(people)
+                        .values(&NewPerson {
+                            person_name: &name,
+                            slug: &slugify(&name),
+                        })
                         .get_result::<Person>(c)
                 })
                 .expect("Find or create tag")
@@ -138,10 +141,11 @@ pub fn set_person<'mw>(
             info!("Photo #{} already has {:?}", image, person);
         } else {
             info!("Add {:?} on photo #{}!", person, image);
-            diesel::insert(&NewPhotoPerson {
-                photo_id: image,
-                person_id: person.id,
-            }).into(photo_people)
+            diesel::insert_into(photo_people)
+                .values(&NewPhotoPerson {
+                    photo_id: image,
+                    person_id: person.id,
+                })
                 .execute(c)
                 .expect("Name person in photo");
         }

@@ -1,5 +1,5 @@
 use adm::result::Error;
-use diesel::{insert, update};
+use diesel::{insert_into, update};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use djangohashers::make_password;
@@ -30,10 +30,11 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
         }
         0 => {
             use models::NewUser;
-            insert(&NewUser {
-                username: uname,
-                password: &hashword,
-            }).into(users)
+            insert_into(users)
+                .values(&NewUser {
+                    username: uname,
+                    password: &hashword,
+                })
                 .execute(db)?;
             println!("Created user {:?} with password {:?}", uname, pword);
         }

@@ -1,6 +1,6 @@
 use adm::result::Error;
 use chrono::naive::NaiveDateTime;
-use diesel::insert;
+use diesel::insert_into;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use models::{Camera, Modification, Photo};
@@ -65,11 +65,12 @@ fn save_photo(
         } else {
             info!("Position for {} is {} {}", file_path, lat, long);
             use models::NewPosition;
-            insert(&NewPosition {
-                photo_id: photo.id,
-                latitude: (lat * 1e6) as i32,
-                longitude: (long * 1e6) as i32,
-            }).into(positions)
+            insert_into(positions)
+                .values(&NewPosition {
+                    photo_id: photo.id,
+                    latitude: (lat * 1e6) as i32,
+                    longitude: (long * 1e6) as i32,
+                })
                 .execute(db)
                 .expect("Insert image position");
         }

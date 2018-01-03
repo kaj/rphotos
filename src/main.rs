@@ -5,7 +5,7 @@ extern crate clap;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
-extern crate diesel_codegen;
+extern crate diesel_infer_schema;
 extern crate djangohashers;
 extern crate dotenv;
 extern crate env_logger;
