@@ -160,8 +160,8 @@ fn find_position(exif: &ExifData) -> Result<Option<(f64, f64)>, Error> {
 fn rat2float(val: &TagValue) -> Result<f64, Error> {
     if let TagValue::URational(ref v) = *val {
         if v.len() == 3 {
-            return Ok(v[0].value()
-                + (v[1].value() + v[2].value() / 60.0) / 60.0);
+            let (v0, v1, v2) = (v[0].value(), v[1].value(), v[2].value());
+            return Ok(v0 + (v1 + v2 / 60.0) / 60.0);
         }
     }
     Err(Error::Other(format!("Bad lat/long value: {:?}", val)))
