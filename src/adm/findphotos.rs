@@ -103,7 +103,7 @@ fn find_rotation(exif: &ExifData) -> Result<i16, Error> {
             let n = v[0];
             debug!("Raw orientation is {}", n);
             match n {
-                1 => Ok(0),
+                1 | 0 => Ok(0),
                 3 => Ok(180),
                 6 => Ok(90),
                 8 => Ok(270),
