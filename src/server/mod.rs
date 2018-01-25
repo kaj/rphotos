@@ -496,7 +496,7 @@ fn random_image<'mw>(
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
     use diesel::expression::dsl::sql;
-    use diesel::types::Integer;
+    use diesel::sql_types::Integer;
     use schema::photos::dsl::id;
     let c: &PgConnection = &req.db_conn();
     let photo: i32 = Photo::query(req.authorized_user().is_some())

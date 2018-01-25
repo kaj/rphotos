@@ -3,7 +3,7 @@ use adm::result::Error;
 use diesel::expression::dsl::{count_star, sql};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::types::{BigInt, Double, Nullable, Text, Timestamp};
+use diesel::sql_types::{BigInt, Double, Nullable, Text, Timestamp};
 use schema::people::dsl::people;
 use schema::photos::dsl::photos;
 use schema::places::dsl::places;
