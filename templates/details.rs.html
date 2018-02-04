@@ -6,7 +6,7 @@
 
 @(req: &Request, lpath: &[Link], people: &[Person], places: &[Place], tags: &[Tag], position: &Option<Coord>, attribution: &Option<String>, camera: &Option<Camera>, photo: &Photo)
 @:page_base(req, "Photo details", lpath, {
-  <div class="details" data-imgid="@photo.id"@if let Some(g) = photo.grade { data-grade="@g"}>
+  <div class="details" data-imgid="@photo.id"@if let Some(g) = photo.grade { data-grade="@g"}@if let Some(ref p) = *position { data-position="[@p.x, @p.y]"}>
     <div class="item"><img src="/img/@photo.id-m.jpg"></div>
     <div class="meta">
     @if req.authorized_user().is_some() {
@@ -26,27 +26,6 @@
     @if let Some(ref a) = *attribution {<p>Av: @a</p>}
     @if let Some(ref c) = *camera{<p>Camera: @c.model (@c.manufacturer)</p>}
 
-    @if let Some(ref pos) = *position {
-    <div id="map"></div>
-    <script language="javascript" type="text/javascript">
-    function initmap() @{
-    var csslink = document.createElement('link');
-    csslink.rel = 'stylesheet';
-    csslink.href = 'https://rasmus.krats.se/static/leaflet077c/leaflet.css';
-    document.getElementsByTagName('head')[0].append(csslink);
-    var pos = [@pos.x, @pos.y];
-    var map = document.getElementById('map');
-    map.style.height = 3 * map.clientWidth / 4 + "px";
-    var map = L.map('map').setView(pos, 16);
-    L.tileLayer('//@{s@}.tile.openstreetmap.org/@{z@}/@{x@}/@{y@}.png', @{
-    attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-    @}).addTo(map);
-    L.marker(pos).addTo(map);
-    @}
-    </script>
-    <script language="javascript" src="https://rasmus.krats.se/static/leaflet077c/leaflet.js" type="text/javascript" async onload="initmap()">
-    </script>
-    }
     </div>
   </div>
 })
