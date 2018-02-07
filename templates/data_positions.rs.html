@@ -1,0 +1,5 @@
+@use models::Coord;
+
+@(coords: &[Coord])
+@if let Some((c, rest)) = coords.split_first()
+{ data-positions="[[@c.x,@c.y]@for c in rest {,[@c.x,@c.y]}]"}

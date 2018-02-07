@@ -190,6 +190,7 @@ pub fn all_null_date<'mw>(
                 .iter()
                 .map(PhotoLink::from)
                 .collect::<Vec<_>>(),
+            &[], // TODO: positions.
         )
     })
 }
@@ -207,7 +208,7 @@ pub fn all_for_day<'mw>(
     let photos = Photo::query(req.authorized_user().is_some())
         .filter(date.ge(thedate))
         .filter(date.lt(thedate + ChDuration::days(1)));
-    let links = links_by_time(req, photos);
+    let (links, coords) = links_by_time(req, photos);
 
     if links.is_empty() {
         res.not_found("No such image")
@@ -219,6 +220,7 @@ pub fn all_for_day<'mw>(
                 &format!("Photos from {} {} {}", day, monthname(month), year),
                 &[Link::year(year), Link::month(year, month)],
                 &links,
+                &coords,
             )
         })
     }

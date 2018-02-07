@@ -373,8 +373,8 @@ fn tag_one<'mw>(
         let photos = Photo::query(req.authorized_user().is_some()).filter(
             id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
         );
-        let links = links_by_time(req, photos);
-        return res.ok(|o| templates::tag(o, req, &links, &tag));
+        let (links, coords) = links_by_time(req, photos);
+        return res.ok(|o| templates::tag(o, req, &links, &coords, &tag));
     }
     res.not_found("Not a tag")
 }
@@ -432,8 +432,8 @@ fn place_one<'mw>(
             Photo::query(req.authorized_user().is_some()).filter(id.eq_any(
                 photo_places.select(photo_id).filter(place_id.eq(place.id)),
             ));
-        let links = links_by_time(req, photos);
-        return res.ok(|o| templates::place(o, req, &links, &place));
+        let (links, coord) = links_by_time(req, photos);
+        return res.ok(|o| templates::place(o, req, &links, &coord, &place));
     }
     res.not_found("Not a place")
 }
@@ -485,8 +485,8 @@ fn person_one<'mw>(
                     .filter(person_id.eq(person.id)),
             ),
         );
-        let links = links_by_time(req, photos);
-        return res.ok(|o| templates::person(o, req, &links, &person));
+        let (links, coords) = links_by_time(req, photos);
+        return res.ok(|o| templates::person(o, req, &links, &coords, &person));
     }
     res.not_found("Not a person")
 }

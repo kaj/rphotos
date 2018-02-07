@@ -1,11 +1,11 @@
 @use nickel::Request;
-@use models::{Place};
+@use models::{Coord, Place};
 @use server::PhotoLink;
-@use templates::{page_base, photo_link};
+@use templates::{data_positions, page_base, photo_link};
 
-@(req: &Request, photos: &[PhotoLink], place: &Place)
+@(req: &Request, photos: &[PhotoLink], coords: &[Coord], place: &Place)
 @:page_base(req, &format!("Photos from {}", place.place_name), &[], {
-  <div class="group">
+  <div class="group"@:data_positions(coords)>
     @for p in photos {@:photo_link(p)}
   </div>
 })

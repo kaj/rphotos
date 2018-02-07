@@ -2,7 +2,7 @@ use super::PhotoLink;
 use super::views_by_date::query_date;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
-use models::Photo;
+use models::{Coord, Photo};
 use nickel::Request;
 use nickel_diesel::DieselRequestExtensions;
 use schema::photos;
@@ -10,7 +10,7 @@ use schema::photos;
 pub fn links_by_time<'a>(
     req: &mut Request,
     photos: photos::BoxedQuery<'a, Pg>,
-) -> Vec<PhotoLink> {
+) -> (Vec<PhotoLink>, Vec<Coord>) {
     let c: &PgConnection = &req.db_conn();
     use schema::photos::dsl::date;
     let photos = if let Some(from_date) = query_date(req, "from") {
@@ -24,15 +24,33 @@ pub fn links_by_time<'a>(
         photos
     };
     let photos = photos.order(date.desc().nulls_last()).load(c).unwrap();
-    if let Some(groups) = split_to_groups(&photos) {
-        let path = req.path_without_query().unwrap_or("/");
-        groups
-            .iter()
-            .map(|g| PhotoLink::for_group(g, path))
-            .collect::<Vec<_>>()
-    } else {
-        photos.iter().map(PhotoLink::from).collect::<Vec<_>>()
-    }
+    (
+        if let Some(groups) = split_to_groups(&photos) {
+            let path = req.path_without_query().unwrap_or("/");
+            groups
+                .iter()
+                .map(|g| PhotoLink::for_group(g, path))
+                .collect()
+        } else {
+            photos.iter().map(PhotoLink::from).collect()
+        },
+        get_positions(&photos, c),
+    )
+}
+
+pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<Coord> {
+    use schema::positions::dsl::*;
+    positions
+        .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))
+        .select((latitude, longitude))
+        .load(c)
+        .unwrap_or_default() // TODO Log if there is a problem?
+        .into_iter()
+        .map(|(lat, long): (i32, i32)| Coord {
+            x: f64::from(lat) / 1e6,
+            y: f64::from(long) / 1e6,
+        })
+        .collect()
 }
 
 pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
