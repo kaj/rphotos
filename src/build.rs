@@ -12,6 +12,8 @@ fn main() {
     statics.add_sass_file(&s_dir.join("photos.scss")).unwrap();
     statics.add_file(&s_dir.join("admin.js")).unwrap();
     statics.add_file(&s_dir.join("ux.js")).unwrap();
-    statics.add_files_as(&s_dir.join("leaflet-1.3.1"), "l131").unwrap();
+    statics
+        .add_files_as(&s_dir.join("leaflet-1.3.1"), "l131")
+        .unwrap();
     compile_templates(&base_dir.join("templates"), &out_dir).unwrap();
 }
