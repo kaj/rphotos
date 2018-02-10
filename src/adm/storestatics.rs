@@ -12,16 +12,35 @@ pub fn to_dir(dir: &str) -> Result<(), Error> {
     for s in STATICS {
         File::create(dir.join(s.name)).and_then(|mut f| f.write(s.content))?;
 
-        File::create(dir.join(format!("{}.gz", s.name)))
-            .map(|f| GzBuilder::new().write(f, Compression::best()))
-            .and_then(|mut gz| {
-                gz.write_all(s.content)?;
-                gz.finish()
-            })?;
-
-        File::create(dir.join(format!("{}.br", s.name)))
-            .map(|f| BrotliEncoder::new(f, 11))
-            .and_then(|mut f| f.write(s.content))?;
+        let gz = gzipped(s.content)?;
+        if gz.len() < s.content.len() {
+            File::create(dir.join(format!("{}.gz", s.name)))
+                .and_then(|mut f| f.write(&gz))?;
+        }
+        let br = brcompressed(s.content)?;
+        if br.len() < s.content.len() {
+            File::create(dir.join(format!("{}.br", s.name)))
+                .and_then(|mut f| f.write(&br))?;
+        }
     }
     Ok(())
+}
+
+fn gzipped(data: &[u8]) -> Result<Vec<u8>, Error> {
+    let mut buf = Vec::new();
+    {
+        let mut gz = GzBuilder::new().write(&mut buf, Compression::best());
+        gz.write_all(data)?;
+        gz.finish()?;
+    }
+    Ok(buf)
+}
+
+fn brcompressed(data: &[u8]) -> Result<Vec<u8>, Error> {
+    let mut buf = Vec::new();
+    {
+        let mut br = BrotliEncoder::new(&mut buf, 11);
+        br.write_all(data)?;
+    }
+    Ok(buf)
 }
