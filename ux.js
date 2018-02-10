@@ -27,13 +27,13 @@
     map.style.height = 3 * map.clientWidth / 4 + "px";
     var slink = d.createElement('script');
     slink.type = 'text/javascript';
-    slink.src = 'https://rasmus.krats.se/static/leaflet077c/leaflet.js';
+    slink.src = '/static/l131/leaflet.js';
     slink.async = 'async';
     slink.onload = cb;
     h.append(slink);
     var csslink = d.createElement('link');
     csslink.rel = 'stylesheet';
-    csslink.href = 'https://rasmus.krats.se/static/leaflet077c/leaflet.css';
+    csslink.href = '/static/l131/leaflet.css';
     h.append(csslink);
   }
   let details = d.querySelector('.details');

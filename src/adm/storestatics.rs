@@ -8,8 +8,11 @@ use templates::statics::STATICS;
 
 pub fn to_dir(dir: &str) -> Result<(), Error> {
     let dir: &Path = dir.as_ref();
-    create_dir_all(&dir)?;
     for s in STATICS {
+        // s.name may contain directory components.
+        if let Some(parent) = dir.join(s.name).parent() {
+            create_dir_all(parent)?;
+        }
         File::create(dir.join(s.name)).and_then(|mut f| f.write(s.content))?;
 
         let gz = gzipped(s.content)?;
