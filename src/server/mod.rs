@@ -118,7 +118,7 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
 
     let mut server = Nickel::new();
     server.utilize(RequestLoggerMiddleware);
-    wrap3!(server.get "/static/{}\\.{}", static_file: file, ext);
+    wrap3!(server.get "/static/",.. static_file);
     server.utilize(MemcacheMiddleware::new(vec![
         ("tcp://127.0.0.1:11211".into(), 1),
     ]));
@@ -405,13 +405,12 @@ fn place_all<'mw>(
 }
 
 fn static_file<'mw>(
-    _req: &mut Request,
+    _req: &Request,
     mut res: Response<'mw>,
-    name: String,
-    ext: String,
+    path: &str,
 ) -> MiddlewareResult<'mw> {
     use templates::statics::StaticFile;
-    if let Some(s) = StaticFile::get(&format!("{}.{}", name, ext)) {
+    if let Some(s) = StaticFile::get(path) {
         res.set((ContentType(s.mime()), far_expires()));
         return res.send(s.content);
     }

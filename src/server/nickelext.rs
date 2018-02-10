@@ -29,6 +29,24 @@ macro_rules! wrap3 {
                stringify!($handler));
          $server.$method(matcher, wrapped);
      }};
+    ($server:ident.$method:ident $url:expr,.. $handler:ident) => {{
+        #[allow(unused_parens)]
+        fn wrapped<'mw>(req: &mut Request,
+                        res: Response<'mw>)
+                        -> MiddlewareResult<'mw> {
+            if let &Some(path) = &req.path_without_query() {
+                $handler(req, res, &path[$url.len()..])
+            } else {
+                res.not_found("Path missing")
+            }
+        }
+        let matcher = format!("{}**", $url);
+        info!("Route {} {} to {}",
+              stringify!($method),
+              matcher,
+              stringify!($handler));
+        $server.$method(matcher, wrapped);
+    }};
     ($server:ident.$method:ident $url:expr, $handler:ident) => {
         info!("Route {} {} to {}",
               stringify!($method),
