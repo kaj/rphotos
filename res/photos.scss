@@ -141,6 +141,7 @@ ul.alltags, ul.allpeople, ul.allplaces {
     border: $border;
     height: 8em;
     margin: 1ex auto;
+    max-height: 60vh;
 }
 
 form {
