@@ -40,7 +40,7 @@
   let pos = details && details.dataset.position
   if (pos) {
     function initmap(pos) {
-      var map = L.map('map').setView(pos, 16);
+      var map = L.map('map', {'scrollWheelZoom': false}).setView(pos, 16);
       L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 	attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
@@ -52,7 +52,7 @@
   let poss = (details && details.dataset.positions) || (group && group.dataset.positions);
   if (poss) {
     function initmap(pos) {
-      var map = L.map('map');
+      var map = L.map('map', {'scrollWheelZoom': false});
       map.fitBounds(L.polyline(pos).getBounds())
       L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 	attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
