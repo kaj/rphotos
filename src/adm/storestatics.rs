@@ -15,13 +15,14 @@ pub fn to_dir(dir: &str) -> Result<(), Error> {
         }
         File::create(dir.join(s.name)).and_then(|mut f| f.write(s.content))?;
 
+        let limit = s.content.len() - 10; // Compensate a few bytes overhead
         let gz = gzipped(s.content)?;
-        if gz.len() < s.content.len() {
+        if gz.len() < limit {
             File::create(dir.join(format!("{}.gz", s.name)))
                 .and_then(|mut f| f.write(&gz))?;
         }
         let br = brcompressed(s.content)?;
-        if br.len() < s.content.len() {
+        if br.len() < limit {
             File::create(dir.join(format!("{}.br", s.name)))
                 .and_then(|mut f| f.write(&br))?;
         }
