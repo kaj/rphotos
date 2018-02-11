@@ -15,25 +15,38 @@
     }
     return true;
   });
+  var map;
+  function resize_map() {
+    var me = d.getElementById('map');
+    if (me) {
+      me.style.height = 4 * me.clientWidth / 5 + "px";
+    }
+    if (map) {
+      map.invalidateSize(false);
+    }
+  }
+  window.addEventListener('resize', resize_map);
   let i = d.querySelector('.details .item');
   if (i) {
-    i.addEventListener('click', e => { i.classList.toggle('zoom') });
+    i.addEventListener('click', e => {
+      i.classList.toggle('zoom');
+      resize_map();
+    });
   }
   function prepare_map(cb) {
     let h = d.querySelector('head');
     let m = d.querySelector('.meta') || d.querySelector('main');
     m.insertAdjacentHTML('beforeend', '<div id="map"></div>');
-    var map = d.getElementById('map');
-    map.style.height = 3 * map.clientWidth / 4 + "px";
     var slink = d.createElement('script');
     slink.type = 'text/javascript';
     slink.src = '/static/l131/leaflet.js';
     slink.async = 'async';
     slink.onload = () => {
-      var map = L.map('map', {'scrollWheelZoom': false});
+      map = L.map('map', {'scrollWheelZoom': false, 'trackResize': false});
       L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 	attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
+      resize_map();
       cb(map);
     }
     h.append(slink);
@@ -46,9 +59,9 @@
   let pos = details && details.dataset.position
   if (pos) {
     prepare_map((map) => {
-      let pos = JSON.parse(pos);
-      map.setView(pos, 16);
-      L.marker(pos).addTo(map);
+      let p = JSON.parse(pos);
+      map.setView(p, 16);
+      L.marker(p).addTo(map);
     })
   }
   let group = d.querySelector('.group');
