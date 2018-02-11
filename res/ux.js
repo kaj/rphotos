@@ -29,7 +29,13 @@
     slink.type = 'text/javascript';
     slink.src = '/static/l131/leaflet.js';
     slink.async = 'async';
-    slink.onload = cb;
+    slink.onload = () => {
+      var map = L.map('map', {'scrollWheelZoom': false});
+      L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      cb(map);
+    }
     h.append(slink);
     var csslink = d.createElement('link');
     csslink.rel = 'stylesheet';
@@ -39,26 +45,19 @@
   let details = d.querySelector('.details');
   let pos = details && details.dataset.position
   if (pos) {
-    function initmap(pos) {
-      var map = L.map('map', {'scrollWheelZoom': false}).setView(pos, 16);
-      L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-	attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
+    prepare_map((map) => {
+      let pos = JSON.parse(pos);
+      map.setView(pos, 16);
       L.marker(pos).addTo(map);
-    }
-    prepare_map(() => initmap(JSON.parse(pos)))
+    })
   }
   let group = d.querySelector('.group');
   let poss = (details && details.dataset.positions) || (group && group.dataset.positions);
   if (poss) {
-    function initmap(pos) {
-      var map = L.map('map', {'scrollWheelZoom': false});
+    prepare_map((map) => {
+      let pos = JSON.parse(poss)
       map.fitBounds(L.polyline(pos).getBounds())
-      L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-	attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
       pos.forEach(p => L.marker(p).addTo(map));
-    }
-    prepare_map(() => initmap(JSON.parse(poss)))
+    })
   }
 })(document)
