@@ -47,7 +47,8 @@ pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<Coord> {
         .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))
         .select((latitude, longitude))
         .load(c)
-        .unwrap_or_default() // TODO Log if there is a problem?
+        .map_err(|e| warn!("Failed to load positions: {}", e))
+        .unwrap_or_default()
         .into_iter()
         .map(|(lat, long): (i32, i32)| Coord {
             x: f64::from(lat) / 1e6,
