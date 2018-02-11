@@ -134,7 +134,7 @@
             event.target.focus();
         };
         f.appendChild(c);
-        meta.appendChild(f);
+        meta.insertBefore(f, meta.querySelector('#map'));
         i.focus();
     }
 
@@ -194,7 +194,7 @@
             e.stopPropagation();
             return false;
         });
-        meta.appendChild(f);
+        meta.insertBefore(f, meta.querySelector('#map'));
         i.focus();
     }
 
