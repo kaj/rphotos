@@ -289,16 +289,20 @@ pub fn next_image<'mw>(
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
     use schema::photos::dsl::{date, id};
-    let q = Photo::query(req.authorized_user().is_some())
-        .select(id)
-        .filter(date.gt(from_date(req)))
-        .order(date);
-    let c: &PgConnection = &req.db_conn();
-    if let Ok(photo) = q.first::<i32>(c) {
-        res.redirect(format!("/img/{}", photo)) // to photo_details
-    } else {
-        res.not_found("No such image")
+    if let Some((from_id, from_date)) = query_date(req, "from") {
+        let q = Photo::query(req.authorized_user().is_some())
+            .select(id)
+            .filter(
+                date.gt(from_date)
+                    .or(date.eq(from_date).and(id.gt(from_id))),
+            )
+            .order((date, id));
+        let c: &PgConnection = &req.db_conn();
+        if let Ok(photo) = q.first::<i32>(c) {
+            return res.redirect(format!("/img/{}", photo)); // to photo_details
+        }
     }
+    res.not_found("No such image")
 }
 
 pub fn prev_image<'mw>(
@@ -306,29 +310,38 @@ pub fn prev_image<'mw>(
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
     use schema::photos::dsl::{date, id};
-    let q = Photo::query(req.authorized_user().is_some())
-        .select(id)
-        .filter(date.lt(from_date(req)))
-        .order(date.desc().nulls_last());
-    let c: &PgConnection = &req.db_conn();
-    if let Ok(photo) = q.first::<i32>(c) {
-        res.redirect(format!("/img/{}", photo)) // to photo_details
-    } else {
-        res.not_found("No such image")
+    if let Some((from_id, from_date)) = query_date(req, "from") {
+        let q = Photo::query(req.authorized_user().is_some())
+            .select(id)
+            .filter(
+                date.lt(from_date)
+                    .or(date.eq(from_date).and(id.lt(from_id))),
+            )
+            .order((date.desc().nulls_last(), id.desc()));
+        let c: &PgConnection = &req.db_conn();
+        if let Ok(photo) = q.first::<i32>(c) {
+            return res.redirect(format!("/img/{}", photo)); // to photo_details
+        }
     }
+    res.not_found("No such image")
 }
 
-fn from_date(req: &mut Request) -> Option<NaiveDateTime> {
-    query_date(req, "from")
-}
-pub fn query_date(req: &mut Request, name: &str) -> Option<NaiveDateTime> {
+pub fn query_date(
+    req: &mut Request,
+    name: &str,
+) -> Option<(i32, NaiveDateTime)> {
     req.query()
         .get(name)
         .and_then(|s| s.parse().ok())
         .and_then(|i: i32| {
             use schema::photos::dsl::{date, photos};
             let c: &PgConnection = &req.db_conn();
-            photos.find(i).select(date).first(c).unwrap_or(None)
+            photos
+                .find(i)
+                .select(date)
+                .first(c)
+                .unwrap_or(None)
+                .map(|d| (i, d))
         })
 }
 

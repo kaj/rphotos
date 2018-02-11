@@ -12,18 +12,21 @@ pub fn links_by_time<'a>(
     photos: photos::BoxedQuery<'a, Pg>,
 ) -> (Vec<PhotoLink>, Vec<Coord>) {
     let c: &PgConnection = &req.db_conn();
-    use schema::photos::dsl::date;
-    let photos = if let Some(from_date) = query_date(req, "from") {
+    use schema::photos::dsl::{date, id};
+    let photos = if let Some((_, from_date)) = query_date(req, "from") {
         photos.filter(date.ge(from_date))
     } else {
         photos
     };
-    let photos = if let Some(to_date) = query_date(req, "to") {
+    let photos = if let Some((_, to_date)) = query_date(req, "to") {
         photos.filter(date.le(to_date))
     } else {
         photos
     };
-    let photos = photos.order(date.desc().nulls_last()).load(c).unwrap();
+    let photos = photos
+        .order((date.desc().nulls_last(), id.desc()))
+        .load(c)
+        .unwrap();
     (
         if let Some(groups) = split_to_groups(&photos) {
             let path = req.path_without_query().unwrap_or("/");
