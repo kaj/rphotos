@@ -62,17 +62,14 @@ pub fn set_tag<'mw>(
     if let (Some(image), Some(tag)) = try_with!(res, tag_params(req)) {
         let c: &PgConnection = &req.db_conn();
         use diesel;
-        use models::{NewPhotoTag, NewTag, PhotoTag, Tag};
+        use models::{PhotoTag, Tag};
         let tag = {
             use schema::tags::dsl::*;
             tags.filter(tag_name.ilike(&tag))
                 .first::<Tag>(c)
                 .or_else(|_| {
                     diesel::insert_into(tags)
-                        .values(&NewTag {
-                            tag_name: &tag,
-                            slug: &slugify(&tag),
-                        })
+                        .values((tag_name.eq(&tag), slug.eq(&slugify(&tag))))
                         .get_result::<Tag>(c)
                 })
                 .expect("Find or create tag")
@@ -86,10 +83,7 @@ pub fn set_tag<'mw>(
         } else {
             info!("Add {:?} on photo #{}!", tag, image);
             diesel::insert_into(photo_tags)
-                .values(&NewPhotoTag {
-                    photo_id: image,
-                    tag_id: tag.id,
-                })
+                .values((photo_id.eq(image), tag_id.eq(tag.id)))
                 .execute(c)
                 .expect("Tag a photo");
         }
@@ -117,7 +111,7 @@ pub fn set_person<'mw>(
     if let (Some(image), Some(name)) = try_with!(res, person_params(req)) {
         let c: &PgConnection = &req.db_conn();
         use diesel;
-        use models::{NewPerson, NewPhotoPerson, Person, PhotoPerson};
+        use models::{Person, PhotoPerson};
         let person = {
             use schema::people::dsl::*;
             people
@@ -125,10 +119,10 @@ pub fn set_person<'mw>(
                 .first::<Person>(c)
                 .or_else(|_| {
                     diesel::insert_into(people)
-                        .values(&NewPerson {
-                            person_name: &name,
-                            slug: &slugify(&name),
-                        })
+                        .values((
+                            person_name.eq(&name),
+                            slug.eq(&slugify(&name)),
+                        ))
                         .get_result::<Person>(c)
                 })
                 .expect("Find or create tag")
@@ -142,10 +136,7 @@ pub fn set_person<'mw>(
         } else {
             info!("Add {:?} on photo #{}!", person, image);
             diesel::insert_into(photo_people)
-                .values(&NewPhotoPerson {
-                    photo_id: image,
-                    person_id: person.id,
-                })
+                .values((photo_id.eq(image), person_id.eq(person.id)))
                 .execute(c)
                 .expect("Name person in photo");
         }

@@ -18,14 +18,6 @@ pub struct Photo {
 }
 
 use schema::photos;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "photos"]
-pub struct NewPhoto<'a> {
-    pub path: &'a str,
-    pub date: Option<NaiveDateTime>,
-    pub rotation: i16,
-    pub camera_id: Option<i32>,
-}
 
 #[derive(Debug)]
 pub enum Modification<T> {
@@ -127,12 +119,12 @@ impl Photo {
             Ok(result)
         } else {
             let pic = diesel::insert_into(photos)
-                .values(&NewPhoto {
-                    path: file_path,
-                    date: exifdate,
-                    rotation: exifrotation,
-                    camera_id: camera.map(|c| c.id),
-                })
+                .values((
+                    path.eq(file_path),
+                    date.eq(exifdate),
+                    rotation.eq(exifrotation),
+                    camera_id.eq(camera.map(|c| c.id)),
+                ))
                 .get_result::<Photo>(db)?;
             Ok(Modification::Created(pic))
         }
@@ -217,22 +209,6 @@ pub struct PhotoTag {
     pub tag_id: i32,
 }
 
-use super::schema::tags;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "tags"]
-pub struct NewTag<'a> {
-    pub tag_name: &'a str,
-    pub slug: &'a str,
-}
-
-use super::schema::photo_tags;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "photo_tags"]
-pub struct NewPhotoTag {
-    pub photo_id: i32,
-    pub tag_id: i32,
-}
-
 #[derive(Debug, Clone, Queryable)]
 pub struct Person {
     pub id: i32,
@@ -243,22 +219,6 @@ pub struct Person {
 #[derive(Debug, Clone, Queryable)]
 pub struct PhotoPerson {
     pub id: i32,
-    pub photo_id: i32,
-    pub person_id: i32,
-}
-
-use super::schema::people;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "people"]
-pub struct NewPerson<'a> {
-    pub person_name: &'a str,
-    pub slug: &'a str,
-}
-
-use super::schema::photo_people;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "photo_people"]
-pub struct NewPhotoPerson {
     pub photo_id: i32,
     pub person_id: i32,
 }
@@ -277,49 +237,10 @@ pub struct PhotoPlace {
     pub place_id: i32,
 }
 
-use super::schema::places;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "places"]
-pub struct NewPlace<'a> {
-    pub slug: &'a str,
-    pub place_name: &'a str,
-}
-
-use super::schema::photo_places;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "photo_places"]
-pub struct NewPhotoPlace {
-    pub photo_id: i32,
-    pub place_id: i32,
-}
-
-use super::schema::positions;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "positions"]
-pub struct NewPosition {
-    pub photo_id: i32,
-    pub latitude: i32,
-    pub longitude: i32,
-}
-
-use super::schema::users;
-#[derive(Insertable)]
-#[table_name = "users"]
-pub struct NewUser<'a> {
-    pub username: &'a str,
-    pub password: &'a str,
-}
-
+use super::schema::cameras;
 #[derive(Debug, Clone, Identifiable, Queryable)]
 pub struct Camera {
     pub id: i32,
-    pub manufacturer: String,
-    pub model: String,
-}
-use super::schema::cameras;
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "cameras"]
-pub struct NewCamera {
     pub manufacturer: String,
     pub model: String,
 }
@@ -341,11 +262,9 @@ impl Camera {
         {
             Ok(camera)
         } else {
-            let camera = NewCamera {
-                manufacturer: make.to_string(),
-                model: modl.to_string(),
-            };
-            diesel::insert_into(cameras).values(&camera).get_result(db)
+            diesel::insert_into(cameras)
+                .values((manufacturer.eq(make), model.eq(modl)))
+                .get_result(db)
         }
     }
 }

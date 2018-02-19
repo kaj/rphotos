@@ -64,13 +64,12 @@ fn save_photo(
             }
         } else {
             info!("Position for {} is {} {}", file_path, lat, long);
-            use models::NewPosition;
             insert_into(positions)
-                .values(&NewPosition {
-                    photo_id: photo.id,
-                    latitude: (lat * 1e6) as i32,
-                    longitude: (long * 1e6) as i32,
-                })
+                .values((
+                    photo_id.eq(photo.id),
+                    latitude.eq((lat * 1e6) as i32),
+                    longitude.eq((long * 1e6) as i32),
+                ))
                 .execute(db)
                 .expect("Insert image position");
         }

@@ -29,12 +29,8 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
             println!("Updated password for {:?} to {:?}", uname, pword);
         }
         0 => {
-            use models::NewUser;
             insert_into(users)
-                .values(&NewUser {
-                    username: uname,
-                    password: &hashword,
-                })
+                .values((username.eq(uname), password.eq(&hashword)))
                 .execute(db)?;
             println!("Created user {:?} with password {:?}", uname, pword);
         }
