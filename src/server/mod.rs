@@ -156,10 +156,9 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.get "/{}/{}/{}",       all_for_day: year, month, day);
     wrap3!(server.get "/thisday",        on_this_day);
 
-    // https://github.com/rust-lang/rust/issues/20178
-    let custom_handler: fn(&mut NickelError, &mut Request) -> Action =
-        custom_errors;
-    server.handle_error(custom_handler);
+    server.handle_error(
+        custom_errors as fn(&mut NickelError, &mut Request) -> Action
+    );
 
     server
         .listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"))

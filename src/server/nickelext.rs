@@ -34,7 +34,7 @@ macro_rules! wrap3 {
         fn wrapped<'mw>(req: &mut Request,
                         res: Response<'mw>)
                         -> MiddlewareResult<'mw> {
-            if let &Some(path) = &req.path_without_query() {
+            if let Some(ref path) = req.path_without_query() {
                 $handler(req, res, &path[$url.len()..])
             } else {
                 res.not_found("Path missing")
