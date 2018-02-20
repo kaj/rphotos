@@ -157,7 +157,7 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.get "/thisday",        on_this_day);
 
     server.handle_error(
-        custom_errors as fn(&mut NickelError, &mut Request) -> Action
+        custom_errors as fn(&mut NickelError, &mut Request) -> Action,
     );
 
     server
