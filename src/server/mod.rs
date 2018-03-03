@@ -34,6 +34,7 @@ use rustc_serialize::json::ToJson;
 use templates::{self, Html};
 
 pub struct PhotoLink {
+    pub title: Option<String>,
     pub href: String,
     pub id: i32,
     pub lable: Option<String>,
@@ -48,6 +49,7 @@ impl PhotoLink {
                 p.grade.unwrap_or(27) + if p.is_public { 38 } else { 0 }
             }
             PhotoLink {
+                title: None,
                 href: format!(
                     "{}?from={}&to={}",
                     base_url,
@@ -96,19 +98,12 @@ impl PhotoLink {
 impl<'a> From<&'a Photo> for PhotoLink {
     fn from(p: &'a Photo) -> PhotoLink {
         PhotoLink {
+            title: None,
             href: format!("/img/{}", p.id),
             id: p.id,
             lable: p.date.map(|d| format!("{}", d.format("%F %T"))),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Group {
-    pub title: String,
-    pub url: String,
-    pub count: i64,
-    pub photo: Photo,
 }
 
 pub fn run(args: &ArgMatches) -> Result<(), Error> {

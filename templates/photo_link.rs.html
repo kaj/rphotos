@@ -1,7 +1,7 @@
 @use server::PhotoLink;
 
 @(photo: &PhotoLink)
-<p class="item">
+<div class="item">@if let Some(ref title) = photo.title {<h2>@title</h2>}
   <a href="@photo.href"><img src="/img/@photo.id-s.jpg"></a>
   @if let Some(ref d) = photo.lable {<span class="lable">@d</span>}
-</p>
+</div>

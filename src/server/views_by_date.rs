@@ -1,6 +1,6 @@
 use super::PhotoLink;
 use super::splitlist::links_by_time;
-use {Group, Link};
+use Link;
 use chrono::Duration as ChDuration;
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use diesel::expression::sql_literal::SqlLiteral;
@@ -22,7 +22,7 @@ pub fn all_years<'mw>(
     use schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    let groups: Vec<Group> = SqlLiteral::new(format!(
+    let groups: Vec<_> = SqlLiteral::new(format!(
         "select cast(extract(year from date) as int) y, count(*) c \
          from photos{} group by y order by y desc nulls last",
         if req.authorized_user().is_none() {
@@ -47,17 +47,19 @@ pub fn all_years<'mw>(
                 } else {
                     q.filter(date.is_null())
                 };
-            Group {
-                title: year.map(|y| format!("{}", y))
-                    .unwrap_or_else(|| "-".to_string()),
-                url: format!("/{}/", year.unwrap_or(0)),
-                count: count,
-                photo: photo.first::<Photo>(c).unwrap(),
+            PhotoLink {
+                title: Some(
+                    year.map(|y| format!("{}", y))
+                        .unwrap_or_else(|| "-".to_string()),
+                ),
+                href: format!("/{}/", year.unwrap_or(0)),
+                lable: Some(format!("{} images", count)),
+                id: photo.first::<Photo>(c).unwrap().id,
             }
         })
         .collect();
 
-    res.ok(|o| templates::groups(o, req, "All photos", &[], &groups))
+    res.ok(|o| templates::index(o, req, "All photos", &[], &groups, &[]))
 }
 
 pub fn months_in_year<'mw>(
@@ -69,7 +71,7 @@ pub fn months_in_year<'mw>(
     let c: &PgConnection = &req.db_conn();
 
     let title: String = format!("Photos from {}", year);
-    let groups: Vec<Group> = SqlLiteral::new(format!(
+    let groups: Vec<_> = SqlLiteral::new(format!(
         "select cast(extract(month from date) as int) m, count(*) c \
          from photos where extract(year from date)={}{} \
          group by m order by m desc",
@@ -99,11 +101,11 @@ pub fn months_in_year<'mw>(
                 .first::<Photo>(c)
                 .unwrap();
 
-            Group {
-                title: monthname(month).to_string(),
-                url: format!("/{}/{}/", year, month),
-                count: count,
-                photo: photo,
+            PhotoLink {
+                title: Some(monthname(month).to_string()),
+                href: format!("/{}/{}/", year, month),
+                lable: Some(format!("{} pictures", count)),
+                id: photo.id,
             }
         })
         .collect();
@@ -111,7 +113,7 @@ pub fn months_in_year<'mw>(
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        res.ok(|o| templates::groups(o, req, &title, &[], &groups))
+        res.ok(|o| templates::index(o, req, &title, &[], &groups, &[]))
     }
 }
 
@@ -126,7 +128,7 @@ pub fn days_in_month<'mw>(
 
     let lpath: Vec<Link> = vec![Link::year(year)];
     let title: String = format!("Photos from {} {}", monthname(month), year);
-    let groups: Vec<Group> = SqlLiteral::new(format!(
+    let groups: Vec<_> = SqlLiteral::new(format!(
         "select cast(extract(day from date) as int) d, count(*) c \
          from photos where extract(year from date)={} \
          and extract(month from date)={}{} group by d order by d desc",
@@ -152,11 +154,11 @@ pub fn days_in_month<'mw>(
                 .first::<Photo>(c)
                 .unwrap();
 
-            Group {
-                title: format!("{}", day),
-                url: format!("/{}/{}/{}", year, month, day),
-                count: count,
-                photo: photo,
+            PhotoLink {
+                title: Some(format!("{}", day)),
+                href: format!("/{}/{}/{}", year, month, day),
+                lable: Some(format!("{} pictures", count)),
+                id: photo.id,
             }
         })
         .collect();
@@ -164,7 +166,7 @@ pub fn days_in_month<'mw>(
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        res.ok(|o| templates::groups(o, req, &title, &lpath, &groups))
+        res.ok(|o| templates::index(o, req, &title, &lpath, &groups, &[]))
     }
 }
 
@@ -238,7 +240,7 @@ pub fn on_this_day<'mw>(
         (now.tm_mon as u32 + 1, now.tm_mday as u32)
     };
     res.ok(|o| {
-        templates::groups(
+        templates::index(
             o,
             req,
             &format!("Photos from {} {}", day, monthname(month)),
@@ -272,14 +274,15 @@ pub fn on_this_day<'mw>(
                         .first::<Photo>(c)
                         .unwrap();
 
-                    Group {
-                        title: format!("{}", year),
-                        url: format!("/{}/{}/{}", year, month, day),
-                        count: count,
-                        photo: photo,
+                    PhotoLink {
+                        title: Some(format!("{}", year)),
+                        href: format!("/{}/{}/{}", year, month, day),
+                        lable: Some(format!("{} pictures", count)),
+                        id: photo.id,
                     }
                 })
                 .collect::<Vec<_>>(),
+            &[],
         )
     })
 }
