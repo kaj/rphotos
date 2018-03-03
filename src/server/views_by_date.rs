@@ -1,6 +1,5 @@
-use super::PhotoLink;
+use super::{Link, PhotoLink};
 use super::splitlist::links_by_time;
-use Link;
 use chrono::Duration as ChDuration;
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use diesel::expression::sql_literal::SqlLiteral;

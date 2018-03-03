@@ -1,7 +1,7 @@
-@use ::Link;
 @use nickel::Request;
 @use nickel_jwt_session::SessionRequestExtensions;
 @use models::{Photo, Person, Place, Tag, Camera, Coord};
+@use server::Link;
 @use templates::page_base;
 
 @(req: &Request, lpath: &[Link], people: &[Person], places: &[Place], tags: &[Tag], position: &Option<Coord>, attribution: &Option<String>, camera: &Option<Camera>, photo: &Photo)

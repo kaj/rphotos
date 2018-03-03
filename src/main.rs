@@ -51,7 +51,6 @@ use diesel::prelude::*;
 use dotenv::dotenv;
 use env::{dburl, photos_dir};
 use photosdir::PhotosDir;
-pub use server::Link;
 use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::Path;

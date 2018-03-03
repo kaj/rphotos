@@ -1,7 +1,6 @@
-@use ::Link;
 @use models::Coord;
 @use nickel::Request;
-@use server::PhotoLink;
+@use server::{Link, PhotoLink};
 @use templates::{data_positions, page_base, photo_link};
 
 @(req: &Request, title: &str, lpath: &[Link], photos: &[PhotoLink], coords: &[Coord])
