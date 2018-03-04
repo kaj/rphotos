@@ -21,7 +21,7 @@ typemap = "*"
 plugin = "*"
 image = "^0.18.0"
 time = "*"
-rexif = "^0.3.4"
+kamadak-exif = "~0.3.0"
 diesel = { version = "^1.0.0", features = ["chrono", "postgres"] }
 diesel_infer_schema = { version = "^1.0.0", features = ["postgres"] }
 r2d2-diesel = "^1.0.0"

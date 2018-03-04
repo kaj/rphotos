@@ -1,6 +1,6 @@
 use image::{self, FilterType, GenericImage, ImageError, ImageFormat};
 use models::Photo;
-use rexif::{self, ExifData};
+use myexif::ExifData;
 use std::{fs, io};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -68,14 +68,11 @@ impl PhotosDir {
                 let path = entry?.path();
                 if fs::metadata(&path)?.is_dir() {
                     self.find_files(&path, cb)?;
-                } else if let Ok(exif) = rexif::parse_file(&path) {
+                } else if let Ok(exif) = ExifData::read_from(&path) {
                     let path = path.to_str().unwrap();
                     cb(&path[bl..], &exif);
                 } else if image::open(&path).is_ok() {
-                    let none = ExifData {
-                        mime: "".into(),
-                        entries: vec![],
-                    };
+                    let none = ExifData::default();
                     info!("{:?} seems like a pic with no exif.", path);
                     let path = path.to_str().unwrap();
                     cb(&path[bl..], &none);

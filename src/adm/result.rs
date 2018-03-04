@@ -1,17 +1,19 @@
 use chrono::ParseError as ChronoParseError;
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
+use exif;
 use memcached::proto::Error as MemcachedError;
 use std::{fmt, io};
 use std::convert::From;
 use std::num::ParseIntError;
+use std::str::Utf8Error;
 
 #[derive(Debug)]
 pub enum Error {
     Connection(ConnectionError),
     Db(DieselError),
     Io(io::Error),
-    UnknownOrientation(u16),
+    UnknownOrientation(u32),
     BadTimeFormat(ChronoParseError),
     BadIntFormat(ParseIntError),
     Cache(MemcachedError),
@@ -68,5 +70,16 @@ impl From<DieselError> for Error {
 impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self {
         Error::Io(e)
+    }
+}
+
+impl From<exif::Error> for Error {
+    fn from(e: exif::Error) -> Self {
+        Error::Other(format!("Exif error: {}", e))
+    }
+}
+impl From<Utf8Error> for Error {
+    fn from(e: Utf8Error) -> Self {
+        Error::Other(format!("{}", e))
     }
 }
