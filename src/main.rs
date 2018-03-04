@@ -169,22 +169,19 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
             Ok(())
         }
         ("makepublic", Some(args)) => {
-            let pd = PhotosDir::new(photos_dir());
             let db = get_db()?;
             match args.value_of("LIST") {
                 Some("-") => {
                     let list = io::stdin();
-                    makepublic::by_file_list(&db, &pd, list.lock())?;
+                    makepublic::by_file_list(&db, list.lock())?;
                     Ok(())
                 }
                 Some(f) => {
                     let list = File::open(f)?;
                     let list = BufReader::new(list);
-                    makepublic::by_file_list(&db, &pd, list)
+                    makepublic::by_file_list(&db, list)
                 }
-                None => {
-                    makepublic::one(&db, &pd, args.value_of("IMAGE").unwrap())
-                }
+                None => makepublic::one(&db, args.value_of("IMAGE").unwrap()),
             }
         }
         ("stats", Some(_args)) => show_stats(&get_db()?),

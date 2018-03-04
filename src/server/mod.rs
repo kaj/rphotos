@@ -37,6 +37,8 @@ pub struct PhotoLink {
     pub title: Option<String>,
     pub href: String,
     pub id: i32,
+    // Size should not be optional, but make it best-effort for now.
+    pub size: Option<(u32, u32)>,
     pub lable: Option<String>,
 }
 
@@ -48,6 +50,7 @@ impl PhotoLink {
             fn imgscore(p: &Photo) -> i16 {
                 p.grade.unwrap_or(27) + if p.is_public { 38 } else { 0 }
             }
+            let photo = g.iter().max_by_key(|p| imgscore(p)).unwrap();
             PhotoLink {
                 title: None,
                 href: format!(
@@ -56,10 +59,8 @@ impl PhotoLink {
                     g.last().map(|p| p.id).unwrap_or(0),
                     g.first().map(|p| p.id).unwrap_or(0),
                 ),
-                id: g.iter()
-                    .max_by_key(|p| imgscore(p))
-                    .map(|p| p.id)
-                    .unwrap_or(0),
+                id: photo.id,
+                size: photo.get_size(SizeTag::Small.px()),
                 lable: {
                     let from = g.last().and_then(|p| p.date);
                     let to = g.first().and_then(|p| p.date);
@@ -101,6 +102,7 @@ impl<'a> From<&'a Photo> for PhotoLink {
             title: None,
             href: format!("/img/{}", p.id),
             id: p.id,
+            size: p.get_size(SizeTag::Small.px()),
             lable: p.date.map(|d| format!("{}", d.format("%F %T"))),
         }
     }

@@ -1,4 +1,4 @@
-use super::{Link, PhotoLink};
+use super::{Link, PhotoLink, SizeTag};
 use super::splitlist::links_by_time;
 use chrono::Duration as ChDuration;
 use chrono::naive::{NaiveDate, NaiveDateTime};
@@ -46,6 +46,7 @@ pub fn all_years<'mw>(
                 } else {
                     q.filter(date.is_null())
                 };
+            let photo = photo.first::<Photo>(c).unwrap();
             PhotoLink {
                 title: Some(
                     year.map(|y| format!("{}", y))
@@ -53,7 +54,8 @@ pub fn all_years<'mw>(
                 ),
                 href: format!("/{}/", year.unwrap_or(0)),
                 lable: Some(format!("{} images", count)),
-                id: photo.first::<Photo>(c).unwrap().id,
+                id: photo.id,
+                size: photo.get_size(SizeTag::Small.px()),
             }
         })
         .collect();
@@ -105,6 +107,7 @@ pub fn months_in_year<'mw>(
                 href: format!("/{}/{}/", year, month),
                 lable: Some(format!("{} pictures", count)),
                 id: photo.id,
+                size: photo.get_size(SizeTag::Small.px()),
             }
         })
         .collect();
@@ -158,6 +161,7 @@ pub fn days_in_month<'mw>(
                 href: format!("/{}/{}/{}", year, month, day),
                 lable: Some(format!("{} pictures", count)),
                 id: photo.id,
+                size: photo.get_size(SizeTag::Small.px()),
             }
         })
         .collect();
@@ -278,6 +282,7 @@ pub fn on_this_day<'mw>(
                         href: format!("/{}/{}/{}", year, month, day),
                         lable: Some(format!("{} pictures", count)),
                         id: photo.id,
+                        size: photo.get_size(SizeTag::Small.px()),
                     }
                 })
                 .collect::<Vec<_>>(),

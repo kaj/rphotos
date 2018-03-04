@@ -4,6 +4,7 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
 use server::SizeTag;
+use std::cmp::max;
 
 #[derive(AsChangeset, Clone, Debug, Identifiable, Queryable)]
 pub struct Photo {
@@ -15,6 +16,8 @@ pub struct Photo {
     pub is_public: bool,
     pub camera_id: Option<i32>,
     pub attribution_id: Option<i32>,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
 }
 
 use schema::photos;
@@ -55,6 +58,8 @@ impl Photo {
     pub fn update_by_path(
         db: &PgConnection,
         file_path: &str,
+        newwidth: i32,
+        newheight: i32,
         exifdate: Option<NaiveDateTime>,
         exifrotation: i16,
         camera: &Option<Camera>,
@@ -69,6 +74,12 @@ impl Photo {
         {
             let mut change = false;
             // TODO Merge updates to one update statement!
+            if pic.width != Some(newwidth) || pic.height != Some(newheight) {
+                change = true;
+                pic = diesel::update(photos.find(pic.id))
+                    .set((width.eq(newwidth), height.eq(newheight)))
+                    .get_result::<Photo>(db)?;
+            }
             if exifdate.is_some() && exifdate != pic.date {
                 change = true;
                 pic = diesel::update(photos.find(pic.id))
@@ -102,6 +113,8 @@ impl Photo {
     pub fn create_or_set_basics(
         db: &PgConnection,
         file_path: &str,
+        newwidth: i32,
+        newheight: i32,
         exifdate: Option<NaiveDateTime>,
         exifrotation: i16,
         camera: Option<Camera>,
@@ -112,6 +125,8 @@ impl Photo {
         if let Some(result) = Self::update_by_path(
             db,
             file_path,
+            newwidth,
+            newheight,
             exifdate,
             exifrotation,
             &camera,
@@ -123,6 +138,8 @@ impl Photo {
                     path.eq(file_path),
                     date.eq(exifdate),
                     rotation.eq(exifrotation),
+                    width.eq(newwidth),
+                    height.eq(newheight),
                     camera_id.eq(camera.map(|c| c.id)),
                 ))
                 .get_result::<Photo>(db)?;
@@ -192,6 +209,19 @@ impl Photo {
     pub fn load_camera(&self, db: &PgConnection) -> Option<Camera> {
         use schema::cameras::dsl::cameras;
         self.camera_id.and_then(|i| cameras.find(i).first(db).ok())
+    }
+    pub fn get_size(&self, max_size: u32) -> Option<(u32, u32)> {
+        if let (Some(width), Some(height)) = (self.width, self.height) {
+            let scale = f64::from(max_size) / f64::from(max(width, height));
+            let w = (scale * f64::from(width)) as u32;
+            let h = (scale * f64::from(height)) as u32;
+            match self.rotation {
+                _x @ 0...44 | _x @ 315...360 | _x @ 135...224 => Some((w, h)),
+                _ => Some((h, w)),
+            }
+        } else {
+            None
+        }
     }
 }
 
