@@ -69,13 +69,13 @@ impl PhotosDir {
                 if fs::metadata(&path)?.is_dir() {
                     self.find_files(&path, cb)?;
                 } else if let Ok(exif) = ExifData::read_from(&path) {
-                    let path = path.to_str().unwrap();
-                    cb(&path[bl..], &exif);
-                } else if image::open(&path).is_ok() {
-                    let none = ExifData::default();
+                    cb(&path.to_str().unwrap()[bl..], &exif);
+                } else if let Ok(image) = image::open(&path) {
+                    let mut meta = ExifData::default();
+                    meta.width = Some(image.width());
+                    meta.height = Some(image.height());
                     info!("{:?} seems like a pic with no exif.", path);
-                    let path = path.to_str().unwrap();
-                    cb(&path[bl..], &none);
+                    cb(&path.to_str().unwrap()[bl..], &meta);
                 } else {
                     debug!("{:?} is no pic.", path)
                 }
