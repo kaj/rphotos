@@ -61,7 +61,6 @@ impl Photo {
         newwidth: i32,
         newheight: i32,
         exifdate: Option<NaiveDateTime>,
-        exifrotation: i16,
         camera: &Option<Camera>,
     ) -> Result<Option<Modification<Photo>>, DieselError> {
         use diesel;
@@ -84,12 +83,6 @@ impl Photo {
                 change = true;
                 pic = diesel::update(photos.find(pic.id))
                     .set(date.eq(exifdate))
-                    .get_result::<Photo>(db)?;
-            }
-            if exifrotation != pic.rotation {
-                change = true;
-                pic = diesel::update(photos.find(pic.id))
-                    .set(rotation.eq(exifrotation))
                     .get_result::<Photo>(db)?;
             }
             if let Some(ref camera) = *camera {
@@ -128,7 +121,6 @@ impl Photo {
             newwidth,
             newheight,
             exifdate,
-            exifrotation,
             &camera,
         )? {
             Ok(result)
