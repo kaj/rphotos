@@ -7,7 +7,7 @@
 @(req: &Request, lpath: &[Link], people: &[Person], places: &[Place], tags: &[Tag], position: &Option<Coord>, attribution: &Option<String>, camera: &Option<Camera>, photo: &Photo)
 @:page_base(req, "Photo details", lpath, {
   <div class="details" data-imgid="@photo.id"@if let Some(g) = photo.grade { data-grade="@g"}@if let Some(ref p) = *position { data-position="[@p.x, @p.y]"}>
-    <div class="item"><img src="/img/@photo.id-m.jpg"></div>
+    <div class="item"><img src="/img/@photo.id-m.jpg" @if let Some(s) = photo.get_size(960) { width="@s.0" height="@s.1"}></div>
     <div class="meta">
     @if req.authorized_user().is_some() {
     <p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>
