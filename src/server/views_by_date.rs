@@ -1,13 +1,13 @@
-use super::{Link, PhotoLink, SizeTag};
 use super::splitlist::links_by_time;
+use super::{Link, PhotoLink, SizeTag};
 use chrono::Duration as ChDuration;
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use diesel::expression::sql_literal::SqlLiteral;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use models::Photo;
-use nickel::{MiddlewareResult, QueryString, Request, Response};
 use nickel::extensions::response::Redirect;
+use nickel::{MiddlewareResult, QueryString, Request, Response};
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
 use server::nickelext::MyResponse;
@@ -36,16 +36,12 @@ pub fn all_years<'mw>(
             let q = Photo::query(req.authorized_user().is_some())
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1);
-            let photo =
-                if let Some(year) = year {
-                    q.filter(date.ge(
-                        NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0),
-                    )).filter(date.lt(
-                        NaiveDate::from_ymd(year + 1, 1, 1).and_hms(0, 0, 0),
-                    ))
-                } else {
-                    q.filter(date.is_null())
-                };
+            let photo = if let Some(year) = year {
+                q.filter(date.ge(start_of_year(year)))
+                    .filter(date.lt(start_of_year(year)))
+            } else {
+                q.filter(date.is_null())
+            };
             let photo = photo.first::<Photo>(c).unwrap();
             PhotoLink {
                 title: Some(
@@ -61,6 +57,10 @@ pub fn all_years<'mw>(
         .collect();
 
     res.ok(|o| templates::index(o, req, "All photos", &[], &groups, &[]))
+}
+
+fn start_of_year(year: i32) -> NaiveDateTime {
+    NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0)
 }
 
 pub fn months_in_year<'mw>(
@@ -222,7 +222,12 @@ pub fn all_for_day<'mw>(
             templates::index(
                 o,
                 req,
-                &format!("Photos from {} {} {}", day, monthname(month), year),
+                &format!(
+                    "Photos from {} {} {}",
+                    day,
+                    monthname(month),
+                    year
+                ),
                 &[Link::year(year), Link::month(year, month)],
                 &links,
                 &coords,

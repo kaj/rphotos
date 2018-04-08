@@ -1,7 +1,7 @@
 use adm::result::Error;
-use diesel::{insert_into, update};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::{insert_into, update};
 use djangohashers::make_password;
 use rand::distributions::IndependentSample;
 use rand::distributions::range::Range;
@@ -26,13 +26,19 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
         .execute(db)?
     {
         1 => {
-            println!("Updated password for {:?} to {:?}", uname, pword);
+            println!(
+                "Updated password for {:?} to {:?}",
+                uname, pword
+            );
         }
         0 => {
             insert_into(users)
                 .values((username.eq(uname), password.eq(&hashword)))
                 .execute(db)?;
-            println!("Created user {:?} with password {:?}", uname, pword);
+            println!(
+                "Created user {:?} with password {:?}",
+                uname, pword
+            );
         }
         n => {
             println!(

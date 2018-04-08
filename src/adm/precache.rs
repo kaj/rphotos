@@ -15,8 +15,10 @@ use server::SizeTag;
 /// The images are handled in public first, new first order, to have
 /// the probably most requested images precached as soon as possible.
 pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
-    let mut cache =
-        Client::connect(&[("tcp://127.0.0.1:11211", 1)], ProtoType::Binary)?;
+    let mut cache = Client::connect(
+        &[("tcp://127.0.0.1:11211", 1)],
+        ProtoType::Binary,
+    )?;
     let size = SizeTag::Small;
     let (mut n, mut n_stored) = (0, 0);
     let photos = Photo::query(true)
@@ -30,17 +32,21 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
             debug!("Cache: {} found for {}", key, photo.path);
         } else {
             let size = size.px();
-            let data = pd.scale_image(&photo, size, size).map_err(|e| {
-                Error::Other(format!(
-                    "Failed to scale #{} ({}): {}",
-                    photo.id, photo.path, e,
-                ))
-            })?;
+            let data = pd.scale_image(&photo, size, size)
+                .map_err(|e| {
+                    Error::Other(format!(
+                        "Failed to scale #{} ({}): {}",
+                        photo.id, photo.path, e,
+                    ))
+                })?;
             cache.set(key.as_bytes(), &data, 0, no_expire)?;
             debug!("Cache: stored {} for {}", key, photo.path);
             n_stored += 1;
             if n_stored % 64 == 0 {
-                info!("{} images of {} updated in cache ...", n_stored, n);
+                info!(
+                    "{} images of {} updated in cache ...",
+                    n_stored, n
+                );
             }
         }
     }

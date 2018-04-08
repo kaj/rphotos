@@ -18,11 +18,11 @@ use hyper::header::ContentType;
 use image;
 use memcachemiddleware::{MemcacheMiddleware, MemcacheRequestExtensions};
 use models::{Person, Photo, Place, Tag};
+use nickel::extensions::response::Redirect;
+use nickel::status::StatusCode;
 use nickel::{Action, Continue, FormBody, Halt, HttpRouter, MediaType,
              MiddlewareResult, Nickel, NickelError, QueryString, Request,
              Response};
-use nickel::extensions::response::Redirect;
-use nickel::status::StatusCode;
 use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{SessionMiddleware, SessionRequestExtensions,
                          SessionResponseExtensions};
@@ -255,7 +255,10 @@ fn test_sanitize_good_1() {
 }
 #[test]
 fn test_sanitize_good_2() {
-    assert_eq!(Some("/2017/7/15"), sanitize_next(Some("/2017/7/15")))
+    assert_eq!(
+        Some("/2017/7/15"),
+        sanitize_next(Some("/2017/7/15"))
+    )
 }
 
 fn logout<'mw>(
@@ -343,15 +346,23 @@ fn tag_all<'mw>(
     } else {
         use schema::photo_tags::dsl as tp;
         use schema::photos::dsl as p;
-        query.filter(id.eq_any(tp::photo_tags.select(tp::tag_id).filter(
-            tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
-        )))
+        query.filter(
+            id.eq_any(
+                tp::photo_tags.select(tp::tag_id).filter(
+                    tp::photo_id
+                        .eq_any(p::photos.select(p::id).filter(p::is_public)),
+                ),
+            ),
+        )
     };
     res.ok(|o| {
         templates::tags(
             o,
             req,
-            &query.order(tag_name).load(c).expect("List tags"),
+            &query
+                .order(tag_name)
+                .load(c)
+                .expect("List tags"),
         )
     })
 }
@@ -367,7 +378,11 @@ fn tag_one<'mw>(
         use schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         use schema::photos::dsl::id;
         let photos = Photo::query(req.authorized_user().is_some()).filter(
-            id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
+            id.eq_any(
+                photo_tags
+                    .select(photo_id)
+                    .filter(tag_id.eq(tag.id)),
+            ),
         );
         let (links, coords) = links_by_time(req, photos);
         return res.ok(|o| templates::tag(o, req, &links, &coords, &tag));
@@ -386,16 +401,24 @@ fn place_all<'mw>(
     } else {
         use schema::photo_places::dsl as pp;
         use schema::photos::dsl as p;
-        query.filter(id.eq_any(pp::photo_places.select(pp::place_id).filter(
-            pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
-        )))
+        query.filter(
+            id.eq_any(
+                pp::photo_places.select(pp::place_id).filter(
+                    pp::photo_id
+                        .eq_any(p::photos.select(p::id).filter(p::is_public)),
+                ),
+            ),
+        )
     };
     let c: &PgConnection = &req.db_conn();
     res.ok(|o| {
         templates::places(
             o,
             req,
-            &query.order(place_name).load(c).expect("List places"),
+            &query
+                .order(place_name)
+                .load(c)
+                .expect("List places"),
         )
     })
 }
@@ -423,10 +446,13 @@ fn place_one<'mw>(
     if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
         use schema::photo_places::dsl::{photo_id, photo_places, place_id};
         use schema::photos::dsl::id;
-        let photos =
-            Photo::query(req.authorized_user().is_some()).filter(id.eq_any(
-                photo_places.select(photo_id).filter(place_id.eq(place.id)),
-            ));
+        let photos = Photo::query(req.authorized_user().is_some()).filter(
+            id.eq_any(
+                photo_places
+                    .select(photo_id)
+                    .filter(place_id.eq(place.id)),
+            ),
+        );
         let (links, coord) = links_by_time(req, photos);
         return res.ok(|o| templates::place(o, req, &links, &coord, &place));
     }
@@ -458,7 +484,10 @@ fn person_all<'mw>(
         templates::people(
             o,
             req,
-            &query.order(person_name).load(c).expect("list people"),
+            &query
+                .order(person_name)
+                .load(c)
+                .expect("list people"),
         )
     })
 }

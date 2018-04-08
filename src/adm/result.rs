@@ -3,10 +3,10 @@ use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
 use exif;
 use memcached::proto::Error as MemcachedError;
-use std::{fmt, io};
 use std::convert::From;
 use std::num::ParseIntError;
 use std::str::Utf8Error;
+use std::{fmt, io};
 
 #[derive(Debug)]
 pub enum Error {

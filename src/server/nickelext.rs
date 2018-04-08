@@ -2,8 +2,8 @@
 //! itself.
 //! Mainly, I'm experimenting with parsing url segments.
 use hyper::header::{Expires, HttpDate};
-use nickel::{Halt, MiddlewareResult, Response};
 use nickel::status::StatusCode;
+use nickel::{Halt, MiddlewareResult, Response};
 use std::io::{self, Write};
 use time::{now, Duration};
 

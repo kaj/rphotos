@@ -1,9 +1,9 @@
 use image::{self, FilterType, GenericImage, ImageError, ImageFormat};
 use models::Photo;
 use myexif::ExifData;
-use std::{fs, io};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
+use std::{fs, io};
 
 pub struct PhotosDir {
     basedir: PathBuf,
@@ -11,7 +11,7 @@ pub struct PhotosDir {
 
 impl PhotosDir {
     pub fn new(basedir: PathBuf) -> Self {
-        PhotosDir { basedir: basedir }
+        PhotosDir { basedir }
     }
 
     #[allow(dead_code)]
@@ -35,7 +35,10 @@ impl PhotosDir {
             _x @ 135...224 => img.rotate180(),
             _x @ 225...314 => img.rotate270(),
             x => {
-                warn!("Should rotate photo {} deg, which is unsupported", x);
+                warn!(
+                    "Should rotate photo {} deg, which is unsupported",
+                    x
+                );
                 img
             }
         };

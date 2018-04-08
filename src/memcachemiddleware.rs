@@ -2,9 +2,9 @@ use memcached::Client;
 use memcached::proto::{Error as MprotError, Operation, ProtoType};
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use plugin::Extensible;
-use std::{fmt, io};
 use std::convert::From;
 use std::error::Error;
+use std::{fmt, io};
 use typemap::Key;
 
 pub struct MemcacheMiddleware {
@@ -13,7 +13,7 @@ pub struct MemcacheMiddleware {
 
 impl MemcacheMiddleware {
     pub fn new(servers: Vec<(String, usize)>) -> Self {
-        MemcacheMiddleware { servers: servers }
+        MemcacheMiddleware { servers }
     }
 }
 

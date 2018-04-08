@@ -43,9 +43,9 @@ mod requestloggermiddleware;
 mod schema;
 mod server;
 
-use adm::{findphotos, makepublic, precache, storestatics, users};
 use adm::result::Error;
 use adm::stats::show_stats;
+use adm::{findphotos, makepublic, precache, storestatics, users};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -196,7 +196,10 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
             storestatics::to_dir(args.value_of("DIR").unwrap())
         }
         ("runserver", Some(args)) => server::run(args),
-        _ => Ok(println!("No subcommand given.\n\n{}", args.usage())),
+        _ => Ok(println!(
+            "No subcommand given.\n\n{}",
+            args.usage()
+        )),
     }
 }
 

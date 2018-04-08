@@ -12,14 +12,16 @@ pub fn crawl(
     photos: &PhotosDir,
     only_in: &Path,
 ) -> Result<(), Error> {
-    Ok(photos.find_files(only_in, &|path, exif| match save_photo(
-        db,
-        path,
-        exif,
-    ) {
-        Ok(()) => debug!("Saved photo {}", path),
-        Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
-    })?)
+    Ok(
+        photos.find_files(only_in, &|path, exif| match save_photo(
+            db,
+            path,
+            exif,
+        ) {
+            Ok(()) => debug!("Saved photo {}", path),
+            Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
+        })?,
+    )
 }
 
 fn save_photo(
@@ -27,10 +29,14 @@ fn save_photo(
     file_path: &str,
     exif: &ExifData,
 ) -> Result<(), Error> {
-    let width = exif.width
-        .ok_or(Error::Other(format!("Image {} missing width", file_path)))?;
-    let height = exif.height
-        .ok_or(Error::Other(format!("Image {} missing height", file_path)))?;
+    let width = exif.width.ok_or(Error::Other(format!(
+        "Image {} missing width",
+        file_path,
+    )))?;
+    let height = exif.height.ok_or(Error::Other(format!(
+        "Image {} missing height",
+        file_path,
+    )))?;
     let photo = match Photo::create_or_set_basics(
         db,
         file_path,

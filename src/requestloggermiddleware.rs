@@ -1,5 +1,5 @@
-use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use nickel::status::StatusCode;
+use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use plugin::Extensible;
 use std::sync::{Arc, Mutex};
 use time::{get_time, Duration, Timespec};
@@ -65,9 +65,11 @@ impl<D> Middleware<D> for RequestLoggerMiddleware {
     ) -> MiddlewareResult<'mw, D> {
         let mu = format!("{} {}", req.origin.method, req.origin.uri);
         let status = Arc::new(Mutex::new(StatusCode::Continue));
-        req.extensions_mut().insert::<RequestLoggerMiddleware>(
-            RequestLogger::new(mu, Arc::clone(&status)),
-        );
+        req.extensions_mut()
+            .insert::<RequestLoggerMiddleware>(RequestLogger::new(
+                mu,
+                Arc::clone(&status),
+            ));
         res.on_send(move |r| {
             if let Ok(mut sw) = status.lock() {
                 *sw = r.status();

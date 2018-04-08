@@ -36,6 +36,8 @@ pub trait PhotosDirRequestExtensions {
 
 impl<'a, 'b, D> PhotosDirRequestExtensions for Request<'a, 'b, D> {
     fn photos(&self) -> &PhotosDir {
-        self.extensions().get::<PhotosDirMiddleware>().unwrap()
+        self.extensions()
+            .get::<PhotosDirMiddleware>()
+            .unwrap()
     }
 }
