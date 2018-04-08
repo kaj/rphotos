@@ -38,7 +38,7 @@ pub fn all_years<'mw>(
                 .limit(1);
             let photo = if let Some(year) = year {
                 q.filter(date.ge(start_of_year(year)))
-                    .filter(date.lt(start_of_year(year)))
+                    .filter(date.lt(start_of_year(year + 1)))
             } else {
                 q.filter(date.is_null())
             };
