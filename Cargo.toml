@@ -1,6 +1,6 @@
 [package]
 name = "rphotos"
-version = "0.4.12"
+version = "0.4.13-PRE"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 
 build = "src/build.rs"
