@@ -2,6 +2,6 @@
 
 @(photo: &PhotoLink)
 <div class="item">@if let Some(ref title) = photo.title {<h2>@title</h2>}
-  <a href="@photo.href"><img src="/img/@photo.id-s.jpg" @if let Some(s) = photo.size {width="@s.0" height="@s.1"} alt="Photo @photo.id"></a>
+  <a href="@photo.href"><img src="/img/@photo.id-s.jpg" @if let Some((w, h)) = photo.size {width="@w" height="@h"} alt="Photo @photo.id"></a>
   @if let Some(ref d) = photo.lable {<span class="lable">@d</span>}
 </div>
