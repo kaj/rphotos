@@ -10,7 +10,6 @@ extern crate env_logger;
 extern crate exif;
 extern crate flate2;
 extern crate hyper;
-extern crate hyper_tls;
 extern crate image;
 extern crate libc;
 #[macro_use]
@@ -22,6 +21,7 @@ extern crate nickel_jwt_session;
 extern crate plugin;
 extern crate rand;
 extern crate regex;
+extern crate reqwest;
 extern crate rustc_serialize;
 extern crate slug;
 extern crate time;

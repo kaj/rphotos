@@ -1,5 +1,5 @@
 //! Admin-only views, generally called by javascript.
-use super::{Coord, SizeTag};
+use super::SizeTag;
 use diesel::prelude::*;
 use memcachemiddleware::MemcacheRequestExtensions;
 use models::{Coord, Photo};
@@ -8,6 +8,7 @@ use nickel::status::StatusCode;
 use nickel::{BodyError, FormBody, MiddlewareResult, Request, Response};
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
+use reqwest::Client;
 use rustc_serialize::json::Json;
 use server::nickelext::MyResponse;
 use slug::slugify;
@@ -247,7 +248,7 @@ pub fn fetch_places<'mw>(
     if !req.authorized_user().is_some() {
         return res.error(StatusCode::Unauthorized, "permission denied");
     }
-    let image = 165794;
+    let image = 60458;
 
     let c: &PgConnection = &req.db_conn();
     use schema::positions::dsl::*;
@@ -262,30 +263,29 @@ pub fn fetch_places<'mw>(
         },
         Err(diesel::NotFound) => {
             return res.not_found("Image has no position");
-        },
+        }
         Err(err) => {
             error!("Failed to read position: {}", err);
             return res.not_found("Failed to get image position");
         }
     };
     info!("Should get places for {:?}", coord);
-    use hyper::client::Client;
-    use hyper_tls::HttpsConnector;
-    let client = Client::with_connector(HttpsConnector::new());
-    match client.post("https://overpass.kumi.systems/api/interpreter")
-        .body(&format!(
+    let client = Client::new();
+    match client
+        .post("https://overpass.kumi.systems/api/interpreter")
+        .body(format!(
             "[out:json];is_in({},{});area._[admin_level];out;",
-            coord.x,
-            coord.y,
+            coord.x, coord.y,
         ))
         .send()
     {
         Ok(mut response) => {
-            if response.status.is_success() {
+            if response.status().is_success() {
                 let data = Json::from_reader(&mut response).unwrap();
-    
                 let obj = data.as_object().unwrap();
-                if let Some(elements) = obj.get("elements").and_then(|o| o.as_array()) {
+                if let Some(elements) =
+                    obj.get("elements").and_then(|o| o.as_array())
+                {
                     for obj in elements {
                         if let (Some(osm_id), Some((name, level))) =
                             (osm_id(obj), name_and_level(obj))
@@ -294,7 +294,6 @@ pub fn fetch_places<'mw>(
                         }
                     }
                 }
-                
             } else {
                 warn!("Bad response from overpass: {:?}", response);
             }
@@ -303,9 +302,10 @@ pub fn fetch_places<'mw>(
             warn!("Failed to get overpass info: {}", err);
         }
     }
-    
+
     return res.ok(|o| writeln!(o, "Should get places for {:?}", coord));
 }
+
 fn osm_id(obj: &Json) -> Option<u64> {
     obj.find("id").and_then(|o| o.as_u64())
 }
