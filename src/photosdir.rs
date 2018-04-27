@@ -24,7 +24,9 @@ impl PhotosDir {
         let path = self.basedir.join(&photo.path);
         info!("Should open {:?}", path);
         let img = image::open(path)?;
-        let img = if width < img.width() || height < img.height() {
+        let img = if 3 * width <= img.width() || 3 * height <= img.height() {
+            img.thumbnail(width, height)
+        } else if width < img.width() || height < img.height() {
             img.resize(width, height, FilterType::CatmullRom)
         } else {
             img
