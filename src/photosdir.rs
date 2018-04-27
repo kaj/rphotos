@@ -43,7 +43,7 @@ impl PhotosDir {
             }
         };
         let mut buf = Vec::new();
-        img.save(&mut buf, ImageFormat::JPEG)?;
+        img.write_to(&mut buf, ImageFormat::JPEG)?;
         Ok(buf)
     }
 
