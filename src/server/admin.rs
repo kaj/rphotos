@@ -276,8 +276,7 @@ pub fn fetch_places<'mw>(
         .body(format!(
             "[out:json];is_in({},{});area._[admin_level];out;",
             coord.x, coord.y,
-        ))
-        .send()
+        )).send()
     {
         Ok(mut response) => {
             if response.status().is_success() {
@@ -287,10 +286,29 @@ pub fn fetch_places<'mw>(
                     obj.get("elements").and_then(|o| o.as_array())
                 {
                     for obj in elements {
-                        if let (Some(osm_id), Some((name, level))) =
+                        info!("{}", obj);
+                        if let (Some(t_osm_id), Some((name, level))) =
                             (osm_id(obj), name_and_level(obj))
                         {
-                            info!("{}: {} (level {})", osm_id, name, level);
+                            info!("{}: {} (level {})", t_osm_id, name, level);
+                            let place_id = {
+                                // http://overpass-api.de/api/interpreter?data=%5Bout%3Acustom%5D%3Brel%5Bref%3D%22A+555%22%5D%5Bnetwork%3DBAB%5D%3Bout%3B
+                                use models::Place;
+                                use schema::places::dsl::*;
+                                places
+                                    .filter(osm_id.eq(Some(t_osm_id)))
+                                    .first::<Place>(c)
+                                    .or_else(|_| {
+                                        diesel::insert_into(places)
+                                            .values((
+                                                place_name.eq(&name),
+                                                slug.eq(&slugify(&name)),
+                                                osm_id.eq(Some(t_osm_id)),
+                                                osm_level.eq(Some(level)),
+                                            )).get_result::<Place>(c)
+                                    }).expect("Find or create tag")
+                            };
+                            info!(" ...: {:?}", place_id)
                         }
                     }
                 }
@@ -306,17 +324,19 @@ pub fn fetch_places<'mw>(
     return res.ok(|o| writeln!(o, "Should get places for {:?}", coord));
 }
 
-fn osm_id(obj: &Json) -> Option<u64> {
-    obj.find("id").and_then(|o| o.as_u64())
+fn osm_id(obj: &Json) -> Option<i64> {
+    obj.find("id").and_then(|o| o.as_i64())
 }
 
-fn name_and_level(obj: &Json) -> Option<(&str, i32)> {
+fn name_and_level(obj: &Json) -> Option<(&str, i16)> {
     obj.find("tags").and_then(|tags| {
-        let name = tags.find("name:sv")
+        let name = tags
+            .find("name:sv")
             //.or_else(|| tags.find("name:en"))
             .or_else(|| tags.find("name"))
             .and_then(|o| o.as_string());
-        let level = tags.find("admin_level")
+        let level = tags
+            .find("admin_level")
             .and_then(|o| o.as_string())
             .and_then(|s| s.parse().ok());
         if let (Some(name), Some(level)) = (name, level) {

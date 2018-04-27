@@ -133,7 +133,9 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     wrap3!(server.post "/login",         do_login);
     wrap3!(server.get  "/logout",        logout);
     wrap3!(server.get "/",               all_years);
-    use self::admin::{fetch_places, rotate, set_grade, set_location, set_person, set_tag};
+    use self::admin::{
+        fetch_places, rotate, set_grade, set_location, set_person, set_tag,
+    };
     wrap3!(server.get "/ac/tag",         auto_complete_tag);
     wrap3!(server.get "/ac/person",      auto_complete_person);
     wrap3!(server.get "/adm/fetch_places", fetch_places);

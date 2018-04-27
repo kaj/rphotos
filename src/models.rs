@@ -260,7 +260,7 @@ pub struct Place {
     pub id: i32,
     pub slug: String,
     pub place_name: String,
-    pub osm_id: Option<i32>,
+    pub osm_id: Option<i64>,
     pub osm_level: Option<i16>,
 }
 
