@@ -1,5 +1,5 @@
-use super::PhotoLink;
 use super::views_by_date::query_date;
+use super::PhotoLink;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
 use models::{Coord, Photo};

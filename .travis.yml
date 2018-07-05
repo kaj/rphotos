@@ -17,4 +17,4 @@ matrix:
      before_script:
       - rustup component add rustfmt-preview
      script:
-      - cargo fmt -- --unstable-features --write-mode=diff
+      - cargo fmt -- --check

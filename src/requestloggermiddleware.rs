@@ -65,11 +65,9 @@ impl<D> Middleware<D> for RequestLoggerMiddleware {
     ) -> MiddlewareResult<'mw, D> {
         let mu = format!("{} {}", req.origin.method, req.origin.uri);
         let status = Arc::new(Mutex::new(StatusCode::Continue));
-        req.extensions_mut()
-            .insert::<RequestLoggerMiddleware>(RequestLogger::new(
-                mu,
-                Arc::clone(&status),
-            ));
+        req.extensions_mut().insert::<RequestLoggerMiddleware>(
+            RequestLogger::new(mu, Arc::clone(&status)),
+        );
         res.on_send(move |r| {
             if let Ok(mut sw) = status.lock() {
                 *sw = r.status();

@@ -16,10 +16,9 @@ pub fn one(db: &PgConnection, tpath: &str) -> Result<(), Error> {
             println!("Made {} public: {:?}", tpath, photo);
             Ok(())
         }
-        Err(DieselError::NotFound) => Err(Error::Other(format!(
-            "File {} is not known",
-            tpath,
-        ))),
+        Err(DieselError::NotFound) => {
+            Err(Error::Other(format!("File {} is not known", tpath,)))
+        }
         Err(error) => Err(error.into()),
     }
 }

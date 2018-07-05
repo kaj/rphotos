@@ -82,13 +82,11 @@ impl ExifData {
         // possibly utc, instead.
         if let (&Some(date), &Some((h, m, s))) = (&self.gpsdate, &self.gpstime)
         {
-            let naive = date.and_hms(h as u32, m as u32, s as u32)
+            let naive = date
+                .and_hms(h as u32, m as u32, s as u32)
                 .with_timezone(&Local)
                 .naive_local();
-            debug!(
-                "GPS Date {}, {}:{}:{} => {}",
-                date, h, m, s, naive
-            );
+            debug!("GPS Date {}, {}:{}:{} => {}", date, h, m, s, naive);
             Some(naive)
         } else if let Some(date) = self.dateval {
             Some(date)
@@ -175,10 +173,7 @@ fn is_datetime(f: &Field, tag: &Tag) -> Option<NaiveDateTime> {
         match single_datetime(&f.value) {
             Ok(date) => Some(date),
             Err(err) => {
-                println!(
-                    "ERROR: Expected datetime for {}: {:?}",
-                    tag, err
-                );
+                println!("ERROR: Expected datetime for {}: {:?}", tag, err);
                 None
             }
         }
@@ -205,7 +200,9 @@ fn is_time(f: &Field, tag: &Tag) -> Option<(u8, u8, u8)> {
     if f.tag == *tag {
         match &f.value {
             &Value::Rational(ref v)
-                if v.len() == 3 && v[0].denom == 1 && v[1].denom == 1
+                if v.len() == 3
+                    && v[0].denom == 1
+                    && v[1].denom == 1
                     && v[2].denom == 1 =>
             {
                 Some((v[0].num as u8, v[1].num as u8, v[2].num as u8))

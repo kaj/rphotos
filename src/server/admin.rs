@@ -24,10 +24,7 @@ pub fn rotate<'mw>(
         let c: &PgConnection = &req.db_conn();
         if let Ok(mut image) = photos.find(image).first::<Photo>(c) {
             let newvalue = (360 + image.rotation + angle) % 360;
-            info!(
-                "Rotation was {}, setting to {}",
-                image.rotation, newvalue
-            );
+            info!("Rotation was {}, setting to {}", image.rotation, newvalue);
             image.rotation = newvalue;
             match image.save_changes::<Photo>(c) {
                 Ok(image) => {
@@ -177,23 +174,14 @@ pub fn set_grade<'mw>(
                 }
                 Ok(0) => (),
                 Ok(n) => {
-                    warn!(
-                        "Strange, updated {} images with id {}",
-                        n, image
-                    );
+                    warn!("Strange, updated {} images with id {}", n, image);
                 }
                 Err(error) => {
-                    warn!(
-                        "Failed set grade of image #{}: {}",
-                        image, error
-                    );
+                    warn!("Failed set grade of image #{}: {}", image, error);
                 }
             }
         } else {
-            info!(
-                "Grade {} is out of range for image #{}",
-                newgrade, image
-            );
+            info!("Grade {} is out of range for image #{}", newgrade, image);
         }
     }
     info!("Missing image and/or angle to rotate or image not found");

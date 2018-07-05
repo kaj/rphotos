@@ -1,7 +1,7 @@
 use super::splitlist::links_by_time;
 use super::{Link, PhotoLink, SizeTag};
-use chrono::Duration as ChDuration;
 use chrono::naive::{NaiveDate, NaiveDateTime};
+use chrono::Duration as ChDuration;
 use diesel::expression::sql_literal::SqlLiteral;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -222,12 +222,7 @@ pub fn all_for_day<'mw>(
             templates::index(
                 o,
                 req,
-                &format!(
-                    "Photos from {} {} {}",
-                    day,
-                    monthname(month),
-                    year
-                ),
+                &format!("Photos from {} {} {}", day, monthname(month), year),
                 &[Link::year(year), Link::month(year, month)],
                 &links,
                 &coords,
@@ -269,11 +264,9 @@ pub fn on_this_day<'mw>(
                 .iter()
                 .map(|&(year, count)| {
                     let year = year.map(|y| y as i32).unwrap_or(0);
-                    let fromdate = NaiveDate::from_ymd(
-                        year,
-                        month as u32,
-                        day,
-                    ).and_hms(0, 0, 0);
+                    let fromdate =
+                        NaiveDate::from_ymd(year, month as u32, day)
+                            .and_hms(0, 0, 0);
                     let photo = Photo::query(req.authorized_user().is_some())
                         .filter(date.ge(fromdate))
                         .filter(date.lt(fromdate + ChDuration::days(1)))
