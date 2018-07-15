@@ -200,6 +200,31 @@ form.admin {
 	right: -1ex;
 	top: -1ex;
     }
+    &.location {
+        background: #eee;
+        box-shadow: .2em .4em 1em rgba(0,0,0,.7);
+        display: flex;
+        flex-flow: column;
+        height: calc(95vh  unquote('-') 6em);
+        left: 5vw;
+        padding-bottom: 1em;
+        position: fixed;
+        top: 3em;
+        width: calc(90vw  unquote('-') 1ex);
+        z-index: 10000;
+
+        #amap {
+            border: $border;
+            flex-grow: 1;
+            margin: 0 auto 1ex;
+            max-height: 95vh;
+            width: -moz-available;
+        }
+        button {
+            flex-grow: 0;
+            align-self: flex-end;
+        }
+    }
 }
 
 div.completions {

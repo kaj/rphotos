@@ -1,7 +1,9 @@
 // Admin functionality for rphotos
 (function (d) {
     var details = d.querySelector('.details');
-    if (details) {
+    if (!details) {
+        return;
+    }
 
     function rotate(event) {
         var imgid = details.dataset.imgid;
@@ -198,6 +200,102 @@
         i.focus();
     }
 
+    function location_form(event) {
+        event.target.disabled = true;
+        var imgid = details.dataset.imgid;
+        var position = details.dataset.position;
+        var f = d.createElement("form");
+        f.className = "admin location";
+        f.action = "/adm/locate";
+        f.method = "post";
+        var i = d.createElement("input");
+        i.type="hidden";
+        i.name="image";
+        i.value = imgid;
+        f.appendChild(i);
+
+        var lat = d.createElement("input");
+        lat.type="hidden";
+        lat.name="lat";
+        f.appendChild(lat);
+        var lng = d.createElement("input");
+        lng.type="hidden";
+        lng.name="lng";
+        f.appendChild(lng);
+
+        function keyHandler(e) {
+            switch(e.code) {
+            case 'Escape':
+                e.target.closest('form').remove();
+                event.target.disabled = false;
+                event.target.focus();
+                break;
+            default:
+                return true;
+            };
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+
+        let h = d.querySelector('head');
+        f.insertAdjacentHTML('beforeend', '<div id="amap"></div>');
+        var slink = d.createElement('script');
+        slink.type = 'text/javascript';
+        slink.src = '/static/l131/leaflet.js';
+        slink.async = 'async';
+        var marker;
+        slink.onload = () => {
+            var map = L.map('amap');
+            L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	        attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            if (position) {
+                position = JSON.parse(position);
+                map.setView(position, 16);
+            } else {
+                map.fitWorld();
+                position = [0, 0];
+            }
+            var me = d.getElementById('amap');
+            marker = L.marker(position, {
+                'draggable': true,
+                'autoPan': true,
+                'autoPanPadding': [me.clientWidth/4, me.clientHeight/4],
+            });
+            marker.addTo(map);
+            map.addEventListener('keypress', keyHandler);
+            me.focus();
+        }
+        h.append(slink);
+        var csslink = d.createElement('link');
+        csslink.rel = 'stylesheet';
+        csslink.href = '/static/l131/leaflet.css';
+        h.append(csslink);
+
+        let b = d.createElement("button");
+        b.innerHTML = "Ok";
+        b.onclick = e => {
+            let pos = marker.getLatLng();
+            lat.value = pos.lat;
+            lng.value = pos.lng;
+        }
+        f.appendChild(b);
+
+        let c = d.createElement("button");
+        c.innerHTML = "&#x1f5d9;";
+        c.className = 'close';
+        c.title = 'close';
+        c.onclick = e => {
+            e.target.closest('form').remove();
+            event.target.disabled = false; // The old event creating this form
+            event.target.focus();
+        };
+        f.appendChild(c);
+        f.addEventListener('keypress', keyHandler);
+        meta.insertBefore(f, meta.querySelector('#map'));
+    }
+
     var meta = details.querySelector('.meta');
     if (meta) {
         p = d.createElement("p");
@@ -233,12 +331,19 @@
 
         p.appendChild(d.createTextNode(" "));
         r = d.createElement("button");
+        r.onclick = e => location_form(e);
+        r.innerHTML = "\u{1f5fa}";
+        r.title = "Location";
+        r.accessKey = "l";
+        p.appendChild(r);
+
+        p.appendChild(d.createTextNode(" "));
+        r = d.createElement("button");
         r.onclick = e => grade_form(e);
         r.innerHTML = "\u2606";
         r.title = "Grade";
         r.accessKey = "g";
         p.appendChild(r);
         meta.appendChild(p);
-    }
     }
 })(document)

@@ -195,3 +195,50 @@ fn grade_params(req: &mut Request) -> QResult<(Option<i32>, Option<i16>)> {
         data.get("grade").and_then(|s| s.parse().ok()),
     ))
 }
+
+pub fn set_location<'mw>(
+    req: &mut Request,
+    res: Response<'mw>,
+) -> MiddlewareResult<'mw> {
+    if req.authorized_user().is_none() {
+        return res.error(StatusCode::Unauthorized, "permission denied");
+    }
+    if let (Some(image), Some((lat, lng))) =
+        try_with!(res, location_params(req))
+    {
+        info!("Should set location of #{} to {}, {}.", image, lat, lng);
+
+        let (lat, lng) = ((lat * 1e6) as i32, (lng * 1e6) as i32);
+        use diesel::insert_into;
+        use schema::positions::dsl::*;
+        let db: &PgConnection = &req.db_conn();
+        insert_into(positions)
+            .values((photo_id.eq(image), latitude.eq(lat), longitude.eq(lng)))
+            .on_conflict(photo_id)
+            .do_update()
+            .set((latitude.eq(lat), longitude.eq(lng)))
+            .execute(db)
+            .expect("Insert image position");
+
+        return res.redirect(format!("/img/{}", image));
+    }
+    info!("Missing image and/or position to set, or image not found.");
+    res.not_found("")
+}
+
+fn location_params(
+    req: &mut Request,
+) -> QResult<(Option<i32>, Option<(f64, f64)>)> {
+    let data = req.form_body()?;
+    Ok((
+        data.get("image").and_then(|s| s.parse().ok()),
+        if let (Some(lat), Some(lng)) = (
+            data.get("lat").and_then(|s| s.parse().ok()),
+            data.get("lng").and_then(|s| s.parse().ok()),
+        ) {
+            Some((lat, lng))
+        } else {
+            None
+        },
+    ))
+}
