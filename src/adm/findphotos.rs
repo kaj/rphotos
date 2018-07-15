@@ -25,12 +25,8 @@ fn save_photo(
     file_path: &str,
     exif: &ExifData,
 ) -> Result<(), Error> {
-    let width = exif
-        .width
-        .ok_or(Error::Other(format!("Image {} missing width", file_path,)))?;
-    let height = exif
-        .height
-        .ok_or(Error::Other(format!("Image {} missing height", file_path,)))?;
+    let width = exif.width.ok_or(Error::MissingWidth)?;
+    let height = exif.height.ok_or(Error::MissingHeight)?;
     let photo = match Photo::create_or_set_basics(
         db,
         file_path,

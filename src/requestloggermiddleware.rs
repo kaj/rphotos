@@ -18,8 +18,8 @@ impl RequestLogger {
         debug!("Start handling {}", mu);
         RequestLogger {
             start: get_time(),
-            mu: mu,
-            status: status,
+            mu,
+            status,
         }
     }
 }

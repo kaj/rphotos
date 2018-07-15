@@ -10,7 +10,7 @@ pub struct PhotosDirMiddleware {
 
 impl PhotosDirMiddleware {
     pub fn new(dir: PathBuf) -> Self {
-        PhotosDirMiddleware { dir: dir }
+        PhotosDirMiddleware { dir }
     }
 }
 

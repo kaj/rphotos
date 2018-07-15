@@ -30,45 +30,44 @@ impl ExifData {
         let reader = Reader::new(&mut BufReader::new(&file))?;
         for f in reader.fields() {
             if !f.thumbnail {
-                if let Some(d) = is_datetime(f, &Tag::DateTimeOriginal) {
+                if let Some(d) = is_datetime(f, Tag::DateTimeOriginal) {
                     result.dateval = Some(d);
-                } else if let Some(d) = is_datetime(f, &Tag::DateTime) {
+                } else if let Some(d) = is_datetime(f, Tag::DateTime) {
                     result.dateval = Some(d);
-                } else if let Some(d) = is_datetime(f, &Tag::DateTimeDigitized)
+                } else if let Some(d) = is_datetime(f, Tag::DateTimeDigitized)
                 {
                     if result.dateval.is_none() {
                         result.dateval = Some(d)
                     }
-                } else if let Some(s) = is_string(f, &Tag::Make) {
+                } else if let Some(s) = is_string(f, Tag::Make) {
                     result.make = Some(s.to_string());
-                } else if let Some(s) = is_string(f, &Tag::Model) {
+                } else if let Some(s) = is_string(f, Tag::Model) {
                     result.model = Some(s.to_string());
-                } else if let Some(w) = is_u32(f, &Tag::PixelXDimension) {
+                } else if let Some(w) = is_u32(f, Tag::PixelXDimension) {
                     result.width = Some(w);
-                } else if let Some(h) = is_u32(f, &Tag::PixelYDimension) {
+                } else if let Some(h) = is_u32(f, Tag::PixelYDimension) {
                     result.height = Some(h);
-                } else if let Some(w) = is_u32(f, &Tag::ImageWidth) {
+                } else if let Some(w) = is_u32(f, Tag::ImageWidth) {
                     result.width = Some(w);
-                } else if let Some(h) = is_u32(f, &Tag::ImageLength) {
+                } else if let Some(h) = is_u32(f, Tag::ImageLength) {
                     result.height = Some(h);
-                } else if let Some(o) = is_u32(f, &Tag::Orientation) {
+                } else if let Some(o) = is_u32(f, Tag::Orientation) {
                     result.orientation = Some(o);
-                } else if let Some(lat) = is_lat_long(f, &Tag::GPSLatitude) {
+                } else if let Some(lat) = is_lat_long(f, Tag::GPSLatitude) {
                     result.latval = Some(lat);
-                } else if let Some(long) = is_lat_long(f, &Tag::GPSLongitude) {
+                } else if let Some(long) = is_lat_long(f, Tag::GPSLongitude) {
                     result.longval = Some(long);
-                } else if let Some(s) = is_string(f, &Tag::GPSLatitudeRef) {
+                } else if let Some(s) = is_string(f, Tag::GPSLatitudeRef) {
                     result.latref = Some(s.to_string());
-                } else if let Some(s) = is_string(f, &Tag::GPSLongitudeRef) {
+                } else if let Some(s) = is_string(f, Tag::GPSLongitudeRef) {
                     result.longref = Some(s.to_string());
-                } else if let Some(s) = is_string(f, &Tag::GPSImgDirectionRef)
-                {
+                } else if let Some(s) = is_string(f, Tag::GPSImgDirectionRef) {
                     println!("  direction ref: {}", s);
-                } else if let Some(s) = is_string(f, &Tag::GPSImgDirection) {
+                } else if let Some(s) = is_string(f, Tag::GPSImgDirection) {
                     println!("  direction: {}", s);
-                } else if let Some(d) = is_date(f, &Tag::GPSDateStamp) {
+                } else if let Some(d) = is_date(f, Tag::GPSDateStamp) {
                     result.gpsdate = Some(d);
-                } else if let Some(hms) = is_time(f, &Tag::GPSTimeStamp) {
+                } else if let Some(hms) = is_time(f, Tag::GPSTimeStamp) {
                     result.gpstime = Some(hms);
                 }
             }
@@ -83,7 +82,7 @@ impl ExifData {
         if let (&Some(date), &Some((h, m, s))) = (&self.gpsdate, &self.gpstime)
         {
             let naive = date
-                .and_hms(h as u32, m as u32, s as u32)
+                .and_hms(u32::from(h), u32::from(m), u32::from(s))
                 .with_timezone(&Local)
                 .naive_local();
             debug!("GPS Date {}, {}:{}:{} => {}", date, h, m, s, naive);
@@ -150,13 +149,12 @@ impl ExifData {
     }
 }
 
-fn is_lat_long(f: &Field, tag: &Tag) -> Option<f64> {
-    if f.tag == *tag {
-        match &f.value {
-            &Value::Rational(ref v) if v.len() == 3 => {
-                let (v0, v1, v2) =
-                    (v[0].to_f64(), v[1].to_f64(), v[2].to_f64());
-                return Some(v0 + (v1 + v2 / 60.0) / 60.0);
+fn is_lat_long(f: &Field, tag: Tag) -> Option<f64> {
+    if f.tag == tag {
+        match f.value {
+            Value::Rational(ref v) if v.len() == 3 => {
+                let d = 1. / 60.;
+                Some(v[0].to_f64() + d * (v[1].to_f64() + d * v[2].to_f64()))
             }
             ref v => {
                 println!("ERROR: Bad value for {}: {:?}", tag, v);
@@ -168,36 +166,35 @@ fn is_lat_long(f: &Field, tag: &Tag) -> Option<f64> {
     }
 }
 
-fn is_datetime(f: &Field, tag: &Tag) -> Option<NaiveDateTime> {
-    if f.tag == *tag {
-        match single_datetime(&f.value) {
-            Ok(date) => Some(date),
-            Err(err) => {
-                println!("ERROR: Expected datetime for {}: {:?}", tag, err);
-                None
-            }
-        }
+fn is_datetime(f: &Field, tag: Tag) -> Option<NaiveDateTime> {
+    if f.tag == tag {
+        single_ascii(&f.value)
+            .and_then(|s| Ok(NaiveDateTime::parse_from_str(s, "%Y:%m:%d %T")?))
+            .map_err(|e| {
+                println!("ERROR: Expected datetime for {}: {:?}", tag, e);
+            })
+            .ok()
     } else {
         None
     }
 }
 
-fn is_date(f: &Field, tag: &Tag) -> Option<Date<Utc>> {
-    if f.tag == *tag {
-        match single_date(&f.value) {
-            Ok(date) => Some(date),
-            Err(err) => {
-                println!("ERROR: Expected date for {}: {:?}", tag, err);
-                None
-            }
-        }
+fn is_date(f: &Field, tag: Tag) -> Option<Date<Utc>> {
+    if f.tag == tag {
+        single_ascii(&f.value)
+            .and_then(|s| Ok(NaiveDate::parse_from_str(s, "%Y:%m:%d")?))
+            .map(|d| Date::from_utc(d, Utc))
+            .map_err(|e| {
+                println!("ERROR: Expected date for {}: {:?}", tag, e);
+            })
+            .ok()
     } else {
         None
     }
 }
 
-fn is_time(f: &Field, tag: &Tag) -> Option<(u8, u8, u8)> {
-    if f.tag == *tag {
+fn is_time(f: &Field, tag: Tag) -> Option<(u8, u8, u8)> {
+    if f.tag == tag {
         match &f.value {
             &Value::Rational(ref v)
                 if v.len() == 3
@@ -217,8 +214,8 @@ fn is_time(f: &Field, tag: &Tag) -> Option<(u8, u8, u8)> {
     }
 }
 
-fn is_string<'a>(f: &'a Field, tag: &Tag) -> Option<&'a str> {
-    if f.tag == *tag {
+fn is_string<'a>(f: &'a Field, tag: Tag) -> Option<&'a str> {
+    if f.tag == tag {
         match single_ascii(&f.value) {
             Ok(s) => Some(s),
             Err(err) => {
@@ -231,11 +228,11 @@ fn is_string<'a>(f: &'a Field, tag: &Tag) -> Option<&'a str> {
     }
 }
 
-fn is_u32(f: &Field, tag: &Tag) -> Option<u32> {
-    if f.tag == *tag {
+fn is_u32(f: &Field, tag: Tag) -> Option<u32> {
+    if f.tag == tag {
         match &f.value {
             &Value::Long(ref v) if v.len() == 1 => Some(v[0]),
-            &Value::Short(ref v) if v.len() == 1 => Some(v[0] as u32),
+            &Value::Short(ref v) if v.len() == 1 => Some(u32::from(v[0])),
             v => {
                 println!("ERROR: Unsuppored value for {}: {:?}", tag, v);
                 None
@@ -244,20 +241,6 @@ fn is_u32(f: &Field, tag: &Tag) -> Option<u32> {
     } else {
         None
     }
-}
-
-fn single_datetime(value: &Value) -> Result<NaiveDateTime, Error> {
-    single_ascii(value)
-        .and_then(|s| Ok(NaiveDateTime::parse_from_str(s, "%Y:%m:%d %T")?))
-}
-
-fn single_date(value: &Value) -> Result<Date<Utc>, Error> {
-    single_ascii(value).and_then(|s| {
-        Ok(Date::from_utc(
-            NaiveDate::parse_from_str(s, "%Y:%m:%d")?,
-            Utc,
-        ))
-    })
 }
 
 fn single_ascii<'a>(value: &'a Value) -> Result<&'a str, Error> {

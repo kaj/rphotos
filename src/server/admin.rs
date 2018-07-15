@@ -15,7 +15,7 @@ pub fn rotate<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    if !req.authorized_user().is_some() {
+    if req.authorized_user().is_none() {
         return res.error(StatusCode::Unauthorized, "permission denied");
     }
     if let (Some(image), Some(angle)) = try_with!(res, rotate_params(req)) {
@@ -28,8 +28,8 @@ pub fn rotate<'mw>(
             image.rotation = newvalue;
             match image.save_changes::<Photo>(c) {
                 Ok(image) => {
-                    req.clear_cache(&image.cache_key(&SizeTag::Small));
-                    req.clear_cache(&image.cache_key(&SizeTag::Medium));
+                    req.clear_cache(&image.cache_key(SizeTag::Small));
+                    req.clear_cache(&image.cache_key(SizeTag::Medium));
                     return res.ok(|o| writeln!(o, "ok"));
                 }
                 Err(error) => {
@@ -56,7 +56,7 @@ pub fn set_tag<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    if !req.authorized_user().is_some() {
+    if req.authorized_user().is_none() {
         return res.error(StatusCode::Unauthorized, "permission denied");
     }
     if let (Some(image), Some(tag)) = try_with!(res, tag_params(req)) {
@@ -105,7 +105,7 @@ pub fn set_person<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    if !req.authorized_user().is_some() {
+    if req.authorized_user().is_none() {
         return res.error(StatusCode::Unauthorized, "permission denied");
     }
     if let (Some(image), Some(name)) = try_with!(res, person_params(req)) {
@@ -158,7 +158,7 @@ pub fn set_grade<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    if !req.authorized_user().is_some() {
+    if req.authorized_user().is_none() {
         return res.error(StatusCode::Unauthorized, "permission denied");
     }
     if let (Some(image), Some(newgrade)) = try_with!(res, grade_params(req)) {

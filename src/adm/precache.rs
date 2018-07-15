@@ -25,7 +25,7 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
     let no_expire = 0;
     for photo in photos {
         n += 1;
-        let key = &photo.cache_key(&size);
+        let key = &photo.cache_key(size);
         if cache.get(key.as_bytes()).is_ok() {
             debug!("Cache: {} found for {}", key, photo.path);
         } else {

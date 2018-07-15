@@ -277,8 +277,8 @@ pub enum SizeTag {
     Large,
 }
 impl SizeTag {
-    pub fn px(&self) -> u32 {
-        match *self {
+    pub fn px(self) -> u32 {
+        match self {
             SizeTag::Small => 240,
             SizeTag::Medium => 960,
             SizeTag::Large => 1900,
@@ -329,7 +329,7 @@ fn get_image_data(
     photo: &Photo,
     size: SizeTag,
 ) -> Result<Vec<u8>, image::ImageError> {
-    req.cached_or(&photo.cache_key(&size), || {
+    req.cached_or(&photo.cache_key(size), || {
         let size = size.px();
         req.photos().scale_image(photo, size, size)
     })

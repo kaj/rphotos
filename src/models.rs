@@ -36,7 +36,7 @@ impl Photo {
         self.is_public
     }
 
-    pub fn cache_key(&self, size: &SizeTag) -> String {
+    pub fn cache_key(&self, size: SizeTag) -> String {
         format!("rp{}{:?}", self.id, size)
     }
 
