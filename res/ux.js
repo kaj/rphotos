@@ -35,6 +35,10 @@
   }
   function prepare_map(cb) {
     let h = d.querySelector('head');
+    var csslink = d.createElement('link');
+    csslink.rel = 'stylesheet';
+    csslink.href = '/static/l131/leaflet.css';
+    h.append(csslink);
     let m = d.querySelector('.meta') || d.querySelector('main');
     m.insertAdjacentHTML('beforeend', '<div id="map"></div>');
     var slink = d.createElement('script');
@@ -50,10 +54,6 @@
       cb(map);
     }
     h.append(slink);
-    var csslink = d.createElement('link');
-    csslink.rel = 'stylesheet';
-    csslink.href = '/static/l131/leaflet.css';
-    h.append(csslink);
   }
   let details = d.querySelector('.details');
   let pos = details && details.dataset.position

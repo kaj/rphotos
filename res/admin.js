@@ -239,6 +239,10 @@
         }
 
         let h = d.querySelector('head');
+        var csslink = d.createElement('link');
+        csslink.rel = 'stylesheet';
+        csslink.href = '/static/l131/leaflet.css';
+        h.append(csslink);
         f.insertAdjacentHTML('beforeend', '<div id="amap"></div>');
         var slink = d.createElement('script');
         slink.type = 'text/javascript';
@@ -268,10 +272,6 @@
             me.focus();
         }
         h.append(slink);
-        var csslink = d.createElement('link');
-        csslink.rel = 'stylesheet';
-        csslink.href = '/static/l131/leaflet.css';
-        h.append(csslink);
 
         let b = d.createElement("button");
         b.innerHTML = "Ok";
