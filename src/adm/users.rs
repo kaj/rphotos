@@ -3,9 +3,7 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::{insert_into, update};
 use djangohashers::make_password;
-use rand::distributions::range::Range;
-use rand::distributions::IndependentSample;
-use rand::os::OsRng;
+use rand::{thread_rng, Rng};
 use std::iter::Iterator;
 
 pub fn list(db: &PgConnection) -> Result<(), Error> {
@@ -45,14 +43,8 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
 }
 
 fn random_password(len: usize) -> String {
-    let rng = &mut OsRng::new().expect("Init rng");
-    let nlc = b'z' - b'a' + 1;
-    let x = Range::new(0, 6 * nlc + 4 * 10 + 1);
-    (0..len)
-        .map(|_| match x.ind_sample(rng) {
-            n if n < (1 * nlc) => (b'A' + (n % nlc)) as char,
-            n if n < (6 * nlc) => (b'a' + (n % nlc)) as char,
-            n => (b'0' + n % 10) as char,
-        })
-        .collect()
+    let mut rng = thread_rng();
+    // Note; I would like to have lowercase letters more probable
+    use rand::distributions::Alphanumeric;
+    rng.sample_iter(&Alphanumeric).take(len).collect()
 }
