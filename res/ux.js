@@ -68,9 +68,26 @@
   let poss = (details && details.dataset.positions) || (group && group.dataset.positions);
   if (poss) {
     prepare_map((map) => {
-      let pos = JSON.parse(poss)
-      map.fitBounds(L.polyline(pos).getBounds())
-      pos.forEach(p => L.marker(p).addTo(map));
+      let h = d.querySelector('head');
+      h.insertAdjacentHTML(
+        'beforeend',
+        '<link rel="stylesheet" href="/static/lm130/lmc.css">' +
+        '<link rel="stylesheet" href="/static/lm130/lmc-default.css">'
+      )
+      var slink2 = d.createElement('script');
+      slink2.type = 'text/javascript';
+      slink2.src = '/static/lm130/lmc.js';
+      h.append(slink2);
+      slink2.onload = () => {
+        let pos = JSON.parse(poss);
+        var markers = L.markerClusterGroup();
+        map.fitBounds(L.polyline(pos).getBounds());
+        pos.forEach(p => {
+          let m = L.marker(p);
+          markers.addLayer(m);
+        });
+        map.addLayer(markers);
+      };
     })
   }
 })(document)

@@ -15,5 +15,8 @@ fn main() {
     statics
         .add_files_as(&s_dir.join("leaflet-1.3.1"), "l131")
         .unwrap();
+    statics
+        .add_files_as(&s_dir.join("leaflet-cluster-1.3.0"), "lm130")
+        .unwrap();
     compile_templates(&base_dir.join("templates"), &out_dir).unwrap();
 }
