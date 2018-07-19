@@ -2,7 +2,7 @@
 use super::SizeTag;
 use diesel::prelude::*;
 use memcachemiddleware::MemcacheRequestExtensions;
-use models::Photo;
+use models::{Coord, Photo};
 use nickel::extensions::Redirect;
 use nickel::status::StatusCode;
 use nickel::{BodyError, FormBody, MiddlewareResult, Request, Response};
@@ -203,12 +203,10 @@ pub fn set_location<'mw>(
     if req.authorized_user().is_none() {
         return res.error(StatusCode::Unauthorized, "permission denied");
     }
-    if let (Some(image), Some((lat, lng))) =
-        try_with!(res, location_params(req))
-    {
-        info!("Should set location of #{} to {}, {}.", image, lat, lng);
+    if let (Some(image), Some(coord)) = try_with!(res, location_params(req)) {
+        info!("Should set location of #{} to {:?}.", image, coord);
 
-        let (lat, lng) = ((lat * 1e6) as i32, (lng * 1e6) as i32);
+        let (lat, lng) = ((coord.x * 1e6) as i32, (coord.y * 1e6) as i32);
         use diesel::insert_into;
         use schema::positions::dsl::*;
         let db: &PgConnection = &req.db_conn();
@@ -228,7 +226,7 @@ pub fn set_location<'mw>(
 
 fn location_params(
     req: &mut Request,
-) -> QResult<(Option<i32>, Option<(f64, f64)>)> {
+) -> QResult<(Option<i32>, Option<Coord>)> {
     let data = req.form_body()?;
     Ok((
         data.get("image").and_then(|s| s.parse().ok()),
@@ -236,7 +234,7 @@ fn location_params(
             data.get("lat").and_then(|s| s.parse().ok()),
             data.get("lng").and_then(|s| s.parse().ok()),
         ) {
-            Some((lat, lng))
+            Some(Coord { x: lat, y: lng })
         } else {
             None
         },

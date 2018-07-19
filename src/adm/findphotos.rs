@@ -12,12 +12,14 @@ pub fn crawl(
     photos: &PhotosDir,
     only_in: &Path,
 ) -> Result<(), Error> {
-    Ok(photos.find_files(only_in, &|path, exif| match save_photo(
-        db, path, exif,
-    ) {
-        Ok(()) => debug!("Saved photo {}", path),
-        Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
-    })?)
+    photos.find_files(
+        only_in,
+        &|path, exif| match save_photo(db, path, exif) {
+            Ok(()) => debug!("Saved photo {}", path),
+            Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
+        },
+    )?;
+    Ok(())
 }
 
 fn save_photo(

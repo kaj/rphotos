@@ -196,7 +196,10 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
             storestatics::to_dir(args.value_of("DIR").unwrap())
         }
         ("runserver", Some(args)) => server::run(args),
-        _ => Ok(println!("No subcommand given.\n\n{}", args.usage())),
+        _ => {
+            println!("No subcommand given.\n\n{}", args.usage());
+            Ok(())
+        }
     }
 }
 
