@@ -83,7 +83,9 @@
         var markers = L.markerClusterGroup();
         map.fitBounds(L.polyline(pos).getBounds());
         pos.forEach(p => {
-          let m = L.marker(p);
+          let n = p.pop();
+          let m = L.marker(p, { title: n });
+          m.bindPopup(`<a href="/img/${n}"><img src="/img/${n}-s.jpg"></a>`);
           markers.addLayer(m);
         });
         map.addLayer(markers);

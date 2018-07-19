@@ -10,7 +10,7 @@ use schema::photos;
 pub fn links_by_time<'a>(
     req: &mut Request,
     photos: photos::BoxedQuery<'a, Pg>,
-) -> (Vec<PhotoLink>, Vec<Coord>) {
+) -> (Vec<PhotoLink>, Vec<(Coord, i32)>) {
     let c: &PgConnection = &req.db_conn();
     use schema::photos::dsl::{date, id};
     let photos = if let Some((_, from_date)) = query_date(req, "from") {
@@ -41,18 +41,23 @@ pub fn links_by_time<'a>(
     )
 }
 
-pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<Coord> {
+pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
     use schema::positions::dsl::*;
     positions
         .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))
-        .select((latitude, longitude))
+        .select((photo_id, latitude, longitude))
         .load(c)
         .map_err(|e| warn!("Failed to load positions: {}", e))
         .unwrap_or_default()
         .into_iter()
-        .map(|(lat, long): (i32, i32)| Coord {
-            x: f64::from(lat) / 1e6,
-            y: f64::from(long) / 1e6,
+        .map(|(p_id, lat, long): (i32, i32, i32)| {
+            (
+                Coord {
+                    x: f64::from(lat) / 1e6,
+                    y: f64::from(long) / 1e6,
+                },
+                p_id,
+            )
         })
         .collect()
 }

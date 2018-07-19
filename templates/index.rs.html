@@ -3,7 +3,7 @@
 @use server::{Link, PhotoLink};
 @use templates::{data_positions, page_base, photo_link};
 
-@(req: &Request, title: &str, lpath: &[Link], photos: &[PhotoLink], coords: &[Coord])
+@(req: &Request, title: &str, lpath: &[Link], photos: &[PhotoLink], coords: &[(Coord, i32)])
 
 @:page_base(req, title, lpath, {
   <div class="group"@:data_positions(coords)>
