@@ -54,16 +54,19 @@ fn save_photo(
     if let Some((lat, long)) = exif.position() {
         debug!("Position for {} is {} {}", file_path, lat, long);
         use schema::positions::dsl::*;
-        if let Ok((pos, clat, clong)) = positions
+        if let Ok((clat, clong)) = positions
             .filter(photo_id.eq(photo.id))
-            .select((id, latitude, longitude))
-            .first::<(i32, i32, i32)>(db)
+            .select((latitude, longitude))
+            .first::<(i32, i32)>(db)
         {
-            if (clat != (lat * 1e6) as i32) || (clong != (long * 1e6) as i32) {
-                panic!(
-                    "TODO Should update position #{} from {} {} to {} {}",
-                    pos, clat, clong, lat, long,
-                )
+            let lat = (lat * 1e6) as i32;
+            let long = (long * 1e6) as i32;
+            if clat != lat || clong != long {
+                warn!(
+                    "Photo #{}: {}: \
+                     Exif position {}, {} differs from saved {}, {}",
+                    photo.id, photo.path, clat, clong, lat, long,
+                );
             }
         } else {
             info!("Position for {} is {} {}", file_path, lat, long);
