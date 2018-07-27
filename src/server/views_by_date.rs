@@ -2,9 +2,10 @@ use super::splitlist::links_by_time;
 use super::{Link, PhotoLink, SizeTag};
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use chrono::Duration as ChDuration;
-use diesel::expression::sql_literal::SqlLiteral;
+use diesel::dsl::sql;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::sql_types::{BigInt, Integer, Nullable};
 use models::Photo;
 use nickel::extensions::response::Redirect;
 use nickel::{MiddlewareResult, QueryString, Request, Response};
@@ -21,7 +22,7 @@ pub fn all_years<'mw>(
     use schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    let groups: Vec<_> = SqlLiteral::new(format!(
+    let groups: Vec<_> = sql::<(Nullable<Integer>, BigInt)>(&format!(
         "select cast(extract(year from date) as int) y, count(*) c \
          from photos{} group by y order by y desc nulls last",
         if req.authorized_user().is_none() {
@@ -72,7 +73,7 @@ pub fn months_in_year<'mw>(
     let c: &PgConnection = &req.db_conn();
 
     let title: String = format!("Photos from {}", year);
-    let groups: Vec<_> = SqlLiteral::new(format!(
+    let groups: Vec<_> = sql::<(Nullable<Integer>, BigInt)>(&format!(
         "select cast(extract(month from date) as int) m, count(*) c \
          from photos where extract(year from date)={}{} \
          group by m order by m desc",
@@ -130,7 +131,7 @@ pub fn days_in_month<'mw>(
 
     let lpath: Vec<Link> = vec![Link::year(year)];
     let title: String = format!("Photos from {} {}", monthname(month), year);
-    let groups: Vec<_> = SqlLiteral::new(format!(
+    let groups: Vec<_> = sql::<(Nullable<Integer>, BigInt)>(&format!(
         "select cast(extract(day from date) as int) d, count(*) c \
          from photos where extract(year from date)={} \
          and extract(month from date)={}{} group by d order by d desc",
@@ -248,7 +249,7 @@ pub fn on_this_day<'mw>(
             req,
             &format!("Photos from {} {}", day, monthname(month)),
             &[],
-            &SqlLiteral::new(format!(
+            &sql(&format!(
                 "select extract(year from date) y, count(*) c \
                  from photos where extract(month from date)={} \
                  and extract(day from date)={}{} group by y order by y desc",
