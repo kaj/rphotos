@@ -172,8 +172,7 @@ fn is_datetime(f: &Field, tag: Tag) -> Option<NaiveDateTime> {
             .and_then(|s| Ok(NaiveDateTime::parse_from_str(s, "%Y:%m:%d %T")?))
             .map_err(|e| {
                 println!("ERROR: Expected datetime for {}: {:?}", tag, e);
-            })
-            .ok()
+            }).ok()
     } else {
         None
     }
@@ -186,8 +185,7 @@ fn is_date(f: &Field, tag: Tag) -> Option<Date<Utc>> {
             .map(|d| Date::from_utc(d, Utc))
             .map_err(|e| {
                 println!("ERROR: Expected date for {}: {:?}", tag, e);
-            })
-            .ok()
+            }).ok()
     } else {
         None
     }

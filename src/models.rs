@@ -128,8 +128,7 @@ impl Photo {
                     width.eq(newwidth),
                     height.eq(newheight),
                     camera_id.eq(camera.map(|c| c.id)),
-                ))
-                .get_result::<Photo>(db)?;
+                )).get_result::<Photo>(db)?;
             Ok(Modification::Created(pic))
         }
     }
@@ -143,8 +142,7 @@ impl Photo {
         people
             .filter(id.eq_any(
                 photo_people.select(person_id).filter(photo_id.eq(self.id)),
-            ))
-            .load(db)
+            )).load(db)
     }
 
     pub fn load_places(
@@ -156,8 +154,7 @@ impl Photo {
         places
             .filter(id.eq_any(
                 photo_places.select(place_id).filter(photo_id.eq(self.id)),
-            ))
-            .load(db)
+            )).load(db)
     }
     pub fn load_tags(
         &self,

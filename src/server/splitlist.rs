@@ -58,8 +58,7 @@ pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
                 },
                 p_id,
             )
-        })
-        .collect()
+        }).collect()
 }
 
 pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
