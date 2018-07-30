@@ -61,10 +61,12 @@ impl ExifData {
                     result.latref = Some(s.to_string());
                 } else if let Some(s) = is_string(f, Tag::GPSLongitudeRef) {
                     result.longref = Some(s.to_string());
+                /*
                 } else if let Some(s) = is_string(f, Tag::GPSImgDirectionRef) {
                     println!("  direction ref: {}", s);
                 } else if let Some(s) = is_string(f, Tag::GPSImgDirection) {
                     println!("  direction: {}", s);
+                */
                 } else if let Some(d) = is_date(f, Tag::GPSDateStamp) {
                     result.gpsdate = Some(d);
                 } else if let Some(hms) = is_time(f, Tag::GPSTimeStamp) {
@@ -194,13 +196,16 @@ fn is_date(f: &Field, tag: Tag) -> Option<Date<Utc>> {
 fn is_time(f: &Field, tag: Tag) -> Option<(u8, u8, u8)> {
     if f.tag == tag {
         match &f.value {
+            // Some cameras (notably iPhone) uses fractional seconds.
+            // Just round to whole seconds.
             &Value::Rational(ref v)
-                if v.len() == 3
-                    && v[0].denom == 1
-                    && v[1].denom == 1
-                    && v[2].denom == 1 =>
+                if v.len() == 3 && v[0].denom == 1 && v[1].denom == 1 =>
             {
-                Some((v[0].num as u8, v[1].num as u8, v[2].num as u8))
+                Some((
+                    v[0].num as u8,
+                    v[1].num as u8,
+                    v[2].to_f64().round() as u8,
+                ))
             }
             err => {
                 error!("Expected time for {}: {:?}", tag, err);
