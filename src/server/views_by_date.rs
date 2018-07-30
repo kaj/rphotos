@@ -22,16 +22,11 @@ pub fn all_years<'mw>(
     use schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
-    let groups = sql::<(Nullable<Integer>, BigInt)>(&format!(
-        "select cast(extract(year from date) as int) y, count(*) c \
-         from photos{} group by y order by y desc nulls last",
-        if req.authorized_user().is_none() {
-            " where is_public"
-        } else {
-            ""
-        }
-    ));
-    let groups = groups
+    let groups = Photo::query(req.authorized_user().is_some())
+        .select(sql::<(Nullable<Integer>, BigInt)>(
+            "cast(extract(year from date) as int) y, count(*)",
+        )).group_by(sql::<Nullable<Integer>>("y"))
+        .order(sql::<Nullable<Integer>>("y").desc().nulls_last())
         .load::<(Option<i32>, i64)>(c)
         .unwrap()
         .iter()
@@ -74,33 +69,21 @@ pub fn months_in_year<'mw>(
     let c: &PgConnection = &req.db_conn();
 
     let title: String = format!("Photos from {}", year);
-    let groups = sql::<(Nullable<Integer>, BigInt)>(&format!(
-        "select cast(extract(month from date) as int) m, count(*) c \
-         from photos where extract(year from date)={}{} \
-         group by m order by m desc",
-        year,
-        if req.authorized_user().is_none() {
-            " and is_public"
-        } else {
-            ""
-        }
-    ));
-    let groups = groups
-        .load::<(Option<i32>, i64)>(c)
+    let groups = Photo::query(req.authorized_user().is_some())
+        .filter(date.ge(start_of_year(year)))
+        .filter(date.lt(start_of_year(year + 1)))
+        .select(sql::<(Integer, BigInt)>(
+            "cast(extract(month from date) as int) m, count(*)",
+        )).group_by(sql::<Integer>("m"))
+        .order(sql::<Integer>("m").desc().nulls_last())
+        .load::<(i32, i64)>(c)
         .unwrap()
         .iter()
         .map(|&(month, count)| {
-            let month = month.map(|y| y as u32).unwrap_or(0);
-            let fromdate =
-                NaiveDate::from_ymd(year, month, 1).and_hms(0, 0, 0);
-            let todate = if month == 12 {
-                NaiveDate::from_ymd(year + 1, 1, 1)
-            } else {
-                NaiveDate::from_ymd(year, month + 1, 1)
-            }.and_hms(0, 0, 0);
+            let month = month as u32;
             let photo = Photo::query(req.authorized_user().is_some())
-                .filter(date.ge(fromdate))
-                .filter(date.lt(todate))
+                .filter(date.ge(start_of_month(year, month)))
+                .filter(date.lt(start_of_month(year, month + 1)))
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1)
                 .first::<Photo>(c)
@@ -122,6 +105,15 @@ pub fn months_in_year<'mw>(
     }
 }
 
+fn start_of_month(year: i32, month: u32) -> NaiveDateTime {
+    let date = if month > 12 {
+        NaiveDate::from_ymd(year + 1, month - 12, 1)
+    } else {
+        NaiveDate::from_ymd(year, month, 1)
+    };
+    date.and_hms(0, 0, 0)
+}
+
 pub fn days_in_month<'mw>(
     req: &mut Request,
     res: Response<'mw>,
@@ -133,24 +125,18 @@ pub fn days_in_month<'mw>(
 
     let lpath: Vec<Link> = vec![Link::year(year)];
     let title: String = format!("Photos from {} {}", monthname(month), year);
-    let groups = sql::<(Nullable<Integer>, BigInt)>(&format!(
-        "select cast(extract(day from date) as int) d, count(*) c \
-         from photos where extract(year from date)={} \
-         and extract(month from date)={}{} group by d order by d desc",
-        year,
-        month,
-        if req.authorized_user().is_none() {
-            " and is_public"
-        } else {
-            ""
-        }
-    ));
-    let groups = groups
-        .load::<(Option<i32>, i64)>(c)
+    let groups = Photo::query(req.authorized_user().is_some())
+        .filter(date.ge(start_of_month(year, month)))
+        .filter(date.lt(start_of_month(year, month + 1)))
+        .select(sql::<(Integer, BigInt)>(
+            "cast(extract(day from date) as int) d, count(*)",
+        )).group_by(sql::<Integer>("d"))
+        .order(sql::<Integer>("d").desc().nulls_last())
+        .load::<(i32, i64)>(c)
         .unwrap()
         .iter()
         .map(|&(day, count)| {
-            let day = day.map(|y| y as u32).unwrap_or(0);
+            let day = day as u32;
             let fromdate =
                 NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
             let photo = Photo::query(req.authorized_user().is_some())
@@ -252,40 +238,40 @@ pub fn on_this_day<'mw>(
             req,
             &format!("Photos from {} {}", day, monthname(month)),
             &[],
-            &sql(&format!(
-                "select extract(year from date) y, count(*) c \
-                 from photos where extract(month from date)={} \
-                 and extract(day from date)={}{} group by y order by y desc",
-                month,
-                day,
-                if req.authorized_user().is_none() {
-                    " and is_public"
-                } else {
-                    ""
-                }
-            )).load::<(Option<f64>, i64)>(c)
-            .unwrap()
-            .iter()
-            .map(|&(year, count)| {
-                let year = year.map(|y| y as i32).unwrap_or(0);
-                let fromdate = NaiveDate::from_ymd(year, month as u32, day)
-                    .and_hms(0, 0, 0);
-                let photo = Photo::query(req.authorized_user().is_some())
-                    .filter(date.ge(fromdate))
-                    .filter(date.lt(fromdate + ChDuration::days(1)))
-                    .order((grade.desc().nulls_last(), date.asc()))
-                    .limit(1)
-                    .first::<Photo>(c)
-                    .unwrap();
+            &Photo::query(req.authorized_user().is_some())
+                .select(sql::<(Integer, BigInt)>(
+                    "cast(extract(year from date) as int) y, count(*)",
+                )).group_by(sql::<Integer>("y"))
+                .filter(
+                    sql("extract(month from date)=")
+                        .bind::<Integer, _>(month as i32),
+                ).filter(
+                    sql("extract(day from date)=")
+                        .bind::<Integer, _>(day as i32),
+                ).order(sql::<Integer>("y").desc())
+                .load::<(i32, i64)>(c)
+                .unwrap()
+                .iter()
+                .map(|&(year, count)| {
+                    let fromdate =
+                        NaiveDate::from_ymd(year, month as u32, day)
+                            .and_hms(0, 0, 0);
+                    let photo = Photo::query(req.authorized_user().is_some())
+                        .filter(date.ge(fromdate))
+                        .filter(date.lt(fromdate + ChDuration::days(1)))
+                        .order((grade.desc().nulls_last(), date.asc()))
+                        .limit(1)
+                        .first::<Photo>(c)
+                        .unwrap();
 
-                PhotoLink {
-                    title: Some(format!("{}", year)),
-                    href: format!("/{}/{}/{}", year, month, day),
-                    lable: Some(format!("{} pictures", count)),
-                    id: photo.id,
-                    size: photo.get_size(SizeTag::Small.px()),
-                }
-            }).collect::<Vec<_>>(),
+                    PhotoLink {
+                        title: Some(format!("{}", year)),
+                        href: format!("/{}/{}/{}", year, month, day),
+                        lable: Some(format!("{} pictures", count)),
+                        id: photo.id,
+                        size: photo.get_size(SizeTag::Small.px()),
+                    }
+                }).collect::<Vec<_>>(),
             &[],
         )
     })
