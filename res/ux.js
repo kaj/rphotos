@@ -80,7 +80,7 @@
       h.append(slink2);
       slink2.onload = () => {
         let pos = JSON.parse(poss);
-        var markers = L.markerClusterGroup();
+        var markers = L.markerClusterGroup({maxClusterRadius: 35});
         map.fitBounds(L.polyline(pos).getBounds());
         pos.forEach(p => {
           let n = p.pop();
