@@ -6,7 +6,7 @@ use diesel::dsl::sql;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Nullable};
-use models::{Coord, Photo};
+use models::Photo;
 use nickel::extensions::response::Redirect;
 use nickel::{MiddlewareResult, QueryString, Request, Response};
 use nickel_diesel::DieselRequestExtensions;
@@ -225,7 +225,7 @@ pub fn on_this_day<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::{date, grade, id};
+    use schema::photos::dsl::{date, grade};
     use schema::positions::dsl::{latitude, longitude, photo_id, positions};
     let c: &PgConnection = &req.db_conn();
 
@@ -234,7 +234,7 @@ pub fn on_this_day<'mw>(
         (now.tm_mon as u32 + 1, now.tm_mday as u32)
     };
     let pos = Photo::query(req.authorized_user().is_some())
-        .inner_join(positions.on(photo_id.eq(id)))
+        .inner_join(positions)
         .filter(
             sql("extract(month from date)=").bind::<Integer, _>(month as i32),
         ).filter(sql("extract(day from date)=").bind::<Integer, _>(day as i32))
@@ -243,15 +243,8 @@ pub fn on_this_day<'mw>(
         .map_err(|e| warn!("Failed to load positions: {}", e))
         .unwrap_or_default()
         .into_iter()
-        .map(|(p_id, lat, long): (i32, i32, i32)| {
-            (
-                Coord {
-                    x: f64::from(lat) / 1e6,
-                    y: f64::from(long) / 1e6,
-                },
-                p_id,
-            )
-        }).collect::<Vec<_>>();
+        .map(|(p_id, lat, long): (i32, i32, i32)| ((lat, long).into(), p_id))
+        .collect::<Vec<_>>();
 
     res.ok(|o| {
         templates::index(

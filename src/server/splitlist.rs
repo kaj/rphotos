@@ -50,15 +50,8 @@ pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
         .map_err(|e| warn!("Failed to load positions: {}", e))
         .unwrap_or_default()
         .into_iter()
-        .map(|(p_id, lat, long): (i32, i32, i32)| {
-            (
-                Coord {
-                    x: f64::from(lat) / 1e6,
-                    y: f64::from(long) / 1e6,
-                },
-                p_id,
-            )
-        }).collect()
+        .map(|(p_id, lat, long): (i32, i32, i32)| ((lat, long).into(), p_id))
+        .collect()
 }
 
 pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {

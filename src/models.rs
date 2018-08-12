@@ -174,10 +174,7 @@ impl Photo {
             .select((latitude, longitude))
             .first::<(i32, i32)>(db)
         {
-            Ok((tlat, tlong)) => Some(Coord {
-                x: f64::from(tlat) / 1e6,
-                y: f64::from(tlong) / 1e6,
-            }),
+            Ok(c) => Some(c.into()),
             Err(diesel::NotFound) => None,
             Err(err) => {
                 error!("Failed to read position: {}", err);
@@ -287,4 +284,13 @@ impl Camera {
 pub struct Coord {
     pub x: f64,
     pub y: f64,
+}
+
+impl From<(i32, i32)> for Coord {
+    fn from((lat, long): (i32, i32)) -> Coord {
+        Coord {
+            x: f64::from(lat) / 1e6,
+            y: f64::from(long) / 1e6,
+        }
+    }
 }
