@@ -203,7 +203,7 @@
     function location_form(event) {
         event.target.disabled = true;
         var imgid = details.dataset.imgid;
-        var position = details.dataset.position;
+        var position = details.dataset.position || localStorage.getItem('lastpos');
         var f = d.createElement("form");
         f.className = "admin location";
         f.action = "/adm/locate";
@@ -279,6 +279,7 @@
             let pos = marker.getLatLng();
             lat.value = pos.lat;
             lng.value = pos.lng;
+            localStorage.setItem('lastpos', `[${pos.lat},${pos.lng}]`)
         }
         f.appendChild(b);
 
