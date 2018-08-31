@@ -23,7 +23,6 @@ image = "^0.19.0"
 time = "*"
 kamadak-exif = "~0.3.0"
 diesel = { version = "~1.2.2", features = ["chrono", "postgres"] }
-diesel_infer_schema = { version = "~1.2.0", features = ["postgres"] }
 r2d2-diesel = "^1.0.0"
 r2d2 = "^0.8.2" # Must match version used by r2d2-diesel
 rustc-serialize = "0.3.24" # Must match version used by nickel
