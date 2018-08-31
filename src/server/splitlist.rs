@@ -88,19 +88,74 @@ fn find_largest(groups: &[&[Photo]]) -> usize {
 
 fn split(group: &[Photo]) -> (&[Photo], &[Photo]) {
     let l = group.len();
+    let gradesum = group
+        .iter()
+        .fold(0, |sum: i64, p| sum + i64::from(p.grade.unwrap_or(30)));
+    let mut lsum = 0;
     let edge = l / 16;
     let mut pos = 0;
     let mut largest = 0;
     for i in edge..l - 1 - edge {
         let interval = timestamp(&group[i]) - timestamp(&group[i + 1]);
-        if interval > largest {
-            largest = interval;
+        lsum += i64::from(group[i].grade.unwrap_or(30));
+        let rsum = gradesum - lsum;
+        let score = (interval + 1) * (lsum * rsum);
+        eprintln!("Pos #{} score: {}", i, score);
+        if score > largest {
+            largest = score;
             pos = i + 1;
         }
     }
+    info!("Splitting a group len {} at {}", l, pos);
     group.split_at(pos)
 }
 
 fn timestamp(p: &Photo) -> i64 {
     p.date.map(|d| d.timestamp()).unwrap_or(0)
+}
+
+#[test]
+fn split_two() {
+    let photos = [
+        Photo::mock(2018, 08, 31, 21, 45, 48),
+        Photo::mock(2018, 08, 31, 21, 45, 12),
+    ];
+    assert_eq!(paths(split(&photos)), paths((&photos[..1], &photos[1..])));
+}
+
+#[test]
+fn split_group_by_time() {
+    let photos = [
+        Photo::mock(2018, 08, 31, 21, 45, 22),
+        Photo::mock(2018, 08, 31, 21, 45, 20),
+        Photo::mock(2018, 08, 31, 21, 45, 18),
+        Photo::mock(2018, 08, 31, 21, 45, 16),
+        Photo::mock(2018, 08, 31, 21, 45, 14),
+        Photo::mock(2018, 08, 31, 21, 45, 12),
+        Photo::mock(2018, 08, 31, 21, 45, 10),
+        Photo::mock(2018, 08, 15, 13, 15, 0),
+        Photo::mock(2018, 08, 15, 13, 14, 0),
+    ];
+    assert_eq!(paths(split(&photos)), paths((&photos[..7], &photos[7..])));
+}
+
+#[test]
+fn split_group_same_time() {
+    let photos = [
+        Photo::mock(2018, 08, 31, 21, 45, 22),
+        Photo::mock(2018, 08, 31, 21, 45, 22),
+        Photo::mock(2018, 08, 31, 21, 45, 22),
+        Photo::mock(2018, 08, 31, 21, 45, 22),
+    ];
+    assert_eq!(paths(split(&photos)), paths((&photos[..2], &photos[2..])));
+}
+
+#[cfg(test)]
+fn paths<'a>(
+    (a, b): (&'a [Photo], &'a [Photo]),
+) -> (Vec<&'a str>, Vec<&'a str>) {
+    (
+        a.iter().map(|p| p.path.as_ref()).collect(),
+        b.iter().map(|p| p.path.as_ref()).collect(),
+    )
 }
