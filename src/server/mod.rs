@@ -12,6 +12,7 @@ use chrono::Datelike;
 use clap::ArgMatches;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::r2d2::NopErrorHandler;
 use djangohashers;
 use env::{dburl, env_or, jwt_key, photos_dir};
 use hyper::header::ContentType;
@@ -30,7 +31,6 @@ use nickel_jwt_session::{
 };
 use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
 use pidfiles::handle_pid_file;
-use r2d2::NopErrorHandler;
 use requestloggermiddleware::RequestLoggerMiddleware;
 use rustc_serialize::json::ToJson;
 use templates::{self, Html};

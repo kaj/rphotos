@@ -19,8 +19,6 @@ extern crate memcached;
 extern crate nickel;
 extern crate nickel_jwt_session;
 extern crate plugin;
-extern crate r2d2;
-extern crate r2d2_diesel;
 extern crate rand;
 extern crate regex;
 extern crate rustc_serialize;

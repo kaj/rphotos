@@ -1,8 +1,7 @@
 use diesel::connection::Connection;
+use diesel::r2d2::{ConnectionManager, HandleError, Pool, PooledConnection};
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use plugin::Extensible;
-use r2d2::{HandleError, Pool, PooledConnection};
-use r2d2_diesel::ConnectionManager;
 use std::any::Any;
 use std::error::Error as StdError;
 use std::sync::Arc;
@@ -22,7 +21,7 @@ where
     pub fn new(
         connect_str: &str,
         num_connections: u32,
-        error_handler: Box<HandleError<::r2d2_diesel::Error>>,
+        error_handler: Box<HandleError<::diesel::r2d2::Error>>,
     ) -> Result<DieselMiddleware<T>, Box<StdError>> {
         let manager = ConnectionManager::<T>::new(connect_str);
 
