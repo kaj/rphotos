@@ -1,43 +1,44 @@
 #[macro_use]
-mod nickelext;
 mod admin;
+mod context;
+mod render_ructe;
 mod splitlist;
 mod views_by_date;
 
-use self::nickelext::{far_expires, FromSlug, MyResponse};
+use self::context::create_session_filter;
+pub use self::context::Context;
+use self::render_ructe::RenderRucte;
 use self::splitlist::*;
 use self::views_by_date::*;
 use crate::adm::result::Error;
-use crate::env::{dburl, env_or, jwt_key, photos_dir};
-use crate::memcachemiddleware::{
-    MemcacheMiddleware, MemcacheRequestExtensions,
-};
+use crate::env::{dburl, env_or, jwt_key};
 use crate::models::{Person, Photo, Place, Tag};
-use crate::nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
-use crate::photosdirmiddleware::{
-    PhotosDirMiddleware, PhotosDirRequestExtensions,
-};
 use crate::pidfiles::handle_pid_file;
-use crate::requestloggermiddleware::RequestLoggerMiddleware;
-use crate::templates::{self, statics, Html};
-use chrono::Datelike;
+use crate::templates::{self, Html};
+use chrono::{Datelike, Duration, Utc};
 use clap::ArgMatches;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::r2d2::NopErrorHandler;
 use djangohashers;
-use hyper::header::ContentType;
 use image;
-use log::{debug, info};
-use nickel::extensions::response::Redirect;
-use nickel::status::StatusCode;
-use nickel::{
-    Action, Continue, FormBody, Halt, HttpRouter, MediaType, MiddlewareResult,
-    Nickel, NickelError, QueryString, Request, Response,
-};
-use nickel_jwt_session::{
-    SessionMiddleware, SessionRequestExtensions, SessionResponseExtensions,
-};
+use log::info;
+use mime;
+use serde::Deserialize;
+use std::net::SocketAddr;
+use warp::filters::path::Tail;
+use warp::http::{header, Response, StatusCode};
+use warp::{self, reply, Filter, Rejection, Reply};
+
+/// Trait to easily add a far expires header to a response builder.
+trait FarExpires {
+    fn far_expires(&mut self) -> &mut Self;
+}
+
+impl FarExpires for warp::http::response::Builder {
+    fn far_expires(&mut self) -> &mut Self {
+        let far_expires = Utc::now() + Duration::days(180);
+        self.header(header::EXPIRES, far_expires.to_rfc2822())
+    }
+}
 
 pub struct PhotoLink {
     pub title: Option<String>,
@@ -119,114 +120,166 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     if let Some(pidfile) = args.value_of("PIDFILE") {
         handle_pid_file(pidfile, args.is_present("REPLACE")).unwrap()
     }
-
-    let mut server = Nickel::new();
-    server.utilize(RequestLoggerMiddleware);
-    wrap3!(server.get "/static/",.. static_file);
-    server.utilize(MemcacheMiddleware::new(vec![(
-        "tcp://127.0.0.1:11211".into(),
-        1,
-    )]));
-    server.utilize(SessionMiddleware::new(&jwt_key()));
-    let dm: DieselMiddleware<PgConnection> =
-        DieselMiddleware::new(&dburl(), 5, Box::new(NopErrorHandler)).unwrap();
-    server.utilize(dm);
-    server.utilize(PhotosDirMiddleware::new(photos_dir()));
-
-    wrap3!(server.get  "/login",         login);
-    wrap3!(server.post "/login",         do_login);
-    wrap3!(server.get  "/logout",        logout);
-    wrap3!(server.get "/",               all_years);
-    use self::admin::{rotate, set_grade, set_location, set_person, set_tag};
-    wrap3!(server.get "/ac/tag",         auto_complete_tag);
-    wrap3!(server.get "/ac/person",      auto_complete_person);
-    wrap3!(server.post "/adm/grade",     set_grade);
-    wrap3!(server.post "/adm/person",    set_person);
-    wrap3!(server.post "/adm/rotate",    rotate);
-    wrap3!(server.post "/adm/tag",       set_tag);
-    wrap3!(server.post "/adm/locate",    set_location);
-    wrap3!(server.get "/img/{}[-]{}\\.jpg", show_image: id, size);
-    wrap3!(server.get "/img/{}",         photo_details: id);
-    wrap3!(server.get "/next",           next_image);
-    wrap3!(server.get "/prev",           prev_image);
-    wrap3!(server.get "/tag/",           tag_all);
-    wrap3!(server.get "/tag/{}",         tag_one: tag);
-    wrap3!(server.get "/place/",         place_all);
-    wrap3!(server.get "/place/{}",       place_one: slug);
-    wrap3!(server.get "/person/",        person_all);
-    wrap3!(server.get "/person/{}",      person_one: slug);
-    wrap3!(server.get "/random",         random_image);
-    wrap3!(server.get "/0/",             all_null_date);
-    wrap3!(server.get "/{}/",            months_in_year: year);
-    wrap3!(server.get "/{}/{}/",         days_in_month: year, month);
-    wrap3!(server.get "/{}/{}/{}",       all_for_day: year, month, day);
-    wrap3!(server.get "/thisday",        on_this_day);
-
-    server.handle_error(
-        custom_errors as fn(&mut NickelError, &mut Request) -> Action,
+    let session_filter = create_session_filter(
+        &dburl(),
+        env_or("MEMCACHED_SERVER", "tcp://127.0.0.1:11211"),
+        jwt_key(),
     );
-
-    server
-        .listen(&*env_or("RPHOTOS_LISTEN", "127.0.0.1:6767"))
-        .map_err(|e| Error::Other(format!("listen: {}", e)))?;
+    let s = move || session_filter.clone();
+    use warp::filters::query::query;
+    use warp::path::{end, param};
+    use warp::{body, get2 as get, path, post2 as post};
+    let static_routes = path("static")
+        .and(get())
+        .and(path::tail())
+        .and_then(static_file);
+    #[rustfmt::skip]
+    let routes = warp::any()
+        .and(static_routes)
+        .or(get().and(path("login")).and(end()).and(s()).and(query()).map(login))
+        .or(post().and(path("login")).and(end()).and(s()).and(body::form()).map(do_login))
+        .or(path("logout").and(end()).and(s()).map(logout))
+        .or(get().and(end()).and(s()).map(all_years))
+        .or(get().and(path("img")).and(param()).and(end()).and(s()).map(photo_details))
+        .or(get().and(path("img")).and(param()).and(end()).and(s()).map(show_image))
+        .or(get().and(path("0")).and(end()).and(s()).map(all_null_date))
+        .or(get().and(param()).and(end()).and(s()).map(months_in_year))
+        .or(get().and(param()).and(param()).and(end()).and(s()).map(days_in_month))
+        .or(get().and(param()).and(param()).and(param()).and(end()).and(query()).and(s()).map(all_for_day))
+        .or(get().and(path("person")).and(end()).and(s()).map(person_all))
+        .or(get().and(path("person")).and(s()).and(param()).and(end()).and(query()).map(person_one))
+        .or(get().and(path("place")).and(end()).and(s()).map(place_all))
+        .or(get().and(path("place")).and(s()).and(param()).and(end()).and(query()).map(place_one))
+        .or(get().and(path("tag")).and(end()).and(s()).map(tag_all))
+        .or(get().and(path("tag")).and(s()).and(param()).and(end()).and(query()).map(tag_one))
+        .or(get().and(path("random")).and(end()).and(s()).map(random_image))
+        .or(get().and(path("thisday")).and(end()).and(s()).map(on_this_day))
+        .or(get().and(path("next")).and(end()).and(s()).and(query()).map(next_image))
+        .or(get().and(path("prev")).and(end()).and(s()).and(query()).map(prev_image))
+        .or(get().and(path("ac")).and(path("tag")).and(s()).and(query()).map(auto_complete_tag))
+        .or(get().and(path("ac")).and(path("person")).and(s()).and(query()).map(auto_complete_person))
+        .or(path("adm").and(admin::routes(s())));
+    let addr = env_or("RPHOTOS_LISTEN", "127.0.0.1:6767")
+        .parse::<SocketAddr>()
+        .map_err(|e| Error::Other(format!("{}", e)))?;
+    warp::serve(routes.recover(customize_error)).run(addr);
     Ok(())
 }
 
-fn custom_errors(err: &mut NickelError, req: &mut Request) -> Action {
-    if let Some(ref mut res) = err.stream {
-        if res.status() == StatusCode::NotFound {
-            templates::not_found(res, req).unwrap();
-            return Halt(());
+/// Create custom error pages.
+fn customize_error(err: Rejection) -> Result<impl Reply, Rejection> {
+    match err.status() {
+        StatusCode::NOT_FOUND => {
+            eprintln!("Got a 404: {:?}", err);
+            Ok(Response::builder().status(StatusCode::NOT_FOUND).html(|o| {
+                templates::error(
+                    o,
+                    StatusCode::NOT_FOUND,
+                    "The resource you requested could not be located.",
+                )
+            }))
+        }
+        code => {
+            eprintln!("Got a {}: {:?}", code.as_u16(), err);
+            Ok(Response::builder()
+                .status(code)
+                .html(|o| templates::error(o, code, "Something went wrong.")))
         }
     }
-
-    Continue(())
 }
 
-fn login<'mw>(
-    req: &mut Request,
-    mut res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    res.clear_jwt();
-    let next = sanitize_next(req.query().get("next")).map(String::from);
-    res.ok(|o| templates::login(o, req, next, None))
+fn not_found(context: &Context) -> Response<Vec<u8>> {
+    Response::builder().status(StatusCode::NOT_FOUND).html(|o| {
+        templates::not_found(
+            o,
+            context,
+            StatusCode::NOT_FOUND,
+            "The resource you requested could not be located.",
+        )
+    })
 }
 
-fn do_login<'mw>(
-    req: &mut Request,
-    mut res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+fn redirect_to_img(image: i32) -> Response<Vec<u8>> {
+    redirect(&format!("/img/{}", image))
+}
+
+fn redirect(url: &str) -> Response<Vec<u8>> {
+    Response::builder()
+        .status(StatusCode::FOUND)
+        .header(header::LOCATION, url)
+        .body(format!("Please refer to {}", url).into_bytes())
+        .unwrap()
+}
+
+fn permission_denied() -> Response<Vec<u8>> {
+    error_response(StatusCode::UNAUTHORIZED)
+}
+
+fn error_response(err: StatusCode) -> Response<Vec<u8>> {
+    Response::builder()
+        .status(err)
+        .html(|o| templates::error(o, err, "Sorry about this."))
+}
+
+fn login(context: Context, param: NextQ) -> Response<Vec<u8>> {
+    info!("Got request for login form.  Param: {:?}", param);
+    let next = sanitize_next(param.next.as_ref().map(AsRef::as_ref))
+        .map(String::from);
+    Response::builder().html(|o| templates::login(o, &context, next, None))
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct NextQ {
+    next: Option<String>,
+}
+
+fn do_login(context: Context, form: LoginForm) -> Response<Vec<u8>> {
     let next = {
-        let c: &PgConnection = &req.db_conn();
-        let form_data = try_with!(res, req.form_body());
-        let next = sanitize_next(form_data.get("next")).map(String::from);
-        if let (Some(user), Some(pw)) =
-            (form_data.get("user"), form_data.get("password"))
+        let next = sanitize_next(form.next.as_ref().map(AsRef::as_ref))
+            .map(String::from);
+        use crate::schema::users::dsl::*;
+        if let Ok(hash) = users
+            .filter(username.eq(&form.user))
+            .select(password)
+            .first::<String>(context.db())
         {
-            use crate::schema::users::dsl::*;
-            if let Ok(hash) = users
-                .filter(username.eq(user))
-                .select(password)
-                .first::<String>(c)
-            {
-                debug!("Hash for {} is {}", user, hash);
-                if djangohashers::check_password_tolerant(pw, &hash) {
-                    info!("User {} logged in", user);
-                    res.set_jwt_user(user);
-                    return res.redirect(next.unwrap_or_else(|| "/".into()));
-                }
-                info!(
-                    "Login failed: Password verification failed for {:?}",
-                    user,
-                );
-            } else {
-                info!("Login failed: No hash found for {:?}", user);
+            if djangohashers::check_password_tolerant(&form.password, &hash) {
+                info!("User {} logged in", form.user);
+                let token = context.make_token(&form.user).unwrap();
+                let url = next.unwrap_or_else(|| "/".into());
+                return Response::builder()
+                    .status(StatusCode::FOUND)
+                    .header(header::LOCATION, url.clone())
+                    .header(
+                        header::SET_COOKIE,
+                        format!(
+                            "EXAUTH={}; SameSite=Strict; HttpOpnly",
+                            token
+                        ),
+                    )
+                    .body(format!("Please refer to {}", url).into_bytes())
+                    .unwrap();
             }
+            info!(
+                "Login failed: Password verification failed for {:?}",
+                form.user,
+            );
+        } else {
+            info!("Login failed: No hash found for {:?}", form.user);
         }
         next
     };
     let message = Some("Login failed, please try again");
-    res.ok(|o| templates::login(o, req, next, message))
+    Response::builder().html(|o| templates::login(o, &context, next, message))
+}
+
+/// The data submitted by the login form.
+/// This does not derive Debug or Serialize, as the password is plain text.
+#[derive(Deserialize)]
+struct LoginForm {
+    user: String,
+    password: String,
+    next: Option<String>,
 }
 
 fn sanitize_next(next: Option<&str>) -> Option<&str> {
@@ -267,12 +320,17 @@ fn test_sanitize_good_2() {
     assert_eq!(Some("/2017/7/15"), sanitize_next(Some("/2017/7/15")))
 }
 
-fn logout<'mw>(
-    _req: &mut Request,
-    mut res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    res.clear_jwt();
-    res.redirect("/")
+fn logout(_context: Context) -> Response<Vec<u8>> {
+    let url = "/";
+    Response::builder()
+        .status(StatusCode::FOUND)
+        .header(header::LOCATION, url.to_string())
+        .header(
+            header::SET_COOKIE,
+            "EXAUTH=; Max-Age=0; SameSite=Strict; HttpOpnly".to_string(),
+        )
+        .body(format!("Please refer to {}", url).into_bytes())
+        .unwrap()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -291,63 +349,114 @@ impl SizeTag {
     }
 }
 
-impl FromSlug for SizeTag {
-    fn parse(slug: &str) -> Option<Self> {
-        match slug {
-            "s" => Some(SizeTag::Small),
-            "m" => Some(SizeTag::Medium),
-            "l" => Some(SizeTag::Large),
-            _ => None,
-        }
-    }
-}
-
-fn show_image<'mw>(
-    req: &Request,
-    mut res: Response<'mw>,
-    the_id: i32,
-    size: SizeTag,
-) -> MiddlewareResult<'mw> {
+fn show_image(img: ImgName, context: Context) -> Response<Vec<u8>> {
     use crate::schema::photos::dsl::photos;
-    let c: &PgConnection = &req.db_conn();
-    if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
-        if req.authorized_user().is_some() || tphoto.is_public() {
-            if size == SizeTag::Large {
-                if req.authorized_user().is_some() {
-                    let path = req.photos().get_raw_path(tphoto);
-                    res.set((MediaType::Jpeg, far_expires()));
-                    return res.send_file(path);
+    if let Ok(tphoto) = photos.find(img.id).first::<Photo>(context.db()) {
+        if context.is_authorized() || tphoto.is_public() {
+            if img.size == SizeTag::Large {
+                if context.is_authorized() {
+                    use std::fs::File;
+                    use std::io::Read;
+                    // TODO: This should be done in a more async-friendly way.
+                    let path = context.photos().get_raw_path(tphoto);
+                    let mut buf = Vec::new();
+                    if File::open(path)
+                        .map(|mut f| f.read_to_end(&mut buf))
+                        .is_ok()
+                    {
+                        return Response::builder()
+                            .status(StatusCode::OK)
+                            .header(
+                                header::CONTENT_TYPE,
+                                mime::IMAGE_JPEG.as_ref(),
+                            )
+                            .far_expires()
+                            .body(buf)
+                            .unwrap();
+                    } else {
+                        return error_response(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                        );
+                    }
                 }
             } else {
-                let data = get_image_data(req, &tphoto, size)
+                let data = get_image_data(context, &tphoto, img.size)
                     .expect("Get image data");
-                res.set((MediaType::Jpeg, far_expires()));
-                return res.send(data);
+                return Response::builder()
+                    .status(StatusCode::OK)
+                    .header(header::CONTENT_TYPE, mime::IMAGE_JPEG.as_ref())
+                    .far_expires()
+                    .body(data)
+                    .unwrap();
             }
         }
     }
-    res.not_found("No such image")
+    not_found(&context)
+}
+
+/// A client-side / url file name for a file.
+/// Someting like 4711-s.jpg
+#[derive(Debug, Eq, PartialEq)]
+struct ImgName {
+    id: i32,
+    size: SizeTag,
+}
+use std::str::FromStr;
+#[derive(Debug, Eq, PartialEq)]
+struct BadImgName {}
+impl FromStr for ImgName {
+    type Err = BadImgName;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some(pos) = s.find('-') {
+            let (num, rest) = s.split_at(pos);
+            let id = num.parse().map_err(|_| BadImgName {})?;
+            let size = match rest {
+                "-s.jpg" => SizeTag::Small,
+                "-m.jpg" => SizeTag::Medium,
+                "-l.jpg" => SizeTag::Large,
+                _ => return Err(BadImgName {}),
+            };
+            return Ok(ImgName { id, size });
+        }
+        Err(BadImgName {})
+    }
+}
+
+#[test]
+fn parse_good_imgname() {
+    assert_eq!(
+        "4711-s.jpg".parse(),
+        Ok(ImgName {
+            id: 4711,
+            size: SizeTag::Small,
+        })
+    )
+}
+
+#[test]
+fn parse_bad_imgname_1() {
+    assert_eq!("4711-q.jpg".parse::<ImgName>(), Err(BadImgName {}))
+}
+#[test]
+fn parse_bad_imgname_2() {
+    assert_eq!("blurgel".parse::<ImgName>(), Err(BadImgName {}))
 }
 
 fn get_image_data(
-    req: &Request,
+    context: Context,
     photo: &Photo,
     size: SizeTag,
 ) -> Result<Vec<u8>, image::ImageError> {
-    req.cached_or(&photo.cache_key(size), || {
+    context.cached_or(&photo.cache_key(size), || {
         let size = size.px();
-        req.photos().scale_image(photo, size, size)
+        context.photos().scale_image(photo, size, size)
     })
 }
 
-fn tag_all<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+fn tag_all(context: Context) -> Response<Vec<u8>> {
     use crate::schema::tags::dsl::{id, tag_name, tags};
-    let c: &PgConnection = &req.db_conn();
     let query = tags.into_boxed();
-    let query = if req.authorized_user().is_some() {
+    let query = if context.is_authorized() {
         query
     } else {
         use crate::schema::photo_tags::dsl as tp;
@@ -356,41 +465,39 @@ fn tag_all<'mw>(
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    res.ok(|o| {
+    Response::builder().html(|o| {
         templates::tags(
             o,
-            req,
-            &query.order(tag_name).load(c).expect("List tags"),
+            &context,
+            &query.order(tag_name).load(context.db()).expect("List tags"),
         )
     })
 }
 
-fn tag_one<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
+fn tag_one(
+    context: Context,
     tslug: String,
-) -> MiddlewareResult<'mw> {
+    range: ImgRange,
+) -> Response<Vec<u8>> {
     use crate::schema::tags::dsl::{slug, tags};
-    let c: &PgConnection = &req.db_conn();
-    if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
+    if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(context.db()) {
         use crate::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         use crate::schema::photos::dsl::id;
-        let photos = Photo::query(req.authorized_user().is_some()).filter(
+        let photos = Photo::query(context.is_authorized()).filter(
             id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
         );
-        let (links, coords) = links_by_time(req, photos);
-        return res.ok(|o| templates::tag(o, req, &links, &coords, &tag));
+        let (links, coords) = links_by_time(&context, photos, range);
+        Response::builder()
+            .html(|o| templates::tag(o, &context, &links, &coords, &tag))
+    } else {
+        not_found(&context)
     }
-    res.not_found("Not a tag")
 }
 
-fn place_all<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+fn place_all(context: Context) -> Response<Vec<u8>> {
     use crate::schema::places::dsl::{id, place_name, places};
     let query = places.into_boxed();
-    let query = if req.authorized_user().is_some() {
+    let query = if context.is_authorized() {
         query
     } else {
         use crate::schema::photo_places::dsl as pp;
@@ -399,57 +506,63 @@ fn place_all<'mw>(
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let c: &PgConnection = &req.db_conn();
-    res.ok(|o| {
+    Response::builder().html(|o| {
         templates::places(
             o,
-            req,
-            &query.order(place_name).load(c).expect("List places"),
+            &context,
+            &query
+                .order(place_name)
+                .load(context.db())
+                .expect("List places"),
         )
     })
 }
 
-fn static_file<'mw>(
-    _req: &Request,
-    mut res: Response<'mw>,
-    path: &str,
-) -> MiddlewareResult<'mw> {
-    if let Some(s) = statics::StaticFile::get(path) {
-        res.set((ContentType(s.mime()), far_expires()));
-        return res.send(s.content);
+/// Handler for static files.
+/// Create a response from the file data with a correct content type
+/// and a far expires header (or a 404 if the file does not exist).
+fn static_file(name: Tail) -> Result<impl Reply, Rejection> {
+    use templates::statics::StaticFile;
+    if let Some(data) = StaticFile::get(name.as_str()) {
+        Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, data.mime.as_ref())
+            .far_expires()
+            .body(data.content))
+    } else {
+        println!("Static file {:?} not found", name);
+        Err(warp::reject::not_found())
     }
-    res.not_found("No such file")
 }
 
-fn place_one<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
+fn place_one(
+    context: Context,
     tslug: String,
-) -> MiddlewareResult<'mw> {
+    range: ImgRange,
+) -> Response<Vec<u8>> {
     use crate::schema::places::dsl::{places, slug};
-    let c: &PgConnection = &req.db_conn();
-    if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
+    if let Ok(place) =
+        places.filter(slug.eq(tslug)).first::<Place>(context.db())
+    {
         use crate::schema::photo_places::dsl::{
             photo_id, photo_places, place_id,
         };
         use crate::schema::photos::dsl::id;
-        let photos =
-            Photo::query(req.authorized_user().is_some()).filter(id.eq_any(
-                photo_places.select(photo_id).filter(place_id.eq(place.id)),
-            ));
-        let (links, coord) = links_by_time(req, photos);
-        return res.ok(|o| templates::place(o, req, &links, &coord, &place));
+        let photos = Photo::query(context.is_authorized()).filter(id.eq_any(
+            photo_places.select(photo_id).filter(place_id.eq(place.id)),
+        ));
+        let (links, coord) = links_by_time(&context, photos, range);
+        Response::builder()
+            .html(|o| templates::place(o, &context, &links, &coord, &place))
+    } else {
+        not_found(&context)
     }
-    res.not_found("Not a place")
 }
 
-fn person_all<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+fn person_all(context: Context) -> Response<Vec<u8>> {
     use crate::schema::people::dsl::{id, people, person_name};
     let query = people.into_boxed();
-    let query = if req.authorized_user().is_some() {
+    let query = if context.is_authorized() {
         query
     } else {
         use crate::schema::photo_people::dsl as pp;
@@ -458,73 +571,71 @@ fn person_all<'mw>(
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let c: &PgConnection = &req.db_conn();
-    res.ok(|o| {
+    Response::builder().html(|o| {
         templates::people(
             o,
-            req,
-            &query.order(person_name).load(c).expect("list people"),
+            &context,
+            &query
+                .order(person_name)
+                .load(context.db())
+                .expect("list people"),
         )
     })
 }
 
-fn person_one<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
+fn person_one(
+    context: Context,
     tslug: String,
-) -> MiddlewareResult<'mw> {
+    range: ImgRange,
+) -> Response<Vec<u8>> {
     use crate::schema::people::dsl::{people, slug};
-    let c: &PgConnection = &req.db_conn();
+    let c = context.db();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
         use crate::schema::photo_people::dsl::{
             person_id, photo_id, photo_people,
         };
         use crate::schema::photos::dsl::id;
-        let photos = Photo::query(req.authorized_user().is_some()).filter(
+        let photos = Photo::query(context.is_authorized()).filter(
             id.eq_any(
                 photo_people
                     .select(photo_id)
                     .filter(person_id.eq(person.id)),
             ),
         );
-        let (links, coords) = links_by_time(req, photos);
-        res.ok(|o| templates::person(o, req, &links, &coords, &person))
+        let (links, coords) = links_by_time(&context, photos, range);
+        Response::builder()
+            .html(|o| templates::person(o, &context, &links, &coords, &person))
     } else {
-        res.not_found("Not a person")
+        not_found(&context)
     }
 }
 
-fn random_image<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+fn random_image(context: Context) -> Response<Vec<u8>> {
     use crate::schema::photos::dsl::id;
     use diesel::expression::dsl::sql;
     use diesel::sql_types::Integer;
-    let c: &PgConnection = &req.db_conn();
-    let photo: i32 = Photo::query(req.authorized_user().is_some())
+    if let Ok(photo) = Photo::query(context.is_authorized())
         .select(id)
         .limit(1)
         .order(sql::<Integer>("random()"))
-        .first(c)
-        .unwrap();
-    info!("Random: {:?}", photo);
-    res.redirect(format!("/img/{}", photo)) // to photo_details
+        .first(context.db())
+    {
+        info!("Random: {:?}", photo);
+        redirect_to_img(photo)
+    } else {
+        not_found(&context)
+    }
 }
 
-fn photo_details<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-    id: i32,
-) -> MiddlewareResult<'mw> {
+fn photo_details(id: i32, context: Context) -> Response<Vec<u8>> {
     use crate::schema::photos::dsl::photos;
-    let c: &PgConnection = &req.db_conn();
+    let c = context.db();
     if let Ok(tphoto) = photos.find(id).first::<Photo>(c) {
-        if req.authorized_user().is_some() || tphoto.is_public() {
-            return res.ok(|o| {
+        if context.is_authorized() || tphoto.is_public() {
+            return Response::builder().html(|o| {
                 templates::details(
                     o,
-                    req,
+                    &context,
                     &tphoto
                         .date
                         .map(|d| {
@@ -548,7 +659,7 @@ fn photo_details<'mw>(
             });
         }
     }
-    res.not_found("Photo not found")
+    not_found(&context)
 }
 
 pub type Link = Html<String>;
@@ -595,38 +706,33 @@ impl Link {
     }
 }
 
-fn auto_complete_tag<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    if let Some(q) = req.query().get("q").map(String::from) {
-        use crate::schema::tags::dsl::{tag_name, tags};
-        let c: &PgConnection = &req.db_conn();
-        let q = tags
-            .select(tag_name)
-            .filter(tag_name.ilike(q + "%"))
-            .order(tag_name)
-            .limit(10);
-        res.send(serde_json::to_string(&q.load::<String>(c).unwrap()).unwrap())
-    } else {
-        res.error(StatusCode::BadRequest, "Missing 'q' parameter")
-    }
+fn auto_complete_tag(context: Context, query: AcQ) -> impl Reply {
+    use crate::schema::tags::dsl::{tag_name, tags};
+    let q = tags
+        .select(tag_name)
+        .filter(tag_name.ilike(query.q + "%"))
+        .order(tag_name)
+        .limit(10);
+    reply::json(&q.load::<String>(context.db()).unwrap())
 }
 
-fn auto_complete_person<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    if let Some(q) = req.query().get("q").map(String::from) {
-        use crate::schema::people::dsl::{people, person_name};
-        let c: &PgConnection = &req.db_conn();
-        let q = people
-            .select(person_name)
-            .filter(person_name.ilike(q + "%"))
-            .order(person_name)
-            .limit(10);
-        res.send(serde_json::to_string(&q.load::<String>(c).unwrap()).unwrap())
-    } else {
-        res.error(StatusCode::BadRequest, "Missing 'q' parameter")
-    }
+fn auto_complete_person(context: Context, query: AcQ) -> impl Reply {
+    use crate::schema::people::dsl::{people, person_name};
+    let q = people
+        .select(person_name)
+        .filter(person_name.ilike(query.q + "%"))
+        .order(person_name)
+        .limit(10);
+    reply::json(&q.load::<String>(context.db()).unwrap())
+}
+
+#[derive(Deserialize)]
+struct AcQ {
+    q: String,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ImgRange {
+    pub from: Option<i32>,
+    pub to: Option<i32>,
 }

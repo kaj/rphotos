@@ -1,0 +1,37 @@
+@use super::statics::{photos_css, ux_js};
+@use warp::http::StatusCode;
+
+@(code: StatusCode, message: &str)
+
+<!doctype html>
+<html>
+  <head>
+    <title>Error @code.as_u16() @code.canonical_reason().unwrap_or("error")</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="stylesheet" href="/static/@photos_css.name" type="text/css"/>
+    <script src="/static/@ux_js.name" type="text/javascript" defer>
+    </script>
+  </head>
+  <body>
+    <header>
+      <span><a href="/" accesskey="h" title="Images from all years">Images</a>
+      </span>
+      <span>· <a href="/tag/">Tags</a></span>
+      <span>· <a href="/person/">People</a></span>
+      <span>· <a href="/place/">Places</a></span>
+      <span>· <a href="/thisday">On this day</a></span>
+      <span>· <a href="/random" accesskey="r">Random pic</a></span>
+      <span class="user"></span>
+    </header>
+    <main>
+      <h1>@code.canonical_reason().unwrap_or("error")</h1>
+      <p>@message (@code.as_u16())</p>
+    </main>
+    <footer>
+      <p>Managed by
+	<a href="https://github.com/kaj/rphotos">rphotos
+	@env!("CARGO_PKG_VERSION")</a>.</p>
+    </footer>
+  </body>
+</html>

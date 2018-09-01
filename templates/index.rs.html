@@ -1,11 +1,10 @@
-@use crate::models::Coord;
-@use nickel::Request;
-@use crate::server::{Link, PhotoLink};
 @use super::{data_positions, page_base, photo_link};
+@use crate::models::Coord;
+@use crate::server::{Context, Link, PhotoLink};
 
-@(req: &Request, title: &str, lpath: &[Link], photos: &[PhotoLink], coords: &[(Coord, i32)])
+@(context: &Context, title: &str, lpath: &[Link], photos: &[PhotoLink], coords: &[(Coord, i32)])
 
-@:page_base(req, title, lpath, {}, {
+@:page_base(context, title, lpath, {}, {
   <div class="group"@:data_positions(coords)>
     @for p in photos {@:photo_link(p)}
   </div>

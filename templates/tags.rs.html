@@ -1,9 +1,9 @@
-@use nickel::Request;
-@use crate::models::Tag;
 @use super::page_base;
+@use crate::models::Tag;
+@use crate::server::Context;
 
-@(req: &Request, tags: &[Tag])
-@:page_base(req, "Photo tags", &[], {}, {
+@(context: &Context, tags: &[Tag])
+@:page_base(context, "Photo tags", &[], {}, {
   <ul class="alltags">
   @for tag in tags {
     <li><a href="/tag/@tag.slug">@tag.tag_name</a>

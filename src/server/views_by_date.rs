@@ -1,39 +1,35 @@
-use super::nickelext::MyResponse;
+use super::render_ructe::RenderRucte;
 use super::splitlist::links_by_time;
-use super::{Link, PhotoLink, SizeTag};
+use super::{
+    not_found, redirect_to_img, Context, ImgRange, Link, PhotoLink, SizeTag,
+};
 use crate::models::Photo;
-use crate::nickel_diesel::DieselRequestExtensions;
 use crate::templates;
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use chrono::Duration as ChDuration;
 use diesel::dsl::sql;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Nullable};
 use log::warn;
-use nickel::extensions::response::Redirect;
-use nickel::{MiddlewareResult, QueryString, Request, Response};
-use nickel_jwt_session::SessionRequestExtensions;
+use serde::Deserialize;
 use time;
+use warp::http::Response;
+use warp::Reply;
 
-pub fn all_years<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+pub fn all_years(context: Context) -> impl Reply {
     use crate::schema::photos::dsl::{date, grade};
-    let c: &PgConnection = &req.db_conn();
 
-    let groups = Photo::query(req.authorized_user().is_some())
+    let groups = Photo::query(context.is_authorized())
         .select(sql::<(Nullable<Integer>, BigInt)>(
             "cast(extract(year from date) as int) y, count(*)",
         ))
         .group_by(sql::<Nullable<Integer>>("y"))
         .order(sql::<Nullable<Integer>>("y").desc().nulls_last())
-        .load::<(Option<i32>, i64)>(c)
+        .load::<(Option<i32>, i64)>(context.db())
         .unwrap()
         .iter()
         .map(|&(year, count)| {
-            let q = Photo::query(req.authorized_user().is_some())
+            let q = Photo::query(context.is_authorized())
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1);
             let photo = if let Some(year) = year {
@@ -42,7 +38,7 @@ pub fn all_years<'mw>(
             } else {
                 q.filter(date.is_null())
             };
-            let photo = photo.first::<Photo>(c).unwrap();
+            let photo = photo.first::<Photo>(context.db()).unwrap();
             PhotoLink {
                 title: Some(
                     year.map(|y| format!("{}", y))
@@ -56,23 +52,20 @@ pub fn all_years<'mw>(
         })
         .collect::<Vec<_>>();
 
-    res.ok(|o| templates::index(o, req, "All photos", &[], &groups, &[]))
+    Response::builder().html(|o| {
+        templates::index(o, &context, "All photos", &[], &groups, &[])
+    })
 }
 
 fn start_of_year(year: i32) -> NaiveDateTime {
     NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0)
 }
 
-pub fn months_in_year<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-    year: i32,
-) -> MiddlewareResult<'mw> {
+pub fn months_in_year(year: i32, context: Context) -> Response<Vec<u8>> {
     use crate::schema::photos::dsl::{date, grade};
-    let c: &PgConnection = &req.db_conn();
 
     let title: String = format!("Photos from {}", year);
-    let groups = Photo::query(req.authorized_user().is_some())
+    let groups = Photo::query(context.is_authorized())
         .filter(date.ge(start_of_year(year)))
         .filter(date.lt(start_of_year(year + 1)))
         .select(sql::<(Integer, BigInt)>(
@@ -80,17 +73,17 @@ pub fn months_in_year<'mw>(
         ))
         .group_by(sql::<Integer>("m"))
         .order(sql::<Integer>("m").desc().nulls_last())
-        .load::<(i32, i64)>(c)
+        .load::<(i32, i64)>(context.db())
         .unwrap()
         .iter()
         .map(|&(month, count)| {
             let month = month as u32;
-            let photo = Photo::query(req.authorized_user().is_some())
+            let photo = Photo::query(context.is_authorized())
                 .filter(date.ge(start_of_month(year, month)))
                 .filter(date.lt(start_of_month(year, month + 1)))
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1)
-                .first::<Photo>(c)
+                .first::<Photo>(context.db())
                 .unwrap();
 
             PhotoLink {
@@ -104,17 +97,17 @@ pub fn months_in_year<'mw>(
         .collect::<Vec<_>>();
 
     if groups.is_empty() {
-        res.not_found("No such image")
+        not_found(&context)
     } else {
         use crate::schema::positions::dsl::{
             latitude, longitude, photo_id, positions,
         };
-        let pos = Photo::query(req.authorized_user().is_some())
+        let pos = Photo::query(context.is_authorized())
             .inner_join(positions)
             .filter(date.ge(start_of_year(year)))
             .filter(date.lt(start_of_year(year + 1)))
             .select((photo_id, latitude, longitude))
-            .load(c)
+            .load(context.db())
             .map_err(|e| warn!("Failed to load positions: {}", e))
             .unwrap_or_default()
             .into_iter()
@@ -122,7 +115,9 @@ pub fn months_in_year<'mw>(
                 ((lat, long).into(), p_id)
             })
             .collect::<Vec<_>>();
-        res.ok(|o| templates::index(o, req, &title, &[], &groups, &pos))
+        Response::builder().html(|o| {
+            templates::index(o, &context, &title, &[], &groups, &pos)
+        })
     }
 }
 
@@ -135,18 +130,16 @@ fn start_of_month(year: i32, month: u32) -> NaiveDateTime {
     date.and_hms(0, 0, 0)
 }
 
-pub fn days_in_month<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
+pub fn days_in_month(
     year: i32,
     month: u32,
-) -> MiddlewareResult<'mw> {
+    context: Context,
+) -> Response<Vec<u8>> {
     use crate::schema::photos::dsl::{date, grade};
-    let c: &PgConnection = &req.db_conn();
 
     let lpath: Vec<Link> = vec![Link::year(year)];
     let title: String = format!("Photos from {} {}", monthname(month), year);
-    let groups = Photo::query(req.authorized_user().is_some())
+    let groups = Photo::query(context.is_authorized())
         .filter(date.ge(start_of_month(year, month)))
         .filter(date.lt(start_of_month(year, month + 1)))
         .select(sql::<(Integer, BigInt)>(
@@ -154,19 +147,19 @@ pub fn days_in_month<'mw>(
         ))
         .group_by(sql::<Integer>("d"))
         .order(sql::<Integer>("d").desc().nulls_last())
-        .load::<(i32, i64)>(c)
+        .load::<(i32, i64)>(context.db())
         .unwrap()
         .iter()
         .map(|&(day, count)| {
             let day = day as u32;
             let fromdate =
                 NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
-            let photo = Photo::query(req.authorized_user().is_some())
+            let photo = Photo::query(context.is_authorized())
                 .filter(date.ge(fromdate))
                 .filter(date.lt(fromdate + ChDuration::days(1)))
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1)
-                .first::<Photo>(c)
+                .first::<Photo>(context.db())
                 .unwrap();
 
             PhotoLink {
@@ -180,17 +173,17 @@ pub fn days_in_month<'mw>(
         .collect::<Vec<_>>();
 
     if groups.is_empty() {
-        res.not_found("No such image")
+        not_found(&context)
     } else {
         use crate::schema::positions::dsl::{
             latitude, longitude, photo_id, positions,
         };
-        let pos = Photo::query(req.authorized_user().is_some())
+        let pos = Photo::query(context.is_authorized())
             .inner_join(positions)
             .filter(date.ge(start_of_month(year, month)))
             .filter(date.lt(start_of_month(year, month + 1)))
             .select((photo_id, latitude, longitude))
-            .load(c)
+            .load(context.db())
             .map_err(|e| warn!("Failed to load positions: {}", e))
             .unwrap_or_default()
             .into_iter()
@@ -198,28 +191,26 @@ pub fn days_in_month<'mw>(
                 ((lat, long).into(), p_id)
             })
             .collect::<Vec<_>>();
-        res.ok(|o| templates::index(o, req, &title, &lpath, &groups, &pos))
+        Response::builder().html(|o| {
+            templates::index(o, &context, &title, &lpath, &groups, &pos)
+        })
     }
 }
 
-pub fn all_null_date<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+pub fn all_null_date(context: Context) -> impl Reply {
     use crate::schema::photos::dsl::{date, path};
 
-    let c: &PgConnection = &req.db_conn();
-    res.ok(|o| {
+    Response::builder().html(|o| {
         templates::index(
             o,
-            req,
+            &context,
             "Photos without a date",
             &[],
-            &Photo::query(req.authorized_user().is_some())
+            &Photo::query(context.is_authorized())
                 .filter(date.is_null())
                 .order(path.asc())
                 .limit(500)
-                .load(c)
+                .load(context.db())
                 .unwrap()
                 .iter()
                 .map(PhotoLink::from)
@@ -229,28 +220,28 @@ pub fn all_null_date<'mw>(
     })
 }
 
-pub fn all_for_day<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
+pub fn all_for_day(
     year: i32,
     month: u32,
     day: u32,
-) -> MiddlewareResult<'mw> {
+    range: ImgRange,
+    context: Context,
+) -> impl Reply {
     let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
     use crate::schema::photos::dsl::date;
 
-    let photos = Photo::query(req.authorized_user().is_some())
+    let photos = Photo::query(context.is_authorized())
         .filter(date.ge(thedate))
         .filter(date.lt(thedate + ChDuration::days(1)));
-    let (links, coords) = links_by_time(req, photos);
+    let (links, coords) = links_by_time(&context, photos, range);
 
     if links.is_empty() {
-        res.not_found("No such image")
+        not_found(&context)
     } else {
-        res.ok(|o| {
+        Response::builder().html(|o| {
             templates::index(
                 o,
-                req,
+                &context,
                 &format!("Photos from {} {} {}", day, monthname(month), year),
                 &[Link::year(year), Link::month(year, month)],
                 &links,
@@ -260,41 +251,37 @@ pub fn all_for_day<'mw>(
     }
 }
 
-pub fn on_this_day<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+pub fn on_this_day(context: Context) -> impl Reply {
     use crate::schema::photos::dsl::{date, grade};
     use crate::schema::positions::dsl::{
         latitude, longitude, photo_id, positions,
     };
-    let c: &PgConnection = &req.db_conn();
 
     let (month, day) = {
         let now = time::now();
         (now.tm_mon as u32 + 1, now.tm_mday as u32)
     };
-    let pos = Photo::query(req.authorized_user().is_some())
+    let pos = Photo::query(context.is_authorized())
         .inner_join(positions)
         .filter(
             sql("extract(month from date)=").bind::<Integer, _>(month as i32),
         )
         .filter(sql("extract(day from date)=").bind::<Integer, _>(day as i32))
         .select((photo_id, latitude, longitude))
-        .load(c)
+        .load(context.db())
         .map_err(|e| warn!("Failed to load positions: {}", e))
         .unwrap_or_default()
         .into_iter()
         .map(|(p_id, lat, long): (i32, i32, i32)| ((lat, long).into(), p_id))
         .collect::<Vec<_>>();
 
-    res.ok(|o| {
+    Response::builder().html(|o| {
         templates::index(
             o,
-            req,
+            &context,
             &format!("Photos from {} {}", day, monthname(month)),
             &[],
-            &Photo::query(req.authorized_user().is_some())
+            &Photo::query(context.is_authorized())
                 .select(sql::<(Integer, BigInt)>(
                     "cast(extract(year from date) as int) y, count(*)",
                 ))
@@ -308,19 +295,19 @@ pub fn on_this_day<'mw>(
                         .bind::<Integer, _>(day as i32),
                 )
                 .order(sql::<Integer>("y").desc())
-                .load::<(i32, i64)>(c)
+                .load::<(i32, i64)>(context.db())
                 .unwrap()
                 .iter()
                 .map(|&(year, count)| {
                     let fromdate =
                         NaiveDate::from_ymd(year, month as u32, day)
                             .and_hms(0, 0, 0);
-                    let photo = Photo::query(req.authorized_user().is_some())
+                    let photo = Photo::query(context.is_authorized())
                         .filter(date.ge(fromdate))
                         .filter(date.lt(fromdate + ChDuration::days(1)))
                         .order((grade.desc().nulls_last(), date.asc()))
                         .limit(1)
-                        .first::<Photo>(c)
+                        .first::<Photo>(context.db())
                         .unwrap();
 
                     PhotoLink {
@@ -337,65 +324,48 @@ pub fn on_this_day<'mw>(
     })
 }
 
-pub fn next_image<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+pub fn next_image(context: Context, param: FromParam) -> impl Reply {
     use crate::schema::photos::dsl::{date, id};
-    if let Some((from_id, from_date)) = query_date(req, "from") {
-        let q = Photo::query(req.authorized_user().is_some())
+    if let Some(from_date) = date_of_img(context.db(), param.from) {
+        let q = Photo::query(context.is_authorized())
             .select(id)
             .filter(
                 date.gt(from_date)
-                    .or(date.eq(from_date).and(id.gt(from_id))),
+                    .or(date.eq(from_date).and(id.gt(param.from))),
             )
             .order((date, id));
-        let c: &PgConnection = &req.db_conn();
-        if let Ok(photo) = q.first::<i32>(c) {
-            return res.redirect(format!("/img/{}", photo)); // to photo_details
+        if let Ok(photo) = q.first::<i32>(context.db()) {
+            return redirect_to_img(photo);
         }
     }
-    res.not_found("No such image")
+    not_found(&context)
 }
 
-pub fn prev_image<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
+pub fn prev_image(context: Context, param: FromParam) -> impl Reply {
     use crate::schema::photos::dsl::{date, id};
-    if let Some((from_id, from_date)) = query_date(req, "from") {
-        let q = Photo::query(req.authorized_user().is_some())
+    if let Some(from_date) = date_of_img(context.db(), param.from) {
+        let q = Photo::query(context.is_authorized())
             .select(id)
             .filter(
                 date.lt(from_date)
-                    .or(date.eq(from_date).and(id.lt(from_id))),
+                    .or(date.eq(from_date).and(id.lt(param.from))),
             )
             .order((date.desc().nulls_last(), id.desc()));
-        let c: &PgConnection = &req.db_conn();
-        if let Ok(photo) = q.first::<i32>(c) {
-            return res.redirect(format!("/img/{}", photo)); // to photo_details
+        if let Ok(photo) = q.first::<i32>(context.db()) {
+            return redirect_to_img(photo);
         }
     }
-    res.not_found("No such image")
+    not_found(&context)
 }
 
-pub fn query_date(
-    req: &mut Request,
-    name: &str,
-) -> Option<(i32, NaiveDateTime)> {
-    req.query()
-        .get(name)
-        .and_then(|s| s.parse().ok())
-        .and_then(|i: i32| {
-            use crate::schema::photos::dsl::{date, photos};
-            let c: &PgConnection = &req.db_conn();
-            photos
-                .find(i)
-                .select(date)
-                .first(c)
-                .unwrap_or(None)
-                .map(|d| (i, d))
-        })
+#[derive(Deserialize)]
+pub struct FromParam {
+    from: i32,
+}
+
+pub fn date_of_img(db: &PgConnection, photo_id: i32) -> Option<NaiveDateTime> {
+    use crate::schema::photos::dsl::{date, photos};
+    photos.find(photo_id).select(date).first(db).unwrap_or(None)
 }
 
 pub fn monthname(n: u32) -> &'static str {

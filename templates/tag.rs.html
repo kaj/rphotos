@@ -1,11 +1,10 @@
-@use nickel::Request;
 @use crate::models::{Coord, Tag};
-@use crate::server::PhotoLink;
+@use crate::server::{Context, PhotoLink};
 @use super::{data_positions, page_base, photo_link};
 
-@(req: &Request, photos: &[PhotoLink], coords: &[(Coord, i32)], tag: &Tag)
+@(context: &Context, photos: &[PhotoLink], coords: &[(Coord, i32)], tag: &Tag)
 
-@:page_base(req, &format!("Photos tagged {}", tag.tag_name), &[], {}, {
+@:page_base(context, &format!("Photos tagged {}", tag.tag_name), &[], {}, {
   <div class="group"@:data_positions(coords)>
     @for p in photos {@:photo_link(p)}
   </div>

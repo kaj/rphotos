@@ -1,249 +1,226 @@
 //! Admin-only views, generally called by javascript.
-use super::nickelext::MyResponse;
-use super::SizeTag;
+use super::{not_found, permission_denied, redirect_to_img, Context, SizeTag};
 use crate::fetch_places::update_image_places;
-use crate::memcachemiddleware::MemcacheRequestExtensions;
 use crate::models::{Coord, Photo};
-use crate::nickel_diesel::DieselRequestExtensions;
-use diesel::prelude::*;
+use diesel::{self, prelude::*};
 use log::{info, warn};
-use nickel::extensions::Redirect;
-use nickel::status::StatusCode;
-use nickel::{BodyError, FormBody, MiddlewareResult, Request, Response};
-use nickel_jwt_session::SessionRequestExtensions;
+use serde::Deserialize;
 use slug::slugify;
+use warp::filters::BoxedFilter;
+use warp::http::Response;
+use warp::{Filter, Reply};
 
-pub fn rotate<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    if req.authorized_user().is_none() {
-        return res.error(StatusCode::Unauthorized, "permission denied");
+pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
+    use warp::{body::form, path, post2 as post};
+    let route = path("grade")
+        .and(s.clone())
+        .and(form())
+        .map(set_grade)
+        .or(path("locate").and(s.clone()).and(form()).map(set_location))
+        .unify()
+        .or(path("person").and(s.clone()).and(form()).map(set_person))
+        .unify()
+        .or(path("rotate").and(s.clone()).and(form()).map(rotate))
+        .unify()
+        .or(path("tag").and(s.clone()).and(form()).map(set_tag))
+        .unify();
+    post().and(route).boxed()
+}
+
+fn rotate(context: Context, form: RotateForm) -> Response<Vec<u8>> {
+    if !context.is_authorized() {
+        return permission_denied();
     }
-    if let (Some(image), Some(angle)) = try_with!(res, rotate_params(req)) {
-        info!("Should rotate #{} by {}", image, angle);
-        use crate::schema::photos::dsl::photos;
-        let c: &PgConnection = &req.db_conn();
-        if let Ok(mut image) = photos.find(image).first::<Photo>(c) {
-            let newvalue = (360 + image.rotation + angle) % 360;
-            info!("Rotation was {}, setting to {}", image.rotation, newvalue);
-            image.rotation = newvalue;
-            match image.save_changes::<Photo>(c) {
-                Ok(image) => {
-                    req.clear_cache(&image.cache_key(SizeTag::Small));
-                    req.clear_cache(&image.cache_key(SizeTag::Medium));
-                    return res.ok(|o| writeln!(o, "ok"));
-                }
-                Err(error) => {
-                    warn!("Failed to save image #{}: {}", image.id, error);
-                }
+    info!("Should rotate #{} by {}", form.image, form.angle);
+    use crate::schema::photos::dsl::photos;
+    let c = context.db();
+    if let Ok(mut image) = photos.find(form.image).first::<Photo>(c) {
+        let newvalue = (360 + image.rotation + form.angle) % 360;
+        info!("Rotation was {}, setting to {}", image.rotation, newvalue);
+        image.rotation = newvalue;
+        match image.save_changes::<Photo>(c) {
+            Ok(image) => {
+                context.clear_cache(&image.cache_key(SizeTag::Small));
+                context.clear_cache(&image.cache_key(SizeTag::Medium));
+                return Response::builder().body(b"ok".to_vec()).unwrap();
+            }
+            Err(error) => {
+                warn!("Failed to save image #{}: {}", image.id, error);
             }
         }
     }
-    info!("Missing image and/or angle to rotate or image not found");
-    res.not_found("")
+    not_found(&context)
 }
 
-type QResult<T> = Result<T, (StatusCode, BodyError)>;
-
-fn rotate_params(req: &mut Request) -> QResult<(Option<i32>, Option<i16>)> {
-    let data = req.form_body()?;
-    Ok((
-        data.get("image").and_then(|s| s.parse().ok()),
-        data.get("angle").and_then(|s| s.parse().ok()),
-    ))
+#[derive(Deserialize)]
+struct RotateForm {
+    image: i32,
+    angle: i16,
 }
 
-pub fn set_tag<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    if req.authorized_user().is_none() {
-        return res.error(StatusCode::Unauthorized, "permission denied");
+fn set_tag(context: Context, form: TagForm) -> Response<Vec<u8>> {
+    if !context.is_authorized() {
+        return permission_denied();
     }
-    if let (Some(image), Some(tag)) = try_with!(res, tag_params(req)) {
-        let c: &PgConnection = &req.db_conn();
-        use crate::models::{PhotoTag, Tag};
-        use diesel;
-        let tag = {
-            use crate::schema::tags::dsl::*;
-            tags.filter(tag_name.ilike(&tag))
-                .first::<Tag>(c)
-                .or_else(|_| {
-                    diesel::insert_into(tags)
-                        .values((tag_name.eq(&tag), slug.eq(&slugify(&tag))))
-                        .get_result::<Tag>(c)
-                })
-                .expect("Find or create tag")
-        };
-        use crate::schema::photo_tags::dsl::*;
-        let q = photo_tags
-            .filter(photo_id.eq(image))
-            .filter(tag_id.eq(tag.id));
-        if q.first::<PhotoTag>(c).is_ok() {
-            info!("Photo #{} already has {:?}", image, tag);
-        } else {
-            info!("Add {:?} on photo #{}!", tag, image);
-            diesel::insert_into(photo_tags)
-                .values((photo_id.eq(image), tag_id.eq(tag.id)))
-                .execute(c)
-                .expect("Tag a photo");
-        }
-        return res.redirect(format!("/img/{}", image));
+    let c = context.db();
+    use crate::models::{PhotoTag, Tag};
+    use diesel;
+    let tag = {
+        use crate::schema::tags::dsl::*;
+        tags.filter(tag_name.ilike(&form.tag))
+            .first::<Tag>(c)
+            .or_else(|_| {
+                diesel::insert_into(tags)
+                    .values((
+                        tag_name.eq(&form.tag),
+                        slug.eq(&slugify(&form.tag)),
+                    ))
+                    .get_result::<Tag>(c)
+            })
+            .expect("Find or create tag")
+    };
+    use crate::schema::photo_tags::dsl::*;
+    let q = photo_tags
+        .filter(photo_id.eq(form.image))
+        .filter(tag_id.eq(tag.id));
+    if q.first::<PhotoTag>(c).is_ok() {
+        info!("Photo #{} already has {:?}", form.image, form.tag);
+    } else {
+        info!("Add {:?} on photo #{}!", form.tag, form.image);
+        diesel::insert_into(photo_tags)
+            .values((photo_id.eq(form.image), tag_id.eq(tag.id)))
+            .execute(c)
+            .expect("Tag a photo");
     }
-    info!("Missing image and/or angle to rotate or image not found");
-    res.not_found("")
+    redirect_to_img(form.image)
 }
 
-fn tag_params(req: &mut Request) -> QResult<(Option<i32>, Option<String>)> {
-    let data = req.form_body()?;
-    Ok((
-        data.get("image").and_then(|s| s.parse().ok()),
-        data.get("tag").map(String::from),
-    ))
+#[derive(Deserialize)]
+struct TagForm {
+    image: i32,
+    tag: String,
 }
 
-pub fn set_person<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    if req.authorized_user().is_none() {
-        return res.error(StatusCode::Unauthorized, "permission denied");
+fn set_person(context: Context, form: PersonForm) -> Response<Vec<u8>> {
+    if !context.is_authorized() {
+        return permission_denied();
     }
-    if let (Some(image), Some(name)) = try_with!(res, person_params(req)) {
-        let c: &PgConnection = &req.db_conn();
-        use crate::models::{Person, PhotoPerson};
-        use diesel;
-        let person = {
-            use crate::schema::people::dsl::*;
-            people
-                .filter(person_name.ilike(&name))
-                .first::<Person>(c)
-                .or_else(|_| {
-                    diesel::insert_into(people)
-                        .values((
-                            person_name.eq(&name),
-                            slug.eq(&slugify(&name)),
-                        ))
-                        .get_result::<Person>(c)
-                })
-                .expect("Find or create tag")
-        };
-        use crate::schema::photo_people::dsl::*;
-        let q = photo_people
-            .filter(photo_id.eq(image))
-            .filter(person_id.eq(person.id));
-        if q.first::<PhotoPerson>(c).is_ok() {
-            info!("Photo #{} already has {:?}", image, person);
-        } else {
-            info!("Add {:?} on photo #{}!", person, image);
-            diesel::insert_into(photo_people)
-                .values((photo_id.eq(image), person_id.eq(person.id)))
-                .execute(c)
-                .expect("Name person in photo");
-        }
-        return res.redirect(format!("/img/{}", image));
+    let c = context.db();
+    use crate::models::{Person, PhotoPerson};
+    use diesel;
+    let person = {
+        use crate::schema::people::dsl::*;
+        people
+            .filter(person_name.ilike(&form.person))
+            .first::<Person>(c)
+            .or_else(|_| {
+                diesel::insert_into(people)
+                    .values((
+                        person_name.eq(&form.person),
+                        slug.eq(&slugify(&form.person)),
+                    ))
+                    .get_result::<Person>(c)
+            })
+            .expect("Find or create tag")
+    };
+    use crate::schema::photo_people::dsl::*;
+    let q = photo_people
+        .filter(photo_id.eq(form.image))
+        .filter(person_id.eq(person.id));
+    if q.first::<PhotoPerson>(c).is_ok() {
+        info!("Photo #{} already has {:?}", form.image, person);
+    } else {
+        info!("Add {:?} on photo #{}!", person, form.image);
+        diesel::insert_into(photo_people)
+            .values((photo_id.eq(form.image), person_id.eq(person.id)))
+            .execute(c)
+            .expect("Name person in photo");
     }
-    info!("Missing image and/or angle to rotate or image not found");
-    res.not_found("")
+    redirect_to_img(form.image)
 }
 
-fn person_params(req: &mut Request) -> QResult<(Option<i32>, Option<String>)> {
-    let data = req.form_body()?;
-    Ok((
-        data.get("image").and_then(|s| s.parse().ok()),
-        data.get("person").map(String::from),
-    ))
+#[derive(Deserialize)]
+struct PersonForm {
+    image: i32,
+    person: String,
 }
 
-pub fn set_grade<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    if req.authorized_user().is_none() {
-        return res.error(StatusCode::Unauthorized, "permission denied");
+fn set_grade(context: Context, form: GradeForm) -> Response<Vec<u8>> {
+    if !context.is_authorized() {
+        return permission_denied();
     }
-    if let (Some(image), Some(newgrade)) = try_with!(res, grade_params(req)) {
-        if newgrade >= 0 && newgrade <= 100 {
-            info!("Should set grade of #{} to {}", image, newgrade);
-            use crate::schema::photos::dsl::{grade, photos};
-            use diesel;
-            let c: &PgConnection = &req.db_conn();
-            let q = diesel::update(photos.find(image)).set(grade.eq(newgrade));
-            match q.execute(c) {
-                Ok(1) => {
-                    return res.redirect(format!("/img/{}", image));
-                }
-                Ok(0) => (),
-                Ok(n) => {
-                    warn!("Strange, updated {} images with id {}", n, image);
-                }
-                Err(error) => {
-                    warn!("Failed set grade of image #{}: {}", image, error);
-                }
+    if form.grade >= 0 && form.grade <= 100 {
+        info!("Should set grade of #{} to {}", form.image, form.grade);
+        use crate::schema::photos::dsl::{grade, photos};
+        let q =
+            diesel::update(photos.find(form.image)).set(grade.eq(form.grade));
+        match q.execute(context.db()) {
+            Ok(1) => {
+                return redirect_to_img(form.image);
             }
-        } else {
-            info!("Grade {} is out of range for image #{}", newgrade, image);
+            Ok(0) => (),
+            Ok(n) => {
+                warn!("Strange, updated {} images with id {}", n, form.image);
+            }
+            Err(error) => {
+                warn!("Failed set grade of image #{}: {}", form.image, error);
+            }
+        }
+    } else {
+        info!(
+            "Grade {} out of range for image #{}",
+            form.grade, form.image
+        );
+    }
+    not_found(&context)
+}
+
+#[derive(Deserialize)]
+struct GradeForm {
+    image: i32,
+    grade: i16,
+}
+
+fn set_location(context: Context, form: CoordForm) -> Response<Vec<u8>> {
+    if !context.is_authorized() {
+        return permission_denied();
+    }
+    let image = form.image;
+    let coord = form.coord();
+    info!("Should set location of #{} to {:?}.", image, coord);
+
+    let (lat, lng) = ((coord.x * 1e6) as i32, (coord.y * 1e6) as i32);
+    use crate::schema::positions::dsl::*;
+    use diesel::insert_into;
+    let db = context.db();
+    insert_into(positions)
+        .values((photo_id.eq(image), latitude.eq(lat), longitude.eq(lng)))
+        .on_conflict(photo_id)
+        .do_update()
+        .set((latitude.eq(lat), longitude.eq(lng)))
+        .execute(db)
+        .expect("Insert image position");
+
+    match update_image_places(db, form.image) {
+        Ok(()) => (),
+        // TODO Tell the user something failed?
+        Err(err) => warn!("Failed to fetch places: {:?}", err),
+    }
+    redirect_to_img(form.image)
+}
+
+#[derive(Deserialize)]
+struct CoordForm {
+    image: i32,
+    lat: f64,
+    lng: f64,
+}
+
+impl CoordForm {
+    fn coord(&self) -> Coord {
+        Coord {
+            x: self.lat,
+            y: self.lng,
         }
     }
-    info!("Missing image and/or angle to rotate or image not found");
-    res.not_found("")
-}
-
-fn grade_params(req: &mut Request) -> QResult<(Option<i32>, Option<i16>)> {
-    let data = req.form_body()?;
-    Ok((
-        data.get("image").and_then(|s| s.parse().ok()),
-        data.get("grade").and_then(|s| s.parse().ok()),
-    ))
-}
-
-pub fn set_location<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    if req.authorized_user().is_none() {
-        return res.error(StatusCode::Unauthorized, "permission denied");
-    }
-    if let (Some(image), Some(coord)) = try_with!(res, location_params(req)) {
-        info!("Should set location of #{} to {:?}.", image, coord);
-
-        let (lat, lng) = ((coord.x * 1e6) as i32, (coord.y * 1e6) as i32);
-        use crate::schema::positions::dsl::*;
-        use diesel::insert_into;
-        let db: &PgConnection = &req.db_conn();
-        insert_into(positions)
-            .values((photo_id.eq(image), latitude.eq(lat), longitude.eq(lng)))
-            .on_conflict(photo_id)
-            .do_update()
-            .set((latitude.eq(lat), longitude.eq(lng)))
-            .execute(db)
-            .expect("Insert image position");
-
-        match update_image_places(db, image) {
-            Ok(()) => (),
-            // TODO Tell the user something failed?
-            Err(err) => warn!("Failed to fetch places: {:?}", err),
-        }
-        return res.redirect(format!("/img/{}", image));
-    }
-    info!("Missing image and/or position to set, or image not found.");
-    res.not_found("")
-}
-
-fn location_params(
-    req: &mut Request,
-) -> QResult<(Option<i32>, Option<Coord>)> {
-    let data = req.form_body()?;
-    Ok((
-        data.get("image").and_then(|s| s.parse().ok()),
-        if let (Some(lat), Some(lng)) = (
-            data.get("lat").and_then(|s| s.parse().ok()),
-            data.get("lng").and_then(|s| s.parse().ok()),
-        ) {
-            Some(Coord { x: lat, y: lng })
-        } else {
-            None
-        },
-    ))
 }
