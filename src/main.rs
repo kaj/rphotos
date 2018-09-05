@@ -29,6 +29,7 @@ extern crate typemap;
 
 mod adm;
 mod env;
+mod fetch_places;
 mod memcachemiddleware;
 mod models;
 mod myexif;
@@ -79,6 +80,14 @@ fn main() {
                     Arg::with_name("USER")
                         .required(true)
                         .help("Username to set password for"),
+                ),
+        ).subcommand(
+            SubCommand::with_name("fetchplaces")
+                .about("Get place tags for photos by looking up coordinates in OSM")
+                .arg(
+                    Arg::with_name("PHOTOS")
+                        .required(true).multiple(true)
+                        .help("Image ids to fetch place data for"),
                 ),
         ).subcommand(
             SubCommand::with_name("makepublic")
@@ -172,6 +181,14 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
         }
         ("stats", Some(_args)) => show_stats(&get_db()?),
         ("userlist", Some(_args)) => users::list(&get_db()?),
+        ("fetchplaces", Some(args)) => {
+            let db = get_db()?;
+            for photo in args.values_of("PHOTOS").unwrap() {
+                fetch_places::update_image_places(&db, photo.parse()?)
+                    .map_err(|e| Error::Other(e))?;
+            }
+            Ok(())
+        }
         ("userpass", Some(args)) => {
             users::passwd(&get_db()?, args.value_of("USER").unwrap())
         }

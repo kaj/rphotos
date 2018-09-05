@@ -8,8 +8,6 @@ use nickel::status::StatusCode;
 use nickel::{BodyError, FormBody, MiddlewareResult, Request, Response};
 use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
-use reqwest::Client;
-use rustc_serialize::json::Json;
 use server::nickelext::MyResponse;
 use slug::slugify;
 
@@ -244,105 +242,19 @@ pub fn fetch_places<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use diesel;
     if !req.authorized_user().is_some() {
         return res.error(StatusCode::Unauthorized, "permission denied");
     }
     let image = 60458;
 
     let c: &PgConnection = &req.db_conn();
-    use schema::positions::dsl::*;
-    let coord = match positions
-        .filter(photo_id.eq(image))
-        .select((latitude, longitude))
-        .first::<(i32, i32)>(c)
-    {
-        Ok((tlat, tlong)) => Coord {
-            x: f64::from(tlat) / 1e6,
-            y: f64::from(tlong) / 1e6,
-        },
-        Err(diesel::NotFound) => {
-            return res.not_found("Image has no position");
-        }
+    use fetch_places::update_image_places;
+    match update_image_places(c, image) {
+        Ok(ok) => res.ok(|o| writeln!(o, "Ok, got places {:?}", ok)),
         Err(err) => {
-            error!("Failed to read position: {}", err);
-            return res.not_found("Failed to get image position");
-        }
-    };
-    info!("Should get places for {:?}", coord);
-    let client = Client::new();
-    match client
-        .post("https://overpass.kumi.systems/api/interpreter")
-        .body(format!(
-            "[out:json];is_in({},{});area._[admin_level];out;",
-            coord.x, coord.y,
-        )).send()
-    {
-        Ok(mut response) => {
-            if response.status().is_success() {
-                let data = Json::from_reader(&mut response).unwrap();
-                let obj = data.as_object().unwrap();
-                if let Some(elements) =
-                    obj.get("elements").and_then(|o| o.as_array())
-                {
-                    for obj in elements {
-                        info!("{}", obj);
-                        if let (Some(t_osm_id), Some((name, level))) =
-                            (osm_id(obj), name_and_level(obj))
-                        {
-                            info!("{}: {} (level {})", t_osm_id, name, level);
-                            let place_id = {
-                                // http://overpass-api.de/api/interpreter?data=%5Bout%3Acustom%5D%3Brel%5Bref%3D%22A+555%22%5D%5Bnetwork%3DBAB%5D%3Bout%3B
-                                use models::Place;
-                                use schema::places::dsl::*;
-                                places
-                                    .filter(osm_id.eq(Some(t_osm_id)))
-                                    .first::<Place>(c)
-                                    .or_else(|_| {
-                                        diesel::insert_into(places)
-                                            .values((
-                                                place_name.eq(&name),
-                                                slug.eq(&slugify(&name)),
-                                                osm_id.eq(Some(t_osm_id)),
-                                                osm_level.eq(Some(level)),
-                                            )).get_result::<Place>(c)
-                                    }).expect("Find or create tag")
-                            };
-                            info!(" ...: {:?}", place_id)
-                        }
-                    }
-                }
-            } else {
-                warn!("Bad response from overpass: {:?}", response);
-            }
-        }
-        Err(err) => {
-            warn!("Failed to get overpass info: {}", err);
+            warn!("Failed to fetch places: {}", err);
+            // TODO This might be a not found or an internal server error
+            res.not_found("Failed to get image position")
         }
     }
-
-    return res.ok(|o| writeln!(o, "Should get places for {:?}", coord));
-}
-
-fn osm_id(obj: &Json) -> Option<i64> {
-    obj.find("id").and_then(|o| o.as_i64())
-}
-
-fn name_and_level(obj: &Json) -> Option<(&str, i16)> {
-    obj.find("tags").and_then(|tags| {
-        let name = tags
-            .find("name:sv")
-            //.or_else(|| tags.find("name:en"))
-            .or_else(|| tags.find("name"))
-            .and_then(|o| o.as_string());
-        let level = tags
-            .find("admin_level")
-            .and_then(|o| o.as_string())
-            .and_then(|s| s.parse().ok());
-        if let (Some(name), Some(level)) = (name, level) {
-            Some((name, level))
-        } else {
-            None
-        }
-    })
 }
