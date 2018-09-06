@@ -150,11 +150,12 @@ impl Photo {
         db: &PgConnection,
     ) -> Result<Vec<Place>, DieselError> {
         use schema::photo_places::dsl::{photo_id, photo_places, place_id};
-        use schema::places::dsl::{id, places};
+        use schema::places::dsl::{id, osm_level, places};
         places
             .filter(id.eq_any(
                 photo_places.select(place_id).filter(photo_id.eq(self.id)),
-            )).load(db)
+            )).order(osm_level.desc().nulls_first())
+            .load(db)
     }
     pub fn load_tags(
         &self,
