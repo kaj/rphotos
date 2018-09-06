@@ -1,6 +1,7 @@
 //! Admin-only views, generally called by javascript.
 use super::SizeTag;
 use diesel::prelude::*;
+use fetch_places::update_image_places;
 use memcachemiddleware::MemcacheRequestExtensions;
 use models::{Coord, Photo};
 use nickel::extensions::Redirect;
@@ -215,6 +216,10 @@ pub fn set_location<'mw>(
             .execute(db)
             .expect("Insert image position");
 
+        match update_image_places(db, image) {
+            Ok(()) => (),
+            Err(err) => warn!("Failed to fetch places: {}", err),
+        }
         return res.redirect(format!("/img/{}", image));
     }
     info!("Missing image and/or position to set, or image not found.");
@@ -236,25 +241,4 @@ fn location_params(
             None
         },
     ))
-}
-
-pub fn fetch_places<'mw>(
-    req: &mut Request,
-    res: Response<'mw>,
-) -> MiddlewareResult<'mw> {
-    if !req.authorized_user().is_some() {
-        return res.error(StatusCode::Unauthorized, "permission denied");
-    }
-    let image = 60458;
-
-    let c: &PgConnection = &req.db_conn();
-    use fetch_places::update_image_places;
-    match update_image_places(c, image) {
-        Ok(ok) => res.ok(|o| writeln!(o, "Ok, got places {:?}", ok)),
-        Err(err) => {
-            warn!("Failed to fetch places: {}", err);
-            // TODO This might be a not found or an internal server error
-            res.not_found("Failed to get image position")
-        }
-    }
 }
