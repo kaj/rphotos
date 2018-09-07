@@ -100,7 +100,7 @@ fn split(group: &[Photo]) -> (&[Photo], &[Photo]) {
         lsum += i64::from(group[i].grade.unwrap_or(30));
         let rsum = gradesum - lsum;
         let score = (interval + 1) * (lsum * rsum);
-        eprintln!("Pos #{} score: {}", i, score);
+        debug!("Pos #{} score: {}", i, score);
         if score > largest {
             largest = score;
             pos = i + 1;
