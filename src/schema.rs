@@ -65,6 +65,8 @@ table! {
         id -> Int4,
         slug -> Varchar,
         place_name -> Varchar,
+        osm_id -> Nullable<Int8>,
+        osm_level -> Nullable<Int2>,
     }
 }
 

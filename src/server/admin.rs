@@ -1,6 +1,7 @@
 //! Admin-only views, generally called by javascript.
 use super::SizeTag;
 use diesel::prelude::*;
+use fetch_places::update_image_places;
 use memcachemiddleware::MemcacheRequestExtensions;
 use models::{Coord, Photo};
 use nickel::extensions::Redirect;
@@ -215,6 +216,10 @@ pub fn set_location<'mw>(
             .execute(db)
             .expect("Insert image position");
 
+        match update_image_places(db, image) {
+            Ok(()) => (),
+            Err(err) => warn!("Failed to fetch places: {}", err),
+        }
         return res.redirect(format!("/img/{}", image));
     }
     info!("Missing image and/or position to set, or image not found.");
