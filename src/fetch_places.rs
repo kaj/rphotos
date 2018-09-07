@@ -33,10 +33,8 @@ pub fn update_image_places(
     let client = Client::new();
     match client
         .post("https://overpass.kumi.systems/api/interpreter")
-        .body(format!(
-            "[out:json];is_in({},{});area._[admin_level];out;",
-            coord.x, coord.y,
-        )).send()
+        .body(format!("[out:json];is_in({},{});out;", coord.x, coord.y))
+        .send()
     {
         Ok(mut response) => {
             if response.status().is_success() {
@@ -153,10 +151,69 @@ fn name_and_level(obj: &Json) -> Option<(&str, i16)> {
         let level = tags
             .find("admin_level")
             .and_then(|o| o.as_string())
-            .and_then(|s| s.parse().ok());
+            .and_then(|s| s.parse().ok())
+            .or_else(|| {
+                match tags.find("leisure").and_then(|o| o.as_string()) {
+                    Some("garden") => Some(18),
+                    Some("nature_reserve") => Some(12),
+                    Some("park") => Some(14),
+                    Some("playground") => Some(16),
+                    _ => None,
+                }
+            }).or_else(|| {
+                match tags.find("tourism").and_then(|o| o.as_string()) {
+                    Some("attraction") => Some(16),
+                    Some("theme_park") | Some("zoo") => Some(14),
+                    _ => None,
+                }
+            }).or_else(|| {
+                match tags.find("boundary").and_then(|o| o.as_string()) {
+                    Some("national_park") => Some(14),
+                    _ => None,
+                }
+            }).or_else(|| {
+                match tags.find("building").and_then(|o| o.as_string()) {
+                    Some("church") => Some(20),
+                    Some("exhibition_center") => Some(20),
+                    Some("industrial") => Some(20),
+                    Some("office") => Some(20),
+                    Some("public") => Some(20),
+                    Some("retail") => Some(20),
+                    Some("university") => Some(20),
+                    Some("yes") => Some(20),
+                    _ => None,
+                }
+            }).or_else(|| {
+                match tags.find("landuse").and_then(|o| o.as_string()) {
+                    Some("industrial") => Some(11),
+                    Some("residential") => Some(11),
+                    _ => None,
+                }
+            }).or_else(|| {
+                match tags.find("highway").and_then(|o| o.as_string()) {
+                    Some("pedestrian") => Some(15), // torg
+                    Some("rest_area") => Some(16),
+                    _ => None,
+                }
+            }).or_else(|| {
+                match tags.find("public_transport").and_then(|o| o.as_string())
+                {
+                    Some("station") => Some(18),
+                    _ => None,
+                }
+            }).or_else(|| {
+                match tags.find("amenity").and_then(|o| o.as_string()) {
+                    Some("exhibition_center") => Some(20),
+                    Some("place_of_worship") => Some(15),
+                    Some("university") => Some(12),
+                    _ => None,
+                }
+            });
         if let (Some(name), Some(level)) = (name, level) {
+            info!("{} is level {}", name, level);
             Some((name, level))
         } else {
+            info!("Unused area {}", obj);
             None
         }
     })
