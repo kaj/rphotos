@@ -18,10 +18,10 @@
     @if let Some(d) = photo.date {<p>Time: @d.format("%F %T")</p>}
     @if !people.is_empty() {
     <p>People: @for p in people{<a href="/person/@p.slug">@p.person_name</a>, }</p>}
-    @if !places.is_empty() {
-    <p class="places">Places: @for p in places{<a href="/place/@p.slug">@p.place_name</a>, }</p>}
     @if !tags.is_empty() {
     <p>Tags: @for t in tags{<a href="/tag/@t.slug">@t.tag_name</a>, }</p>}
+    @if !places.is_empty() {
+    <p class="places">Places: @for p in places{<a href="/place/@p.slug">@p.place_name</a>, }</p>}
     @if let Some(ref pos) = *position {<p>Position: @pos.x @pos.y</p>}
     @if let Some(ref a) = *attribution {<p>Av: @a</p>}
     @if let Some(ref c) = *camera{<p>Camera: @c.model (@c.manufacturer)</p>}
