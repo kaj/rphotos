@@ -198,15 +198,16 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
             if args.is_present("AUTO") {
                 let limit = args.value_of("LIMIT").unwrap().parse()?;
                 println!("Should find {} photos to fetch places for", limit);
-                use schema::photos::dsl::{id, date, path, photos};
-                use schema::positions::dsl as pos;
-                use schema::photo_places::dsl as place;
                 use diesel::prelude::*;
+                use schema::photo_places::dsl as place;
+                use schema::photos::dsl::{date, id, path, photos};
+                use schema::positions::dsl as pos;
                 let result = photos
                     .select((id, path))
                     .filter(id.eq_any(pos::positions.select(pos::photo_id)))
-                    .filter(id.ne_all(place::photo_places.select(place::photo_id)))
-                    .limit(limit)
+                    .filter(
+                        id.ne_all(place::photo_places.select(place::photo_id)),
+                    ).limit(limit)
                     .order(date.desc().nulls_last())
                     .load::<(i32, String)>(&db)?;
                 println!("Work with {:?}", result);
