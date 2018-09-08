@@ -223,21 +223,6 @@
         lng.name="lng";
         f.appendChild(lng);
 
-        function keyHandler(e) {
-            switch(e.code) {
-            case 'Escape':
-                e.target.closest('form').remove();
-                event.target.disabled = false;
-                event.target.focus();
-                break;
-            default:
-                return true;
-            };
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-        }
-
         let h = d.querySelector('head');
         var csslink = d.createElement('link');
         csslink.rel = 'stylesheet';
@@ -276,13 +261,33 @@
 
         let b = d.createElement("button");
         b.innerHTML = "Ok";
-        b.onclick = e => {
+        f.addEventListener('submit', presubmit);
+        f.appendChild(b);
+
+        function presubmit() {
             let pos = marker.getLatLng();
             lat.value = pos.lat;
             lng.value = pos.lng;
             localStorage.setItem('lastpos', `[${pos.lat},${pos.lng}]`)
         }
-        f.appendChild(b);
+        function keyHandler(e) {
+            switch(e.code) {
+            case 'Escape':
+                e.target.closest('form').remove();
+                event.target.disabled = false;
+                event.target.focus();
+                break;
+            case 'Enter':
+                presubmit();
+                f.submit();
+                break;
+            default:
+                return true;
+            };
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
 
         let c = d.createElement("button");
         c.innerHTML = "&#x1f5d9;";
