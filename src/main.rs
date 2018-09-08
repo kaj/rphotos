@@ -85,8 +85,20 @@ fn main() {
             SubCommand::with_name("fetchplaces")
                 .about("Get place tags for photos by looking up coordinates in OSM")
                 .arg(
+                    Arg::with_name("LIMIT")
+                        .long("limit")
+                        .short("l")
+                        .takes_value(true)
+                        .default_value("5")
+                        .help("Max number of photos to use for --auto")
+                ).arg(
+                    Arg::with_name("AUTO")
+                        .long("auto")
+                        .help("Fetch data for photos with position but \
+                               lacking places.")
+                ).arg(
                     Arg::with_name("PHOTOS")
-                        .required(true).multiple(true)
+                        .required_unless("AUTO").multiple(true)
                         .help("Image ids to fetch place data for"),
                 ),
         ).subcommand(
@@ -183,9 +195,31 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
         ("userlist", Some(_args)) => users::list(&get_db()?),
         ("fetchplaces", Some(args)) => {
             let db = get_db()?;
-            for photo in args.values_of("PHOTOS").unwrap() {
-                fetch_places::update_image_places(&db, photo.parse()?)
-                    .map_err(|e| Error::Other(e))?;
+            if args.is_present("AUTO") {
+                let limit = args.value_of("LIMIT").unwrap().parse()?;
+                println!("Should find {} photos to fetch places for", limit);
+                use schema::photos::dsl::{id, date, path, photos};
+                use schema::positions::dsl as pos;
+                use schema::photo_places::dsl as place;
+                use diesel::prelude::*;
+                let result = photos
+                    .select((id, path))
+                    .filter(id.eq_any(pos::positions.select(pos::photo_id)))
+                    .filter(id.ne_all(place::photo_places.select(place::photo_id)))
+                    .limit(limit)
+                    .order(date.desc().nulls_last())
+                    .load::<(i32, String)>(&db)?;
+                println!("Work with {:?}", result);
+                for (photo_id, ppath) in result {
+                    println!("Find places for #{}, {}", photo_id, ppath);
+                    fetch_places::update_image_places(&db, photo_id)
+                        .map_err(|e| Error::Other(e))?;
+                }
+            } else {
+                for photo in args.values_of("PHOTOS").unwrap() {
+                    fetch_places::update_image_places(&db, photo.parse()?)
+                        .map_err(|e| Error::Other(e))?;
+                }
             }
             Ok(())
         }
