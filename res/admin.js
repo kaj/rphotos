@@ -252,7 +252,8 @@
         slink.onload = () => {
             var map = L.map('amap');
             L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-	        attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+		attribution: '© <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+		maxZoom: 19
             }).addTo(map);
             if (position) {
                 position = JSON.parse(position);
