@@ -119,7 +119,18 @@ fn main() {
                 ),
         ).subcommand(
             SubCommand::with_name("precache")
-                .about("Make sure the photos has thumbnails stored in cache."),
+                .about("Make sure the photos has thumbnails stored in cache.")
+                .arg(
+                    Arg::with_name("MAXTIME")
+                        .long("max-time")
+                        .default_value("10")
+                        .help("Max time (in seconds) to work")
+                ).after_help(
+                    "The time limit is checked after each stored image, \
+                     so the command will complete in slightly more than \
+                     the max time and one image will be processed even \
+                     if the max time is zero."
+                )
         ).subcommand(
             SubCommand::with_name("storestatics")
                 .about("Store statics as files for a web server")
@@ -227,9 +238,11 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
         ("userpass", Some(args)) => {
             users::passwd(&get_db()?, args.value_of("USER").unwrap())
         }
-        ("precache", _) => {
-            precache::precache(&get_db()?, &PhotosDir::new(photos_dir()))
-        }
+        ("precache", Some(args)) => precache::precache(
+            &get_db()?,
+            &PhotosDir::new(photos_dir()),
+            args.value_of("MAXTIME").unwrap().parse()?,
+        ),
         ("storestatics", Some(args)) => {
             storestatics::to_dir(args.value_of("DIR").unwrap())
         }

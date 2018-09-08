@@ -7,6 +7,7 @@ use models::Photo;
 use photosdir::PhotosDir;
 use schema::photos::dsl::{date, is_public};
 use server::SizeTag;
+use std::time::{Duration, Instant};
 
 /// Make sure all photos are stored in the cache.
 ///
@@ -14,7 +15,13 @@ use server::SizeTag;
 /// overwhelm the host while precaching.
 /// The images are handled in public first, new first order, to have
 /// the probably most requested images precached as soon as possible.
-pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
+pub fn precache(
+    db: &PgConnection,
+    pd: &PhotosDir,
+    max_secs: u64,
+) -> Result<(), Error> {
+    let max_time = Duration::from_secs(max_secs);
+    let timer = Instant::now();
     let mut cache =
         Client::connect(&[("tcp://127.0.0.1:11211", 1)], ProtoType::Binary)?;
     let size = SizeTag::Small;
@@ -26,9 +33,7 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
     for photo in photos {
         n += 1;
         let key = &photo.cache_key(size);
-        if cache.get(key.as_bytes()).is_ok() {
-            debug!("Cache: {} found for {}", key, photo.path);
-        } else {
+        if cache.get(key.as_bytes()).is_err() {
             let size = size.px();
             let data = pd.scale_image(&photo, size, size).map_err(|e| {
                 Error::Other(format!(
@@ -39,11 +44,24 @@ pub fn precache(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
             cache.set(key.as_bytes(), &data, 0, no_expire)?;
             debug!("Cache: stored {} for {}", key, photo.path);
             n_stored += 1;
+            if timer.elapsed() > max_time {
+                break;
+            }
             if n_stored % 64 == 0 {
-                info!("{} images of {} updated in cache ...", n_stored, n);
+                info!(
+                    "Checked {} images in cache, added {}, in {:.1?}.",
+                    n,
+                    n_stored,
+                    timer.elapsed()
+                );
             }
         }
     }
-    info!("{} images of {} updated in cache.", n_stored, n);
+    info!(
+        "Checked {} images in cache, added {}, in {:.1?}.",
+        n,
+        n_stored,
+        timer.elapsed()
+    );
     Ok(())
 }
