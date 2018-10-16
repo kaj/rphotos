@@ -1,4 +1,4 @@
-use image::{self, FilterType, GenericImage, ImageError, ImageFormat};
+use image::{self, FilterType, GenericImageView, ImageError, ImageFormat};
 use models::Photo;
 use myexif::ExifData;
 use std::ffi::OsStr;
