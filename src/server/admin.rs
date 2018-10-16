@@ -72,7 +72,8 @@ pub fn set_tag<'mw>(
                     diesel::insert_into(tags)
                         .values((tag_name.eq(&tag), slug.eq(&slugify(&tag))))
                         .get_result::<Tag>(c)
-                }).expect("Find or create tag")
+                })
+                .expect("Find or create tag")
         };
         use schema::photo_tags::dsl::*;
         let q = photo_tags
@@ -122,8 +123,10 @@ pub fn set_person<'mw>(
                         .values((
                             person_name.eq(&name),
                             slug.eq(&slugify(&name)),
-                        )).get_result::<Person>(c)
-                }).expect("Find or create tag")
+                        ))
+                        .get_result::<Person>(c)
+                })
+                .expect("Find or create tag")
         };
         use schema::photo_people::dsl::*;
         let q = photo_people

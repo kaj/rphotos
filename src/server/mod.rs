@@ -527,7 +527,8 @@ fn photo_details<'mw>(
                                 Link::prev(tphoto.id),
                                 Link::next(tphoto.id),
                             ]
-                        }).unwrap_or_default(),
+                        })
+                        .unwrap_or_default(),
                     &tphoto.load_people(c).unwrap(),
                     &tphoto.load_places(c).unwrap(),
                     &tphoto.load_tags(c).unwrap(),

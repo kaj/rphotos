@@ -75,7 +75,8 @@ fn save_photo(
                     photo_id.eq(photo.id),
                     latitude.eq((lat * 1e6) as i32),
                     longitude.eq((long * 1e6) as i32),
-                )).execute(db)
+                ))
+                .execute(db)
                 .expect("Insert image position");
         }
     }

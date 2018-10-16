@@ -58,7 +58,8 @@ pub fn update_image_places(
                                                 .eq(name)
                                                 .and(osm_id.is_null()),
                                         ),
-                                    ).first::<Place>(c)
+                                    )
+                                    .first::<Place>(c)
                                     .or_else(|_| {
                                         diesel::insert_into(places)
                                             .values((
@@ -66,7 +67,8 @@ pub fn update_image_places(
                                                 slug.eq(&slugify(&name)),
                                                 osm_id.eq(Some(t_osm_id)),
                                                 osm_level.eq(Some(level)),
-                                            )).get_result::<Place>(c)
+                                            ))
+                                            .get_result::<Place>(c)
                                             .or_else(|_| {
                                                 let name = format!(
                                                     "{} ({})",
@@ -83,9 +85,11 @@ pub fn update_image_places(
                                                         )),
                                                         osm_level
                                                             .eq(Some(level)),
-                                                    )).get_result::<Place>(c)
+                                                    ))
+                                                    .get_result::<Place>(c)
                                             })
-                                    }).expect("Find or create place")
+                                    })
+                                    .expect("Find or create place")
                             };
                             if place.osm_id.is_none() {
                                 debug!(
@@ -98,7 +102,8 @@ pub fn update_image_places(
                                     .set((
                                         osm_id.eq(Some(t_osm_id)),
                                         osm_level.eq(level),
-                                    )).execute(c)
+                                    ))
+                                    .execute(c)
                                     .expect(&format!(
                                         "Update OSM for {:?}",
                                         place
@@ -119,7 +124,8 @@ pub fn update_image_places(
                                     .values((
                                         photo_id.eq(image),
                                         place_id.eq(place.id),
-                                    )).execute(c)
+                                    ))
+                                    .execute(c)
                                     .expect("Place a photo");
                             }
                         }
@@ -160,18 +166,21 @@ fn name_and_level(obj: &Json) -> Option<(&str, i16)> {
                     Some("playground") => Some(16),
                     _ => None,
                 }
-            }).or_else(|| {
+            })
+            .or_else(|| {
                 match tags.find("tourism").and_then(|o| o.as_string()) {
                     Some("attraction") => Some(16),
                     Some("theme_park") | Some("zoo") => Some(14),
                     _ => None,
                 }
-            }).or_else(|| {
+            })
+            .or_else(|| {
                 match tags.find("boundary").and_then(|o| o.as_string()) {
                     Some("national_park") => Some(14),
                     _ => None,
                 }
-            }).or_else(|| {
+            })
+            .or_else(|| {
                 match tags.find("building").and_then(|o| o.as_string()) {
                     Some("church") => Some(20),
                     Some("exhibition_center") => Some(20),
@@ -183,25 +192,29 @@ fn name_and_level(obj: &Json) -> Option<(&str, i16)> {
                     Some("yes") => Some(20),
                     _ => None,
                 }
-            }).or_else(|| {
+            })
+            .or_else(|| {
                 match tags.find("landuse").and_then(|o| o.as_string()) {
                     Some("industrial") => Some(11),
                     Some("residential") => Some(11),
                     _ => None,
                 }
-            }).or_else(|| {
+            })
+            .or_else(|| {
                 match tags.find("highway").and_then(|o| o.as_string()) {
                     Some("pedestrian") => Some(15), // torg
                     Some("rest_area") => Some(16),
                     _ => None,
                 }
-            }).or_else(|| {
+            })
+            .or_else(|| {
                 match tags.find("public_transport").and_then(|o| o.as_string())
                 {
                     Some("station") => Some(18),
                     _ => None,
                 }
-            }).or_else(|| {
+            })
+            .or_else(|| {
                 match tags.find("amenity").and_then(|o| o.as_string()) {
                     Some("exhibition_center") => Some(20),
                     Some("place_of_worship") => Some(15),

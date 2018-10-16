@@ -25,7 +25,8 @@ pub fn all_years<'mw>(
     let groups = Photo::query(req.authorized_user().is_some())
         .select(sql::<(Nullable<Integer>, BigInt)>(
             "cast(extract(year from date) as int) y, count(*)",
-        )).group_by(sql::<Nullable<Integer>>("y"))
+        ))
+        .group_by(sql::<Nullable<Integer>>("y"))
         .order(sql::<Nullable<Integer>>("y").desc().nulls_last())
         .load::<(Option<i32>, i64)>(c)
         .unwrap()
@@ -51,7 +52,8 @@ pub fn all_years<'mw>(
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small.px()),
             }
-        }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     res.ok(|o| templates::index(o, req, "All photos", &[], &groups, &[]))
 }
@@ -74,7 +76,8 @@ pub fn months_in_year<'mw>(
         .filter(date.lt(start_of_year(year + 1)))
         .select(sql::<(Integer, BigInt)>(
             "cast(extract(month from date) as int) m, count(*)",
-        )).group_by(sql::<Integer>("m"))
+        ))
+        .group_by(sql::<Integer>("m"))
         .order(sql::<Integer>("m").desc().nulls_last())
         .load::<(i32, i64)>(c)
         .unwrap()
@@ -96,7 +99,8 @@ pub fn months_in_year<'mw>(
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small.px()),
             }
-        }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     if groups.is_empty() {
         res.not_found("No such image")
@@ -130,7 +134,8 @@ pub fn days_in_month<'mw>(
         .filter(date.lt(start_of_month(year, month + 1)))
         .select(sql::<(Integer, BigInt)>(
             "cast(extract(day from date) as int) d, count(*)",
-        )).group_by(sql::<Integer>("d"))
+        ))
+        .group_by(sql::<Integer>("d"))
         .order(sql::<Integer>("d").desc().nulls_last())
         .load::<(i32, i64)>(c)
         .unwrap()
@@ -154,7 +159,8 @@ pub fn days_in_month<'mw>(
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small.px()),
             }
-        }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     if groups.is_empty() {
         res.not_found("No such image")
@@ -173,7 +179,8 @@ pub fn days_in_month<'mw>(
             .into_iter()
             .map(|(p_id, lat, long): (i32, i32, i32)| {
                 ((lat, long).into(), p_id)
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         res.ok(|o| templates::index(o, req, &title, &lpath, &groups, &pos))
     }
 }
@@ -252,7 +259,8 @@ pub fn on_this_day<'mw>(
         .inner_join(positions)
         .filter(
             sql("extract(month from date)=").bind::<Integer, _>(month as i32),
-        ).filter(sql("extract(day from date)=").bind::<Integer, _>(day as i32))
+        )
+        .filter(sql("extract(day from date)=").bind::<Integer, _>(day as i32))
         .select((photo_id, latitude, longitude))
         .load(c)
         .map_err(|e| warn!("Failed to load positions: {}", e))
@@ -270,14 +278,17 @@ pub fn on_this_day<'mw>(
             &Photo::query(req.authorized_user().is_some())
                 .select(sql::<(Integer, BigInt)>(
                     "cast(extract(year from date) as int) y, count(*)",
-                )).group_by(sql::<Integer>("y"))
+                ))
+                .group_by(sql::<Integer>("y"))
                 .filter(
                     sql("extract(month from date)=")
                         .bind::<Integer, _>(month as i32),
-                ).filter(
+                )
+                .filter(
                     sql("extract(day from date)=")
                         .bind::<Integer, _>(day as i32),
-                ).order(sql::<Integer>("y").desc())
+                )
+                .order(sql::<Integer>("y").desc())
                 .load::<(i32, i64)>(c)
                 .unwrap()
                 .iter()
@@ -300,7 +311,8 @@ pub fn on_this_day<'mw>(
                         id: photo.id,
                         size: photo.get_size(SizeTag::Small.px()),
                     }
-                }).collect::<Vec<_>>(),
+                })
+                .collect::<Vec<_>>(),
             &pos,
         )
     })
@@ -317,7 +329,8 @@ pub fn next_image<'mw>(
             .filter(
                 date.gt(from_date)
                     .or(date.eq(from_date).and(id.gt(from_id))),
-            ).order((date, id));
+            )
+            .order((date, id));
         let c: &PgConnection = &req.db_conn();
         if let Ok(photo) = q.first::<i32>(c) {
             return res.redirect(format!("/img/{}", photo)); // to photo_details
@@ -337,7 +350,8 @@ pub fn prev_image<'mw>(
             .filter(
                 date.lt(from_date)
                     .or(date.eq(from_date).and(id.lt(from_id))),
-            ).order((date.desc().nulls_last(), id.desc()));
+            )
+            .order((date.desc().nulls_last(), id.desc()));
         let c: &PgConnection = &req.db_conn();
         if let Ok(photo) = q.first::<i32>(c) {
             return res.redirect(format!("/img/{}", photo)); // to photo_details

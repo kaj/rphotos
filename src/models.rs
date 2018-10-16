@@ -128,7 +128,8 @@ impl Photo {
                     width.eq(newwidth),
                     height.eq(newheight),
                     camera_id.eq(camera.map(|c| c.id)),
-                )).get_result::<Photo>(db)?;
+                ))
+                .get_result::<Photo>(db)?;
             Ok(Modification::Created(pic))
         }
     }
@@ -142,7 +143,8 @@ impl Photo {
         people
             .filter(id.eq_any(
                 photo_people.select(person_id).filter(photo_id.eq(self.id)),
-            )).load(db)
+            ))
+            .load(db)
     }
 
     pub fn load_places(
@@ -154,7 +156,8 @@ impl Photo {
         places
             .filter(id.eq_any(
                 photo_places.select(place_id).filter(photo_id.eq(self.id)),
-            )).order(osm_level.desc().nulls_first())
+            ))
+            .order(osm_level.desc().nulls_first())
             .load(db)
     }
     pub fn load_tags(
@@ -165,7 +168,8 @@ impl Photo {
         use schema::tags::dsl::{id, tags};
         tags.filter(
             id.eq_any(photo_tags.select(tag_id).filter(photo_id.eq(self.id))),
-        ).load(db)
+        )
+        .load(db)
     }
 
     pub fn load_position(&self, db: &PgConnection) -> Option<Coord> {

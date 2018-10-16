@@ -218,7 +218,8 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
                     .filter(id.eq_any(pos::positions.select(pos::photo_id)))
                     .filter(
                         id.ne_all(place::photo_places.select(place::photo_id)),
-                    ).limit(limit)
+                    )
+                    .limit(limit)
                     .order(date.desc().nulls_last())
                     .load::<(i32, String)>(&db)?;
                 println!("Work with {:?}", result);
