@@ -31,12 +31,7 @@ fn read_pid_file(pidfile: &str) -> Result<Option<pid_t>, String> {
                 format!("Bad content in {}: {}", pidfile, e)
             })?))
         }
-        Err(e) => {
-            if e.kind() == ErrorKind::NotFound {
-                Ok(None)
-            } else {
-                Err(format!("Could not open {}: {}", pidfile, e))
-            }
-        }
+        Err(ref e) if e.kind() == ErrorKind::NotFound => Ok(None),
+        Err(ref e) => Err(format!("Could not open {}: {}", pidfile, e)),
     }
 }
