@@ -1,3 +1,4 @@
+#![allow(proc_macro_derive_resolution_fallback)]
 #![recursion_limit = "128"]
 extern crate brotli2;
 extern crate chrono;
