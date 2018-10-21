@@ -148,7 +148,7 @@ fn osm_id(obj: &Json) -> Option<i64> {
 }
 
 fn name_and_level(obj: &Json) -> Option<(&str, i16)> {
-    obj.find("tags").and_then(|tags| {
+    if let Some(tags) = obj.find("tags") {
         let name = tags
             .find("name:sv")
             //.or_else(|| tags.find("name:en"))
@@ -223,11 +223,14 @@ fn name_and_level(obj: &Json) -> Option<(&str, i16)> {
                 }
             });
         if let (Some(name), Some(level)) = (name, level) {
-            info!("{} is level {}", name, level);
+            debug!("{} is level {}", name, level);
             Some((name, level))
         } else {
             info!("Unused area {}", obj);
             None
         }
-    })
+    } else {
+        warn!("Tag-less object {:?}", obj);
+        None
+    }
 }
