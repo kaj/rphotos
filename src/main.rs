@@ -24,6 +24,7 @@ extern crate rand;
 extern crate regex;
 extern crate reqwest;
 extern crate rustc_serialize;
+extern crate serde_json;
 extern crate slug;
 extern crate time;
 extern crate typemap;
