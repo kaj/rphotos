@@ -32,7 +32,6 @@ use nickel_jwt_session::{
 use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
 use pidfiles::handle_pid_file;
 use requestloggermiddleware::RequestLoggerMiddleware;
-use rustc_serialize::json::ToJson;
 use templates::{self, Html};
 
 pub struct PhotoLink {
@@ -599,7 +598,7 @@ fn auto_complete_tag<'mw>(
             .filter(tag_name.ilike(q + "%"))
             .order(tag_name)
             .limit(10);
-        res.send(q.load::<String>(c).unwrap().to_json())
+        res.send(serde_json::to_string(&q.load::<String>(c).unwrap()).unwrap())
     } else {
         res.error(StatusCode::BadRequest, "Missing 'q' parameter")
     }
@@ -617,7 +616,7 @@ fn auto_complete_person<'mw>(
             .filter(person_name.ilike(q + "%"))
             .order(person_name)
             .limit(10);
-        res.send(q.load::<String>(c).unwrap().to_json())
+        res.send(serde_json::to_string(&q.load::<String>(c).unwrap()).unwrap())
     } else {
         res.error(StatusCode::BadRequest, "Missing 'q' parameter")
     }
