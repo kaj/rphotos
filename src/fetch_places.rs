@@ -1,6 +1,7 @@
 use diesel;
 use diesel::prelude::*;
-use models::Coord;
+use diesel::result::{DatabaseErrorKind, Error as DieselError};
+use models::{Coord, Place};
 use reqwest::{self, Client};
 use serde_json::Value;
 use slug::slugify;
@@ -38,39 +39,8 @@ pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
                 (osm_id(obj), name_and_level(obj))
             {
                 debug!("{}: {} (level {})", t_osm_id, name, level);
-                let place = {
-                    use models::Place;
-                    use schema::places::dsl::*;
-                    places
-                        .filter(
-                            osm_id
-                                .eq(Some(t_osm_id))
-                                .or(place_name.eq(name).and(osm_id.is_null())),
-                        )
-                        .first::<Place>(c)
-                        .or_else(|_| {
-                            diesel::insert_into(places)
-                                .values((
-                                    place_name.eq(&name),
-                                    slug.eq(&slugify(&name)),
-                                    osm_id.eq(Some(t_osm_id)),
-                                    osm_level.eq(Some(level)),
-                                ))
-                                .get_result::<Place>(c)
-                                .or_else(|_| {
-                                    let name = format!("{} ({})", name, level);
-                                    diesel::insert_into(places)
-                                        .values((
-                                            place_name.eq(&name),
-                                            slug.eq(&slugify(&name)),
-                                            osm_id.eq(Some(t_osm_id)),
-                                            osm_level.eq(Some(level)),
-                                        ))
-                                        .get_result::<Place>(c)
-                                })
-                        })
-                        .map_err(|e| Error::Db(image, e))?
-                };
+                let place = get_or_create_place(c, t_osm_id, name, level)
+                    .map_err(|e| Error::Db(image, e))?;
                 if place.osm_id.is_none() {
                     debug!("Matched {:?} by name, update osm info", place);
                     use schema::places::dsl::*;
@@ -173,6 +143,57 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
     } else {
         warn!("Tag-less object {:?}", obj);
         None
+    }
+}
+
+fn get_or_create_place(
+    c: &PgConnection,
+    t_osm_id: i64,
+    name: &str,
+    level: i16,
+) -> Result<Place, diesel::result::Error> {
+    use schema::places::dsl::*;
+    places
+        .filter(
+            osm_id
+                .eq(Some(t_osm_id))
+                .or(place_name.eq(name).and(osm_id.is_null())),
+        )
+        .first::<Place>(c)
+        .or_else(|_| {
+            let mut result = diesel::insert_into(places)
+                .values((
+                    place_name.eq(&name),
+                    slug.eq(&slugify(&name)),
+                    osm_id.eq(Some(t_osm_id)),
+                    osm_level.eq(Some(level)),
+                ))
+                .get_result::<Place>(c);
+            let mut attempt = 1;
+            while is_duplicate(&result) && attempt < 25 {
+                info!("Attempt #{} got {:?}, trying again", attempt, result);
+                attempt += 1;
+                let name = format!("{} ({})", name, attempt);
+                result = diesel::insert_into(places)
+                    .values((
+                        place_name.eq(&name),
+                        slug.eq(&slugify(&name)),
+                        osm_id.eq(Some(t_osm_id)),
+                        osm_level.eq(Some(level)),
+                    ))
+                    .get_result::<Place>(c);
+            }
+            result
+        })
+}
+
+fn is_duplicate<T>(r: &Result<T, DieselError>) -> bool {
+    match r {
+        Err(DieselError::DatabaseError(
+            DatabaseErrorKind::UniqueViolation,
+            _,
+        )) => true,
+        _ => false,
     }
 }
 
