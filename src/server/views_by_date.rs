@@ -105,7 +105,23 @@ pub fn months_in_year<'mw>(
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        res.ok(|o| templates::index(o, req, &title, &[], &groups, &[]))
+        use schema::positions::dsl::{
+            latitude, longitude, photo_id, positions,
+        };
+        let pos = Photo::query(req.authorized_user().is_some())
+            .inner_join(positions)
+            .filter(date.ge(start_of_year(year)))
+            .filter(date.lt(start_of_year(year + 1)))
+            .select((photo_id, latitude, longitude))
+            .load(c)
+            .map_err(|e| warn!("Failed to load positions: {}", e))
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(p_id, lat, long): (i32, i32, i32)| {
+                ((lat, long).into(), p_id)
+            })
+            .collect::<Vec<_>>();
+        res.ok(|o| templates::index(o, req, &title, &[], &groups, &pos))
     }
 }
 
@@ -207,7 +223,7 @@ pub fn all_null_date<'mw>(
                 .iter()
                 .map(PhotoLink::from)
                 .collect::<Vec<_>>(),
-            &[], // TODO: positions.
+            &[], // Don't care about positions here
         )
     })
 }
