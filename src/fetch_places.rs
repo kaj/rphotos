@@ -2,13 +2,10 @@ use diesel;
 use diesel::prelude::*;
 use models::Coord;
 use reqwest::Client;
-use rustc_serialize::json::Json;
+use rustc_serialize::json::{self, Json};
 use slug::slugify;
 
-pub fn update_image_places(
-    c: &PgConnection,
-    image: i32,
-) -> Result<(), String> {
+pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
     use schema::positions::dsl::*;
     let coord = match positions
         .filter(photo_id.eq(image))
@@ -19,17 +16,10 @@ pub fn update_image_places(
             x: f64::from(tlat) / 1e6,
             y: f64::from(tlong) / 1e6,
         },
-        Err(diesel::NotFound) => {
-            return Err(format!(
-                "Image #{} does not exist or has no position",
-                image
-            ));
-        }
-        Err(err) => {
-            return Err(format!("Failed to get image position: {}", err));
-        }
+        Err(diesel::NotFound) => Err(Error::NoPosition(image))?,
+        Err(err) => Err(Error::Db(image, err))?,
     };
-    debug!("Should get places for {:?}", coord);
+    debug!("Should get places for #{} at {:?}", image, coord);
     let client = Client::new();
     match client
         .post("https://overpass.kumi.systems/api/interpreter")
@@ -38,10 +28,12 @@ pub fn update_image_places(
     {
         Ok(mut response) => {
             if response.status().is_success() {
-                let data = Json::from_reader(&mut response).unwrap();
-                let obj = data.as_object().unwrap();
-                if let Some(elements) =
-                    obj.get("elements").and_then(|o| o.as_array())
+                let data = Json::from_reader(&mut response)
+                    .map_err(|e| Error::Json(image, e))?;
+                if let Some(elements) = data
+                    .as_object()
+                    .and_then(|o| o.get("elements"))
+                    .and_then(|o| o.as_array())
                 {
                     for obj in elements {
                         if let (Some(t_osm_id), Some((name, level))) =
@@ -89,7 +81,7 @@ pub fn update_image_places(
                                                     .get_result::<Place>(c)
                                             })
                                     })
-                                    .expect("Find or create place")
+                                    .map_err(|e| Error::Db(image, e))?
                             };
                             if place.osm_id.is_none() {
                                 debug!(
@@ -104,10 +96,7 @@ pub fn update_image_places(
                                         osm_level.eq(level),
                                     ))
                                     .execute(c)
-                                    .expect(&format!(
-                                        "Update OSM for {:?}",
-                                        place
-                                    ));
+                                    .map_err(|e| Error::Db(image, e))?;
                             }
                             use models::PhotoPlace;
                             use schema::photo_places::dsl::*;
@@ -126,7 +115,7 @@ pub fn update_image_places(
                                         place_id.eq(place.id),
                                     ))
                                     .execute(c)
-                                    .expect("Place a photo");
+                                    .map_err(|e| Error::Db(image, e))?;
                             }
                         }
                     }
@@ -233,4 +222,11 @@ fn name_and_level(obj: &Json) -> Option<(&str, i16)> {
         warn!("Tag-less object {:?}", obj);
         None
     }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    NoPosition(i32),
+    Db(i32, diesel::result::Error),
+    Json(i32, json::ParserError),
 }

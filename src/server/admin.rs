@@ -221,7 +221,8 @@ pub fn set_location<'mw>(
 
         match update_image_places(db, image) {
             Ok(()) => (),
-            Err(err) => warn!("Failed to fetch places: {}", err),
+            // TODO Tell the user something failed?
+            Err(err) => warn!("Failed to fetch places: {:?}", err),
         }
         return res.redirect(format!("/img/{}", image));
     }

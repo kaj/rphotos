@@ -226,13 +226,11 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
                 println!("Work with {:?}", result);
                 for (photo_id, ppath) in result {
                     println!("Find places for #{}, {}", photo_id, ppath);
-                    fetch_places::update_image_places(&db, photo_id)
-                        .map_err(|e| Error::Other(e))?;
+                    fetch_places::update_image_places(&db, photo_id)?;
                 }
             } else {
                 for photo in args.values_of("PHOTOS").unwrap() {
-                    fetch_places::update_image_places(&db, photo.parse()?)
-                        .map_err(|e| Error::Other(e))?;
+                    fetch_places::update_image_places(&db, photo.parse()?)?;
                 }
             }
             Ok(())

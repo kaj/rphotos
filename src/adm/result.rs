@@ -2,6 +2,7 @@ use chrono::ParseError as ChronoParseError;
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
 use exif;
+use fetch_places;
 use memcached::proto::Error as MemcachedError;
 use std::convert::From;
 use std::num::ParseIntError;
@@ -19,6 +20,7 @@ pub enum Error {
     Cache(MemcachedError),
     MissingWidth,
     MissingHeight,
+    PlacesFailed(fetch_places::Error),
     Other(String),
 }
 
@@ -36,6 +38,9 @@ impl fmt::Display for Error {
             Error::Cache(ref e) => write!(f, "Memcached error: {}", e),
             Error::MissingHeight => write!(f, "Missing height property"),
             Error::MissingWidth => write!(f, "Missing width property"),
+            Error::PlacesFailed(ref e) => {
+                write!(f, "Failed to get places: {:?}", e)
+            }
             Error::Other(ref s) => write!(f, "Error: {}", s),
         }
     }
@@ -85,5 +90,11 @@ impl From<exif::Error> for Error {
 impl From<Utf8Error> for Error {
     fn from(e: Utf8Error) -> Self {
         Error::Other(format!("{}", e))
+    }
+}
+
+impl From<fetch_places::Error> for Error {
+    fn from(e: fetch_places::Error) -> Self {
+        Error::PlacesFailed(e)
     }
 }
