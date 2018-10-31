@@ -1,15 +1,16 @@
 //! Admin-only views, generally called by javascript.
+use super::nickelext::MyResponse;
 use super::SizeTag;
+use crate::fetch_places::update_image_places;
+use crate::memcachemiddleware::MemcacheRequestExtensions;
+use crate::models::{Coord, Photo};
+use crate::nickel_diesel::DieselRequestExtensions;
 use diesel::prelude::*;
-use fetch_places::update_image_places;
-use memcachemiddleware::MemcacheRequestExtensions;
-use models::{Coord, Photo};
+use log::{info, warn};
 use nickel::extensions::Redirect;
 use nickel::status::StatusCode;
 use nickel::{BodyError, FormBody, MiddlewareResult, Request, Response};
-use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
-use server::nickelext::MyResponse;
 use slug::slugify;
 
 pub fn rotate<'mw>(
@@ -21,7 +22,7 @@ pub fn rotate<'mw>(
     }
     if let (Some(image), Some(angle)) = try_with!(res, rotate_params(req)) {
         info!("Should rotate #{} by {}", image, angle);
-        use schema::photos::dsl::photos;
+        use crate::schema::photos::dsl::photos;
         let c: &PgConnection = &req.db_conn();
         if let Ok(mut image) = photos.find(image).first::<Photo>(c) {
             let newvalue = (360 + image.rotation + angle) % 360;
@@ -62,10 +63,10 @@ pub fn set_tag<'mw>(
     }
     if let (Some(image), Some(tag)) = try_with!(res, tag_params(req)) {
         let c: &PgConnection = &req.db_conn();
+        use crate::models::{PhotoTag, Tag};
         use diesel;
-        use models::{PhotoTag, Tag};
         let tag = {
-            use schema::tags::dsl::*;
+            use crate::schema::tags::dsl::*;
             tags.filter(tag_name.ilike(&tag))
                 .first::<Tag>(c)
                 .or_else(|_| {
@@ -75,7 +76,7 @@ pub fn set_tag<'mw>(
                 })
                 .expect("Find or create tag")
         };
-        use schema::photo_tags::dsl::*;
+        use crate::schema::photo_tags::dsl::*;
         let q = photo_tags
             .filter(photo_id.eq(image))
             .filter(tag_id.eq(tag.id));
@@ -111,10 +112,10 @@ pub fn set_person<'mw>(
     }
     if let (Some(image), Some(name)) = try_with!(res, person_params(req)) {
         let c: &PgConnection = &req.db_conn();
+        use crate::models::{Person, PhotoPerson};
         use diesel;
-        use models::{Person, PhotoPerson};
         let person = {
-            use schema::people::dsl::*;
+            use crate::schema::people::dsl::*;
             people
                 .filter(person_name.ilike(&name))
                 .first::<Person>(c)
@@ -128,7 +129,7 @@ pub fn set_person<'mw>(
                 })
                 .expect("Find or create tag")
         };
-        use schema::photo_people::dsl::*;
+        use crate::schema::photo_people::dsl::*;
         let q = photo_people
             .filter(photo_id.eq(image))
             .filter(person_id.eq(person.id));
@@ -165,8 +166,8 @@ pub fn set_grade<'mw>(
     if let (Some(image), Some(newgrade)) = try_with!(res, grade_params(req)) {
         if newgrade >= 0 && newgrade <= 100 {
             info!("Should set grade of #{} to {}", image, newgrade);
+            use crate::schema::photos::dsl::{grade, photos};
             use diesel;
-            use schema::photos::dsl::{grade, photos};
             let c: &PgConnection = &req.db_conn();
             let q = diesel::update(photos.find(image)).set(grade.eq(newgrade));
             match q.execute(c) {
@@ -208,8 +209,8 @@ pub fn set_location<'mw>(
         info!("Should set location of #{} to {:?}.", image, coord);
 
         let (lat, lng) = ((coord.x * 1e6) as i32, (coord.y * 1e6) as i32);
+        use crate::schema::positions::dsl::*;
         use diesel::insert_into;
-        use schema::positions::dsl::*;
         let db: &PgConnection = &req.db_conn();
         insert_into(positions)
             .values((photo_id.eq(image), latitude.eq(lat), longitude.eq(lng)))

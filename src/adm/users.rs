@@ -1,4 +1,4 @@
-use adm::result::Error;
+use super::result::Error;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::{insert_into, update};
@@ -7,7 +7,7 @@ use rand::{thread_rng, Rng};
 use std::iter::Iterator;
 
 pub fn list(db: &PgConnection) -> Result<(), Error> {
-    use schema::users::dsl::*;
+    use crate::schema::users::dsl::*;
     println!(
         "Existing users: {:?}.",
         users.select(username).load::<String>(db)?,
@@ -18,7 +18,7 @@ pub fn list(db: &PgConnection) -> Result<(), Error> {
 pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
     let pword = random_password(14);
     let hashword = make_password(&pword);
-    use schema::users::dsl::*;
+    use crate::schema::users::dsl::*;
     match update(users.filter(username.eq(&uname)))
         .set(password.eq(&hashword))
         .execute(db)?

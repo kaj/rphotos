@@ -1,5 +1,5 @@
+use crate::photosdir::PhotosDir;
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
-use photosdir::PhotosDir;
 use plugin::Extensible;
 use std::path::PathBuf;
 use typemap::Key;

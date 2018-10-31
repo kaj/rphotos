@@ -1,12 +1,13 @@
-use adm::result::Error;
+use super::result::Error;
+use crate::models::Photo;
+use crate::photosdir::PhotosDir;
+use crate::schema::photos::dsl::{date, is_public};
+use crate::server::SizeTag;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use log::{debug, info};
 use memcached::proto::{Operation, ProtoType};
 use memcached::Client;
-use models::Photo;
-use photosdir::PhotosDir;
-use schema::photos::dsl::{date, is_public};
-use server::SizeTag;
 use std::time::{Duration, Instant};
 
 /// Make sure all photos are stored in the cache.

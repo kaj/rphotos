@@ -1,25 +1,26 @@
+use super::nickelext::MyResponse;
 use super::splitlist::links_by_time;
 use super::{Link, PhotoLink, SizeTag};
+use crate::models::Photo;
+use crate::nickel_diesel::DieselRequestExtensions;
+use crate::templates;
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use chrono::Duration as ChDuration;
 use diesel::dsl::sql;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Nullable};
-use models::Photo;
+use log::warn;
 use nickel::extensions::response::Redirect;
 use nickel::{MiddlewareResult, QueryString, Request, Response};
-use nickel_diesel::DieselRequestExtensions;
 use nickel_jwt_session::SessionRequestExtensions;
-use server::nickelext::MyResponse;
-use templates;
 use time;
 
 pub fn all_years<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::{date, grade};
+    use crate::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     let groups = Photo::query(req.authorized_user().is_some())
@@ -67,7 +68,7 @@ pub fn months_in_year<'mw>(
     res: Response<'mw>,
     year: i32,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::{date, grade};
+    use crate::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     let title: String = format!("Photos from {}", year);
@@ -105,7 +106,7 @@ pub fn months_in_year<'mw>(
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        use schema::positions::dsl::{
+        use crate::schema::positions::dsl::{
             latitude, longitude, photo_id, positions,
         };
         let pos = Photo::query(req.authorized_user().is_some())
@@ -140,7 +141,7 @@ pub fn days_in_month<'mw>(
     year: i32,
     month: u32,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::{date, grade};
+    use crate::schema::photos::dsl::{date, grade};
     let c: &PgConnection = &req.db_conn();
 
     let lpath: Vec<Link> = vec![Link::year(year)];
@@ -181,7 +182,7 @@ pub fn days_in_month<'mw>(
     if groups.is_empty() {
         res.not_found("No such image")
     } else {
-        use schema::positions::dsl::{
+        use crate::schema::positions::dsl::{
             latitude, longitude, photo_id, positions,
         };
         let pos = Photo::query(req.authorized_user().is_some())
@@ -205,7 +206,7 @@ pub fn all_null_date<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::{date, path};
+    use crate::schema::photos::dsl::{date, path};
 
     let c: &PgConnection = &req.db_conn();
     res.ok(|o| {
@@ -236,7 +237,7 @@ pub fn all_for_day<'mw>(
     day: u32,
 ) -> MiddlewareResult<'mw> {
     let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
-    use schema::photos::dsl::date;
+    use crate::schema::photos::dsl::date;
 
     let photos = Photo::query(req.authorized_user().is_some())
         .filter(date.ge(thedate))
@@ -263,8 +264,10 @@ pub fn on_this_day<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::{date, grade};
-    use schema::positions::dsl::{latitude, longitude, photo_id, positions};
+    use crate::schema::photos::dsl::{date, grade};
+    use crate::schema::positions::dsl::{
+        latitude, longitude, photo_id, positions,
+    };
     let c: &PgConnection = &req.db_conn();
 
     let (month, day) = {
@@ -338,7 +341,7 @@ pub fn next_image<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::{date, id};
+    use crate::schema::photos::dsl::{date, id};
     if let Some((from_id, from_date)) = query_date(req, "from") {
         let q = Photo::query(req.authorized_user().is_some())
             .select(id)
@@ -359,7 +362,7 @@ pub fn prev_image<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::{date, id};
+    use crate::schema::photos::dsl::{date, id};
     if let Some((from_id, from_date)) = query_date(req, "from") {
         let q = Photo::query(req.authorized_user().is_some())
             .select(id)
@@ -384,7 +387,7 @@ pub fn query_date(
         .get(name)
         .and_then(|s| s.parse().ok())
         .and_then(|i: i32| {
-            use schema::photos::dsl::{date, photos};
+            use crate::schema::photos::dsl::{date, photos};
             let c: &PgConnection = &req.db_conn();
             photos
                 .find(i)

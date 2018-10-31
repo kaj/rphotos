@@ -1,9 +1,10 @@
+use crate::server::SizeTag;
 use chrono::naive::NaiveDateTime;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
-use server::SizeTag;
+use log::error;
 use std::cmp::max;
 
 #[derive(AsChangeset, Clone, Debug, Identifiable, Queryable)]
@@ -20,7 +21,7 @@ pub struct Photo {
     pub height: Option<i32>,
 }
 
-use schema::photos;
+use crate::schema::photos;
 
 #[derive(Debug)]
 pub enum Modification<T> {
@@ -63,9 +64,7 @@ impl Photo {
         exifdate: Option<NaiveDateTime>,
         camera: &Option<Camera>,
     ) -> Result<Option<Modification<Photo>>, DieselError> {
-        use diesel;
-        use diesel::prelude::*;
-        use schema::photos::dsl::*;
+        use crate::schema::photos::dsl::*;
         if let Some(mut pic) = photos
             .filter(path.eq(&file_path.to_string()))
             .first::<Photo>(db)
@@ -112,9 +111,7 @@ impl Photo {
         exifrotation: i16,
         camera: Option<Camera>,
     ) -> Result<Modification<Photo>, DieselError> {
-        use diesel;
-        use diesel::prelude::*;
-        use schema::photos::dsl::*;
+        use crate::schema::photos::dsl::*;
         if let Some(result) = Self::update_by_path(
             db, file_path, newwidth, newheight, exifdate, &camera,
         )? {
@@ -138,8 +135,10 @@ impl Photo {
         &self,
         db: &PgConnection,
     ) -> Result<Vec<Person>, DieselError> {
-        use schema::people::dsl::{id, people};
-        use schema::photo_people::dsl::{person_id, photo_id, photo_people};
+        use crate::schema::people::dsl::{id, people};
+        use crate::schema::photo_people::dsl::{
+            person_id, photo_id, photo_people,
+        };
         people
             .filter(id.eq_any(
                 photo_people.select(person_id).filter(photo_id.eq(self.id)),
@@ -151,8 +150,10 @@ impl Photo {
         &self,
         db: &PgConnection,
     ) -> Result<Vec<Place>, DieselError> {
-        use schema::photo_places::dsl::{photo_id, photo_places, place_id};
-        use schema::places::dsl::{id, osm_level, places};
+        use crate::schema::photo_places::dsl::{
+            photo_id, photo_places, place_id,
+        };
+        use crate::schema::places::dsl::{id, osm_level, places};
         places
             .filter(id.eq_any(
                 photo_places.select(place_id).filter(photo_id.eq(self.id)),
@@ -164,8 +165,8 @@ impl Photo {
         &self,
         db: &PgConnection,
     ) -> Result<Vec<Tag>, DieselError> {
-        use schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
-        use schema::tags::dsl::{id, tags};
+        use crate::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
+        use crate::schema::tags::dsl::{id, tags};
         tags.filter(
             id.eq_any(photo_tags.select(tag_id).filter(photo_id.eq(self.id))),
         )
@@ -173,7 +174,7 @@ impl Photo {
     }
 
     pub fn load_position(&self, db: &PgConnection) -> Option<Coord> {
-        use schema::positions::dsl::*;
+        use crate::schema::positions::dsl::*;
         match positions
             .filter(photo_id.eq(self.id))
             .select((latitude, longitude))
@@ -188,12 +189,12 @@ impl Photo {
         }
     }
     pub fn load_attribution(&self, db: &PgConnection) -> Option<String> {
-        use schema::attributions::dsl::*;
+        use crate::schema::attributions::dsl::*;
         self.attribution_id
             .and_then(|i| attributions.find(i).select(name).first(db).ok())
     }
     pub fn load_camera(&self, db: &PgConnection) -> Option<Camera> {
-        use schema::cameras::dsl::cameras;
+        use crate::schema::cameras::dsl::cameras;
         self.camera_id.and_then(|i| cameras.find(i).first(db).ok())
     }
     pub fn get_size(&self, max_size: u32) -> Option<(u32, u32)> {
@@ -290,9 +291,7 @@ impl Camera {
         make: &str,
         modl: &str,
     ) -> Result<Camera, DieselError> {
-        use diesel;
-        use diesel::prelude::*;
-        use schema::cameras::dsl::*;
+        use crate::schema::cameras::dsl::*;
         if let Some(camera) = cameras
             .filter(manufacturer.eq(make))
             .filter(model.eq(modl))

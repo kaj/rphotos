@@ -1,3 +1,4 @@
+use log::{debug, warn};
 use memcached::proto::{Error as MprotError, Operation, ProtoType};
 use memcached::Client;
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};

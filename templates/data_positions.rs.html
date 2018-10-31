@@ -1,4 +1,4 @@
-@use models::Coord;
+@use crate::models::Coord;
 
 @(coords: &[(Coord, i32)])
 @if let Some(((c, p), rest)) = coords.split_first()

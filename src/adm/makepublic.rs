@@ -1,13 +1,13 @@
-use adm::result::Error;
+use super::result::Error;
+use crate::models::Photo;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
 use diesel::update;
-use models::Photo;
 use std::io::prelude::*;
 
 pub fn one(db: &PgConnection, tpath: &str) -> Result<(), Error> {
-    use schema::photos::dsl::*;
+    use crate::schema::photos::dsl::*;
     match update(photos.filter(path.eq(&tpath)))
         .set(is_public.eq(true))
         .get_result::<Photo>(db)

@@ -1,4 +1,5 @@
 use libc::{getpid, kill, pid_t, SIGHUP};
+use log::{debug, info};
 use std::fs::File;
 use std::io::{ErrorKind, Read, Write};
 use std::path::Path;

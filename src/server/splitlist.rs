@@ -1,18 +1,19 @@
 use super::views_by_date::query_date;
 use super::PhotoLink;
+use crate::models::{Coord, Photo};
+use crate::nickel_diesel::DieselRequestExtensions;
+use crate::schema::photos;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
-use models::{Coord, Photo};
+use log::{debug, info, warn};
 use nickel::Request;
-use nickel_diesel::DieselRequestExtensions;
-use schema::photos;
 
 pub fn links_by_time<'a>(
     req: &mut Request,
     photos: photos::BoxedQuery<'a, Pg>,
 ) -> (Vec<PhotoLink>, Vec<(Coord, i32)>) {
     let c: &PgConnection = &req.db_conn();
-    use schema::photos::dsl::{date, id};
+    use crate::schema::photos::dsl::{date, id};
     let photos = if let Some((_, from_date)) = query_date(req, "from") {
         photos.filter(date.ge(from_date))
     } else {
@@ -42,7 +43,7 @@ pub fn links_by_time<'a>(
 }
 
 pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
-    use schema::positions::dsl::*;
+    use crate::schema::positions::dsl::*;
     positions
         .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))
         .select((photo_id, latitude, longitude))

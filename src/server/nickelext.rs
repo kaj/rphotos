@@ -23,7 +23,7 @@ macro_rules! wrap3 {
              }
          }
          let matcher = format!($url, $(concat!(":", stringify!($param))),+);
-         info!("Route {} {} to {}",
+         log::info!("Route {} {} to {}",
                stringify!($method),
                matcher,
                stringify!($handler));
@@ -41,14 +41,14 @@ macro_rules! wrap3 {
             }
         }
         let matcher = format!("{}**", $url);
-        info!("Route {} {} to {}",
+        log::info!("Route {} {} to {}",
               stringify!($method),
               matcher,
               stringify!($handler));
         $server.$method(matcher, wrapped);
     }};
     ($server:ident.$method:ident $url:expr, $handler:ident) => {
-        info!("Route {} {} to {}",
+        log::info!("Route {} {} to {}",
               stringify!($method),
               $url,
               stringify!($handler));

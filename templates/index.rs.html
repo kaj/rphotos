@@ -1,7 +1,7 @@
-@use models::Coord;
+@use crate::models::Coord;
 @use nickel::Request;
-@use server::{Link, PhotoLink};
-@use templates::{data_positions, page_base, photo_link};
+@use crate::server::{Link, PhotoLink};
+@use super::{data_positions, page_base, photo_link};
 
 @(req: &Request, title: &str, lpath: &[Link], photos: &[PhotoLink], coords: &[(Coord, i32)])
 
