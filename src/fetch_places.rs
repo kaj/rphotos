@@ -56,13 +56,18 @@ pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
                     .filter(photo_id.eq(image))
                     .filter(place_id.eq(place.id));
                 if q.first::<PhotoPlace>(c).is_ok() {
-                    debug!("Photo #{} already has {:?}", image, place.id);
+                    debug!(
+                        "Photo #{} already has {} ({})",
+                        image, place.id, place.place_name
+                    );
                 } else {
                     diesel::insert_into(photo_places)
                         .values((photo_id.eq(image), place_id.eq(place.id)))
                         .execute(c)
                         .map_err(|e| Error::Db(image, e))?;
                 }
+            } else {
+                info!("Unused area: {}", obj);
             }
         }
     }
@@ -137,7 +142,6 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
             debug!("{} is level {}", name, level);
             Some((name, level))
         } else {
-            info!("Unused area {}", obj);
             None
         }
     } else {
