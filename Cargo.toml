@@ -6,7 +6,7 @@ authors = ["Rasmus Kaj <kaj@kth.se>"]
 build = "src/build.rs"
 
 [build-dependencies]
-ructe = { version = "^0.4.0", features = ["sass", "mime02"] }
+ructe = { version = "^0.5.0", features = ["sass", "mime02"] }
 
 [dependencies]
 nickel = "~0.10.0"
