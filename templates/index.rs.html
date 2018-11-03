@@ -5,7 +5,7 @@
 
 @(req: &Request, title: &str, lpath: &[Link], photos: &[PhotoLink], coords: &[(Coord, i32)])
 
-@:page_base(req, title, lpath, {
+@:page_base(req, title, lpath, {}, {
   <div class="group"@:data_positions(coords)>
     @for p in photos {@:photo_link(p)}
   </div>

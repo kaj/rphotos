@@ -4,7 +4,7 @@
 @use templates::head;
 @use templates::statics::{photos_css, admin_js, ux_js};
 
-@(req: &Request, title: &str, lpath: &[Link], content: Content)
+@(req: &Request, title: &str, lpath: &[Link], meta: Content, content: Content)
 
 <!doctype html>
 <html>
@@ -19,6 +19,7 @@
     }
     <script src="/static/@ux_js.name" type="text/javascript" defer>
     </script>
+    @:meta()
   </head>
   <body>
     @:head(req, lpath)

@@ -4,7 +4,7 @@
 @use templates::{data_positions, page_base, photo_link};
 
 @(req: &Request, photos: &[PhotoLink], coords: &[(Coord, i32)], person: &Person)
-@:page_base(req, &format!("Photos with {}", person.person_name), &[], {
+@:page_base(req, &format!("Photos with {}", person.person_name), &[], {}, {
   <div class="group"@:data_positions(coords)>
     @for p in photos {@:photo_link(p)}
   </div>
