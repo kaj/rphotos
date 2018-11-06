@@ -87,17 +87,27 @@ fn find_largest(groups: &[&[Photo]]) -> usize {
 }
 
 fn split(group: &[Photo]) -> (&[Photo], &[Photo]) {
+    fn gradeval(p: &Photo) -> u64 {
+        1 + p.grade.unwrap_or(30) as u64
+    }
     let l = group.len();
-    let gradesum = group
-        .iter()
-        .fold(0, |sum: i64, p| sum + i64::from(p.grade.unwrap_or(30)));
+    let gradesum = group.iter().fold(0u64, |sum, p| sum + gradeval(p));
     let mut lsum = 0;
     let edge = l / 16;
     let mut pos = 0;
     let mut largest = 0;
     for i in edge..l - 1 - edge {
         let interval = timestamp(&group[i]) - timestamp(&group[i + 1]);
-        lsum += i64::from(group[i].grade.unwrap_or(30));
+        let interval = if interval < 0 {
+            panic!(
+                "Got images {:?}, {:?} in wrong order",
+                group[i],
+                group[i + 1]
+            )
+        } else {
+            interval as u64
+        };
+        lsum += gradeval(&group[i]);
         let rsum = gradesum - lsum;
         let score = (interval + 1) * (lsum * rsum);
         debug!("Pos #{} score: {}", i, score);
