@@ -12,9 +12,9 @@ before_script:
  - $HOME/.cargo/bin/diesel setup
 matrix:
   include:
-   - rust: nightly
+   - rust: stable
      env: TASK=rustfmt
      before_script:
-      - rustup component add rustfmt-preview
+      - rustup component add rustfmt
      script:
       - cargo fmt -- --check
