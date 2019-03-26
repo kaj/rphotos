@@ -1,8 +1,8 @@
+use crate::fetch_places;
 use chrono::ParseError as ChronoParseError;
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
 use exif;
-use fetch_places;
 use memcached::proto::Error as MemcachedError;
 use std::convert::From;
 use std::num::ParseIntError;

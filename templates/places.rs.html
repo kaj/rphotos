@@ -1,6 +1,6 @@
 @use nickel::Request;
-@use models::Place;
-@use templates::page_base;
+@use crate::models::Place;
+@use super::page_base;
 
 @(req: &Request, places: &[Place])
 

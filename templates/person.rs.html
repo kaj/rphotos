@@ -1,7 +1,7 @@
 @use nickel::Request;
-@use models::{Coord, Person};
-@use server::PhotoLink;
-@use templates::{data_positions, page_base, photo_link};
+@use crate::models::{Coord, Person};
+@use crate::server::PhotoLink;
+@use super::{data_positions, page_base, photo_link};
 
 @(req: &Request, photos: &[PhotoLink], coords: &[(Coord, i32)], person: &Person)
 @:page_base(req, &format!("Photos with {}", person.person_name), &[], {}, {

@@ -1,6 +1,6 @@
 @use nickel::Request;
-@use models::Tag;
-@use templates::page_base;
+@use crate::models::Tag;
+@use super::page_base;
 
 @(req: &Request, tags: &[Tag])
 @:page_base(req, "Photo tags", &[], {}, {

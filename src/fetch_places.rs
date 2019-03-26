@@ -1,13 +1,14 @@
+use crate::models::{Coord, Place};
 use diesel;
 use diesel::prelude::*;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
-use models::{Coord, Place};
+use log::{debug, info, warn};
 use reqwest::{self, Client};
 use serde_json::Value;
 use slug::slugify;
 
 pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
-    use schema::positions::dsl::*;
+    use crate::schema::positions::dsl::*;
     let coord = match positions
         .filter(photo_id.eq(image))
         .select((latitude, longitude))
@@ -43,15 +44,15 @@ pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
                     .map_err(|e| Error::Db(image, e))?;
                 if place.osm_id.is_none() {
                     debug!("Matched {:?} by name, update osm info", place);
-                    use schema::places::dsl::*;
+                    use crate::schema::places::dsl::*;
                     diesel::update(places)
                         .filter(id.eq(place.id))
                         .set((osm_id.eq(Some(t_osm_id)), osm_level.eq(level)))
                         .execute(c)
                         .map_err(|e| Error::Db(image, e))?;
                 }
-                use models::PhotoPlace;
-                use schema::photo_places::dsl::*;
+                use crate::models::PhotoPlace;
+                use crate::schema::photo_places::dsl::*;
                 let q = photo_places
                     .filter(photo_id.eq(image))
                     .filter(place_id.eq(place.id));
@@ -156,7 +157,7 @@ fn get_or_create_place(
     name: &str,
     level: i16,
 ) -> Result<Place, diesel::result::Error> {
-    use schema::places::dsl::*;
+    use crate::schema::places::dsl::*;
     places
         .filter(
             osm_id

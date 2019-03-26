@@ -1,7 +1,8 @@
 //! Extract all the exif data I care about
-use adm::result::Error;
+use crate::adm::result::Error;
 use chrono::{Date, Local, NaiveDate, NaiveDateTime, Utc};
 use exif::{Field, Reader, Tag, Value};
+use log::{debug, error, warn};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;

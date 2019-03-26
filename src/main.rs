@@ -1,32 +1,9 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 #![recursion_limit = "128"]
-extern crate brotli2;
-extern crate chrono;
-extern crate clap;
 #[macro_use]
 extern crate diesel;
-extern crate djangohashers;
-extern crate dotenv;
-extern crate env_logger;
-extern crate exif;
-extern crate flate2;
-extern crate hyper;
-extern crate image;
-extern crate libc;
-#[macro_use]
-extern crate log;
-extern crate memcached;
 #[macro_use]
 extern crate nickel;
-extern crate nickel_jwt_session;
-extern crate plugin;
-extern crate rand;
-extern crate regex;
-extern crate reqwest;
-extern crate serde_json;
-extern crate slug;
-extern crate time;
-extern crate typemap;
 
 mod adm;
 mod env;
@@ -42,15 +19,15 @@ mod requestloggermiddleware;
 mod schema;
 mod server;
 
-use adm::result::Error;
-use adm::stats::show_stats;
-use adm::{findphotos, makepublic, precache, storestatics, users};
+use crate::adm::result::Error;
+use crate::adm::stats::show_stats;
+use crate::adm::{findphotos, makepublic, precache, storestatics, users};
+use crate::env::{dburl, photos_dir};
+use crate::photosdir::PhotosDir;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
-use env::{dburl, photos_dir};
-use photosdir::PhotosDir;
 use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::Path;
@@ -210,10 +187,10 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
             if args.is_present("AUTO") {
                 let limit = args.value_of("LIMIT").unwrap().parse()?;
                 println!("Should find {} photos to fetch places for", limit);
+                use crate::schema::photo_places::dsl as place;
+                use crate::schema::photos::dsl::{date, id, path, photos};
+                use crate::schema::positions::dsl as pos;
                 use diesel::prelude::*;
-                use schema::photo_places::dsl as place;
-                use schema::photos::dsl::{date, id, path, photos};
-                use schema::positions::dsl as pos;
                 let result = photos
                     .select((id, path))
                     .filter(id.eq_any(pos::positions.select(pos::photo_id)))

@@ -1,10 +1,10 @@
-use adm::result::Error;
+use super::result::Error;
+use crate::templates::statics::STATICS;
 use brotli2::write::BrotliEncoder;
 use flate2::{Compression, GzBuilder};
 use std::fs::{create_dir_all, File};
 use std::io::prelude::*;
 use std::path::Path;
-use templates::statics::STATICS;
 
 pub fn to_dir(dir: &str) -> Result<(), Error> {
     let dir: &Path = dir.as_ref();

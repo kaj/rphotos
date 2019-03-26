@@ -7,32 +7,37 @@ mod views_by_date;
 use self::nickelext::{far_expires, FromSlug, MyResponse};
 use self::splitlist::*;
 use self::views_by_date::*;
-use adm::result::Error;
+use crate::adm::result::Error;
+use crate::env::{dburl, env_or, jwt_key, photos_dir};
+use crate::memcachemiddleware::{
+    MemcacheMiddleware, MemcacheRequestExtensions,
+};
+use crate::models::{Person, Photo, Place, Tag};
+use crate::nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
+use crate::photosdirmiddleware::{
+    PhotosDirMiddleware, PhotosDirRequestExtensions,
+};
+use crate::pidfiles::handle_pid_file;
+use crate::requestloggermiddleware::RequestLoggerMiddleware;
+use crate::templates::{self, statics, Html};
 use chrono::Datelike;
 use clap::ArgMatches;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::NopErrorHandler;
 use djangohashers;
-use env::{dburl, env_or, jwt_key, photos_dir};
 use hyper::header::ContentType;
 use image;
-use memcachemiddleware::{MemcacheMiddleware, MemcacheRequestExtensions};
-use models::{Person, Photo, Place, Tag};
+use log::{debug, info};
 use nickel::extensions::response::Redirect;
 use nickel::status::StatusCode;
 use nickel::{
     Action, Continue, FormBody, Halt, HttpRouter, MediaType, MiddlewareResult,
     Nickel, NickelError, QueryString, Request, Response,
 };
-use nickel_diesel::{DieselMiddleware, DieselRequestExtensions};
 use nickel_jwt_session::{
     SessionMiddleware, SessionRequestExtensions, SessionResponseExtensions,
 };
-use photosdirmiddleware::{PhotosDirMiddleware, PhotosDirRequestExtensions};
-use pidfiles::handle_pid_file;
-use requestloggermiddleware::RequestLoggerMiddleware;
-use templates::{self, Html};
 
 pub struct PhotoLink {
     pub title: Option<String>,
@@ -198,7 +203,7 @@ fn do_login<'mw>(
         if let (Some(user), Some(pw)) =
             (form_data.get("user"), form_data.get("password"))
         {
-            use schema::users::dsl::*;
+            use crate::schema::users::dsl::*;
             if let Ok(hash) = users
                 .filter(username.eq(user))
                 .select(password)
@@ -303,7 +308,7 @@ fn show_image<'mw>(
     the_id: i32,
     size: SizeTag,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::photos;
+    use crate::schema::photos::dsl::photos;
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(the_id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
@@ -339,14 +344,14 @@ fn tag_all<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::tags::dsl::{id, tag_name, tags};
+    use crate::schema::tags::dsl::{id, tag_name, tags};
     let c: &PgConnection = &req.db_conn();
     let query = tags.into_boxed();
     let query = if req.authorized_user().is_some() {
         query
     } else {
-        use schema::photo_tags::dsl as tp;
-        use schema::photos::dsl as p;
+        use crate::schema::photo_tags::dsl as tp;
+        use crate::schema::photos::dsl as p;
         query.filter(id.eq_any(tp::photo_tags.select(tp::tag_id).filter(
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
@@ -365,11 +370,11 @@ fn tag_one<'mw>(
     res: Response<'mw>,
     tslug: String,
 ) -> MiddlewareResult<'mw> {
-    use schema::tags::dsl::{slug, tags};
+    use crate::schema::tags::dsl::{slug, tags};
     let c: &PgConnection = &req.db_conn();
     if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(c) {
-        use schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
-        use schema::photos::dsl::id;
+        use crate::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
+        use crate::schema::photos::dsl::id;
         let photos = Photo::query(req.authorized_user().is_some()).filter(
             id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
         );
@@ -383,13 +388,13 @@ fn place_all<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::places::dsl::{id, place_name, places};
+    use crate::schema::places::dsl::{id, place_name, places};
     let query = places.into_boxed();
     let query = if req.authorized_user().is_some() {
         query
     } else {
-        use schema::photo_places::dsl as pp;
-        use schema::photos::dsl as p;
+        use crate::schema::photo_places::dsl as pp;
+        use crate::schema::photos::dsl as p;
         query.filter(id.eq_any(pp::photo_places.select(pp::place_id).filter(
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
@@ -409,8 +414,7 @@ fn static_file<'mw>(
     mut res: Response<'mw>,
     path: &str,
 ) -> MiddlewareResult<'mw> {
-    use templates::statics::StaticFile;
-    if let Some(s) = StaticFile::get(path) {
+    if let Some(s) = statics::StaticFile::get(path) {
         res.set((ContentType(s.mime()), far_expires()));
         return res.send(s.content);
     }
@@ -422,11 +426,13 @@ fn place_one<'mw>(
     res: Response<'mw>,
     tslug: String,
 ) -> MiddlewareResult<'mw> {
-    use schema::places::dsl::{places, slug};
+    use crate::schema::places::dsl::{places, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(place) = places.filter(slug.eq(tslug)).first::<Place>(c) {
-        use schema::photo_places::dsl::{photo_id, photo_places, place_id};
-        use schema::photos::dsl::id;
+        use crate::schema::photo_places::dsl::{
+            photo_id, photo_places, place_id,
+        };
+        use crate::schema::photos::dsl::id;
         let photos =
             Photo::query(req.authorized_user().is_some()).filter(id.eq_any(
                 photo_places.select(photo_id).filter(place_id.eq(place.id)),
@@ -441,13 +447,13 @@ fn person_all<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
-    use schema::people::dsl::{id, people, person_name};
+    use crate::schema::people::dsl::{id, people, person_name};
     let query = people.into_boxed();
     let query = if req.authorized_user().is_some() {
         query
     } else {
-        use schema::photo_people::dsl as pp;
-        use schema::photos::dsl as p;
+        use crate::schema::photo_people::dsl as pp;
+        use crate::schema::photos::dsl as p;
         query.filter(id.eq_any(pp::photo_people.select(pp::person_id).filter(
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
@@ -467,11 +473,13 @@ fn person_one<'mw>(
     res: Response<'mw>,
     tslug: String,
 ) -> MiddlewareResult<'mw> {
-    use schema::people::dsl::{people, slug};
+    use crate::schema::people::dsl::{people, slug};
     let c: &PgConnection = &req.db_conn();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
-        use schema::photo_people::dsl::{person_id, photo_id, photo_people};
-        use schema::photos::dsl::id;
+        use crate::schema::photo_people::dsl::{
+            person_id, photo_id, photo_people,
+        };
+        use crate::schema::photos::dsl::id;
         let photos = Photo::query(req.authorized_user().is_some()).filter(
             id.eq_any(
                 photo_people
@@ -489,9 +497,9 @@ fn random_image<'mw>(
     req: &mut Request,
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
+    use crate::schema::photos::dsl::id;
     use diesel::expression::dsl::sql;
     use diesel::sql_types::Integer;
-    use schema::photos::dsl::id;
     let c: &PgConnection = &req.db_conn();
     let photo: i32 = Photo::query(req.authorized_user().is_some())
         .select(id)
@@ -508,7 +516,7 @@ fn photo_details<'mw>(
     res: Response<'mw>,
     id: i32,
 ) -> MiddlewareResult<'mw> {
-    use schema::photos::dsl::photos;
+    use crate::schema::photos::dsl::photos;
     let c: &PgConnection = &req.db_conn();
     if let Ok(tphoto) = photos.find(id).first::<Photo>(c) {
         if req.authorized_user().is_some() || tphoto.is_public() {
@@ -591,7 +599,7 @@ fn auto_complete_tag<'mw>(
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
     if let Some(q) = req.query().get("q").map(String::from) {
-        use schema::tags::dsl::{tag_name, tags};
+        use crate::schema::tags::dsl::{tag_name, tags};
         let c: &PgConnection = &req.db_conn();
         let q = tags
             .select(tag_name)
@@ -609,7 +617,7 @@ fn auto_complete_person<'mw>(
     res: Response<'mw>,
 ) -> MiddlewareResult<'mw> {
     if let Some(q) = req.query().get("q").map(String::from) {
-        use schema::people::dsl::{people, person_name};
+        use crate::schema::people::dsl::{people, person_name};
         let c: &PgConnection = &req.db_conn();
         let q = people
             .select(person_name)

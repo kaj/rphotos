@@ -1,8 +1,8 @@
 @use nickel::Request;
 @use nickel_jwt_session::SessionRequestExtensions;
-@use server::Link;
-@use templates::head;
-@use templates::statics::{photos_css, admin_js, ux_js};
+@use crate::server::Link;
+@use super::head;
+@use super::statics::{photos_css, admin_js, ux_js};
 
 @(req: &Request, title: &str, lpath: &[Link], meta: Content, content: Content)
 

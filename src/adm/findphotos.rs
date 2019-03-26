@@ -1,10 +1,11 @@
-use adm::result::Error;
+use super::result::Error;
+use crate::models::{Camera, Modification, Photo};
+use crate::myexif::ExifData;
+use crate::photosdir::PhotosDir;
 use diesel::insert_into;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use models::{Camera, Modification, Photo};
-use myexif::ExifData;
-use photosdir::PhotosDir;
+use log::{debug, info, warn};
 use std::path::Path;
 
 pub fn crawl(
@@ -53,7 +54,7 @@ fn save_photo(
     };
     if let Some((lat, long)) = exif.position() {
         debug!("Position for {} is {} {}", file_path, lat, long);
-        use schema::positions::dsl::*;
+        use crate::schema::positions::dsl::*;
         if let Ok((clat, clong)) = positions
             .filter(photo_id.eq(photo.id))
             .select((latitude, longitude))

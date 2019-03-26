@@ -1,13 +1,13 @@
 #![allow(dead_code)] // for the date_part macro-created function
-use adm::result::Error;
+use super::result::Error;
+use crate::schema::people::dsl::people;
+use crate::schema::photos::dsl::photos;
+use crate::schema::places::dsl::places;
+use crate::schema::tags::dsl::tags;
 use diesel::expression::dsl::{count_star, sql};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Double, Nullable, Text, Timestamp};
-use schema::people::dsl::people;
-use schema::photos::dsl::photos;
-use schema::places::dsl::places;
-use schema::tags::dsl::tags;
 
 sql_function!(date_part,
               date_part_t,

@@ -1,3 +1,4 @@
+use log::{debug, info};
 use nickel::status::StatusCode;
 use nickel::{Continue, Middleware, MiddlewareResult, Request, Response};
 use plugin::Extensible;
