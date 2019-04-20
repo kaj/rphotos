@@ -488,9 +488,10 @@ fn person_one<'mw>(
             ),
         );
         let (links, coords) = links_by_time(req, photos);
-        return res.ok(|o| templates::person(o, req, &links, &coords, &person));
+        res.ok(|o| templates::person(o, req, &links, &coords, &person))
+    } else {
+        res.not_found("Not a person")
     }
-    res.not_found("Not a person")
 }
 
 fn random_image<'mw>(
