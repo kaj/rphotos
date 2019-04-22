@@ -1,7 +1,7 @@
 @use super::page_base;
 @use crate::server::Context;
 
-@(context: &Context, next: Option<String>, message: Option<&str>)
+@(context: &Context, next: Option<&str>, message: Option<&str>)
 
 @:page_base(context, "login", &[], {}, {
     <form action="/login" method="post">

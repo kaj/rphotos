@@ -223,8 +223,7 @@ fn error_response(err: StatusCode) -> Response<Vec<u8>> {
 
 fn login(context: Context, param: NextQ) -> Response<Vec<u8>> {
     info!("Got request for login form.  Param: {:?}", param);
-    let next = sanitize_next(param.next.as_ref().map(AsRef::as_ref))
-        .map(String::from);
+    let next = sanitize_next(param.next.as_ref().map(AsRef::as_ref));
     Response::builder().html(|o| templates::login(o, &context, next, None))
 }
 
@@ -234,41 +233,34 @@ struct NextQ {
 }
 
 fn do_login(context: Context, form: LoginForm) -> Response<Vec<u8>> {
-    let next = {
-        let next = sanitize_next(form.next.as_ref().map(AsRef::as_ref))
-            .map(String::from);
-        use crate::schema::users::dsl::*;
-        if let Ok(hash) = users
-            .filter(username.eq(&form.user))
-            .select(password)
-            .first::<String>(context.db())
-        {
-            if djangohashers::check_password_tolerant(&form.password, &hash) {
-                info!("User {} logged in", form.user);
-                let token = context.make_token(&form.user).unwrap();
-                let url = next.unwrap_or_else(|| "/".into());
-                return Response::builder()
-                    .status(StatusCode::FOUND)
-                    .header(header::LOCATION, url.clone())
-                    .header(
-                        header::SET_COOKIE,
-                        format!(
-                            "EXAUTH={}; SameSite=Strict; HttpOpnly",
-                            token
-                        ),
-                    )
-                    .body(format!("Please refer to {}", url).into_bytes())
-                    .unwrap();
-            }
-            info!(
-                "Login failed: Password verification failed for {:?}",
-                form.user,
-            );
-        } else {
-            info!("Login failed: No hash found for {:?}", form.user);
+    let next = sanitize_next(form.next.as_ref().map(AsRef::as_ref));
+    use crate::schema::users::dsl::*;
+    if let Ok(hash) = users
+        .filter(username.eq(&form.user))
+        .select(password)
+        .first::<String>(context.db())
+    {
+        if djangohashers::check_password_tolerant(&form.password, &hash) {
+            info!("User {} logged in", form.user);
+            let token = context.make_token(&form.user).unwrap();
+            let url = next.unwrap_or("/");
+            return Response::builder()
+                .status(StatusCode::FOUND)
+                .header(header::LOCATION, url)
+                .header(
+                    header::SET_COOKIE,
+                    format!("EXAUTH={}; SameSite=Strict; HttpOpnly", token),
+                )
+                .body(format!("Please refer to {}", url).into_bytes())
+                .unwrap();
         }
-        next
-    };
+        info!(
+            "Login failed: Password verification failed for {:?}",
+            form.user,
+        );
+    } else {
+        info!("Login failed: No hash found for {:?}", form.user);
+    }
     let message = Some("Login failed, please try again");
     Response::builder().html(|o| templates::login(o, &context, next, message))
 }
