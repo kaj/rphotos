@@ -3,7 +3,7 @@ use diesel;
 use diesel::prelude::*;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use log::{debug, info, warn};
-use reqwest::{self, Client};
+use reqwest::{self, Client, Response};
 use serde_json::Value;
 use slug::slugify;
 
@@ -26,14 +26,14 @@ pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
         .post("https://overpass.kumi.systems/api/interpreter")
         .body(format!("[out:json];is_in({},{});out;", coord.x, coord.y))
         .send()
-        .and_then(|r| r.error_for_status())
+        .and_then(Response::error_for_status)
         .and_then(|mut r| r.json::<Value>())
         .map_err(|e| Error::Server(image, e))?;
 
     if let Some(elements) = data
         .as_object()
         .and_then(|o| o.get("elements"))
-        .and_then(|o| o.as_array())
+        .and_then(Value::as_array)
     {
         for obj in elements {
             if let (Some(t_osm_id), Some((name, level))) =
@@ -76,7 +76,7 @@ pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
 }
 
 fn osm_id(obj: &Value) -> Option<i64> {
-    obj.get("id").and_then(|o| o.as_i64())
+    obj.get("id").and_then(Value::as_i64)
 }
 
 fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
@@ -85,28 +85,28 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
             .get("name:sv")
             //.or_else(|| tags.get("name:en"))
             .or_else(|| tags.get("name"))
-            .and_then(|o| o.as_str());
+            .and_then(Value::as_str);
         let level = tags
             .get("admin_level")
-            .and_then(|o| o.as_str())
+            .and_then(Value::as_str)
             .and_then(|l| l.parse().ok())
-            .or_else(|| match tags.get("leisure").and_then(|o| o.as_str()) {
+            .or_else(|| match tags.get("leisure").and_then(Value::as_str) {
                 Some("garden") => Some(18),
                 Some("nature_reserve") => Some(12),
                 Some("park") => Some(14),
                 Some("playground") => Some(16),
                 _ => None,
             })
-            .or_else(|| match tags.get("tourism").and_then(|o| o.as_str()) {
+            .or_else(|| match tags.get("tourism").and_then(Value::as_str) {
                 Some("attraction") => Some(16),
                 Some("theme_park") | Some("zoo") => Some(14),
                 _ => None,
             })
-            .or_else(|| match tags.get("boundary").and_then(|o| o.as_str()) {
+            .or_else(|| match tags.get("boundary").and_then(Value::as_str) {
                 Some("national_park") => Some(14),
                 _ => None,
             })
-            .or_else(|| match tags.get("building").and_then(|o| o.as_str()) {
+            .or_else(|| match tags.get("building").and_then(Value::as_str) {
                 Some("church") => Some(20),
                 Some("exhibition_center") => Some(20),
                 Some("industrial") => Some(20),
@@ -117,23 +117,23 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("yes") => Some(20),
                 _ => None,
             })
-            .or_else(|| match tags.get("landuse").and_then(|o| o.as_str()) {
+            .or_else(|| match tags.get("landuse").and_then(Value::as_str) {
                 Some("industrial") => Some(11),
                 Some("residential") => Some(11),
                 _ => None,
             })
-            .or_else(|| match tags.get("highway").and_then(|o| o.as_str()) {
+            .or_else(|| match tags.get("highway").and_then(Value::as_str) {
                 Some("pedestrian") => Some(15), // torg
                 Some("rest_area") => Some(16),
                 _ => None,
             })
             .or_else(|| {
-                match tags.get("public_transport").and_then(|o| o.as_str()) {
+                match tags.get("public_transport").and_then(Value::as_str) {
                     Some("station") => Some(18),
                     _ => None,
                 }
             })
-            .or_else(|| match tags.get("amenity").and_then(|o| o.as_str()) {
+            .or_else(|| match tags.get("amenity").and_then(Value::as_str) {
                 Some("exhibition_center") => Some(20),
                 Some("place_of_worship") => Some(15),
                 Some("university") => Some(12),
