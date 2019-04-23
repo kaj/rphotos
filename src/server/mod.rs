@@ -204,11 +204,7 @@ fn redirect_to_img(image: i32) -> Response<Vec<u8>> {
 }
 
 fn redirect(url: &str) -> Response<Vec<u8>> {
-    Response::builder()
-        .status(StatusCode::FOUND)
-        .header(header::LOCATION, url)
-        .body(format!("Please refer to {}", url).into_bytes())
-        .unwrap()
+    Response::builder().redirect(url)
 }
 
 fn permission_denied() -> Response<Vec<u8>> {
@@ -243,16 +239,12 @@ fn do_login(context: Context, form: LoginForm) -> Response<Vec<u8>> {
         if djangohashers::check_password_tolerant(&form.password, &hash) {
             info!("User {} logged in", form.user);
             let token = context.make_token(&form.user).unwrap();
-            let url = next.unwrap_or("/");
             return Response::builder()
-                .status(StatusCode::FOUND)
-                .header(header::LOCATION, url)
                 .header(
                     header::SET_COOKIE,
                     format!("EXAUTH={}; SameSite=Strict; HttpOpnly", token),
                 )
-                .body(format!("Please refer to {}", url).into_bytes())
-                .unwrap();
+                .redirect(next.unwrap_or("/"));
         }
         info!(
             "Login failed: Password verification failed for {:?}",
@@ -313,16 +305,12 @@ fn test_sanitize_good_2() {
 }
 
 fn logout(_context: Context) -> Response<Vec<u8>> {
-    let url = "/";
     Response::builder()
-        .status(StatusCode::FOUND)
-        .header(header::LOCATION, url.to_string())
         .header(
             header::SET_COOKIE,
-            "EXAUTH=; Max-Age=0; SameSite=Strict; HttpOpnly".to_string(),
+            "EXAUTH=; Max-Age=0; SameSite=Strict; HttpOpnly",
         )
-        .body(format!("Please refer to {}", url).into_bytes())
-        .unwrap()
+        .redirect("/")
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
