@@ -1,10 +1,10 @@
-@use nickel::Request;
-@use crate::models::Place;
 @use super::page_base;
+@use crate::models::Place;
+@use crate::server::Context;
 
-@(req: &Request, places: &[Place])
+@(context: &Context, places: &[Place])
 
-@:page_base(req, "Photo places", &[], {}, {
+@:page_base(context, "Photo places", &[], {}, {
   <ul class="allplaces">
   @for p in places {
     <li><a href="/place/@p.slug">@p.place_name</a>

@@ -7,31 +7,30 @@ edition = "2018"
 build = "src/build.rs"
 
 [build-dependencies]
-ructe = { version = "^0.6.2", features = ["sass", "mime02"] }
+ructe = { version = "^0.6.2", features = ["sass", "mime03"] }
 
 [dependencies]
-nickel = "~0.10.0"
-nickel-jwt-session = "~0.10.0"
-hyper = "~0.10.0"
+warp = "0.1.6"
 env_logger = "*"
 libc = "*"
 log = "*"
 chrono = "~0.4.0" # Must match version used by diesel
 clap = { version = "^2.19", features = [ "color", "wrap_help" ] }
-typemap = "*"
-plugin = "*"
 image = "0.21"
+jwt = "0.4.0"
 time = "*"
 kamadak-exif = "~0.3.0"
 diesel = { version = "1.4.0", features = ["r2d2", "chrono", "postgres"] }
 dotenv = "0.13.0"
 djangohashers = "*"
 rand = "0.6.5"
+rust-crypto = "0.2.36"
 memcached-rs = "0.4.1"
 flate2 = "^1.0.0"
 brotli2 = "*"
-mime = "0.2.6"
+mime = "0.3.0"
 regex = "*"
 slug = "0.1"
 reqwest = "0.9"
+serde = { version = "1.0.0", features = ["derive"] }
 serde_json = "1.0"

@@ -1,25 +1,25 @@
-use super::views_by_date::query_date;
-use super::PhotoLink;
+use super::views_by_date::date_of_img;
+use super::{Context, ImgRange, PhotoLink};
 use crate::models::{Coord, Photo};
-use crate::nickel_diesel::DieselRequestExtensions;
 use crate::schema::photos;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
 use log::{debug, info, warn};
-use nickel::Request;
 
 pub fn links_by_time<'a>(
-    req: &mut Request,
+    context: &Context,
     photos: photos::BoxedQuery<'a, Pg>,
+    range: ImgRange,
 ) -> (Vec<PhotoLink>, Vec<(Coord, i32)>) {
-    let c: &PgConnection = &req.db_conn();
+    let c = context.db();
     use crate::schema::photos::dsl::{date, id};
-    let photos = if let Some((_, from_date)) = query_date(req, "from") {
+    let photos = if let Some(from_date) = range.from.map(|i| date_of_img(c, i))
+    {
         photos.filter(date.ge(from_date))
     } else {
         photos
     };
-    let photos = if let Some((_, to_date)) = query_date(req, "to") {
+    let photos = if let Some(to_date) = range.to.map(|i| date_of_img(c, i)) {
         photos.filter(date.le(to_date))
     } else {
         photos
@@ -30,7 +30,7 @@ pub fn links_by_time<'a>(
         .unwrap();
     (
         if let Some(groups) = split_to_groups(&photos) {
-            let path = req.path_without_query().unwrap_or("/");
+            let path = context.path_without_query();
             groups
                 .iter()
                 .map(|g| PhotoLink::for_group(g, path))

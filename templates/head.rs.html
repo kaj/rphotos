@@ -1,8 +1,6 @@
-@use nickel::Request;
-@use nickel_jwt_session::SessionRequestExtensions;
-@use crate::server::Link;
+@use crate::server::{Context, Link};
 
-@(req: &Request, lpath: &[Link])
+@(context: &Context, lpath: &[Link])
 
 <header>
 <span><a href="/" accesskey="h" title="Images from all years">Images</a>
@@ -13,6 +11,6 @@
 <span>· <a href="/place/">Places</a></span>
 <span>· <a href="/thisday">On this day</a></span>
 <span>· <a href="/random" accesskey="r">Random pic</a></span>
-@if let Some(ref u) = req.authorized_user() {<span class="user">@u (<a href="/logout">log out</a>)</span>}
-else {<span class="user">(<a href="/login@if let Some(p) = req.path_without_query() {?next=@p}">log in</a>)</span>}
+@if let Some(ref u) = context.authorized_user() {<span class="user">@u (<a href="/logout">log out</a>)</span>}
+else {<span class="user">(<a href="/login?next=@context.path_without_query()">log in</a>)</span>}
 </header>

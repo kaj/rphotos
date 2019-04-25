@@ -1,9 +1,9 @@
-@use nickel::Request;
-@use crate::models::Person;
 @use super::page_base;
+@use crate::models::Person;
+@use crate::server::Context;
 
-@(req: &Request, people: &[Person])
-@:page_base(req, "Photo people", &[], {}, {
+@(context: &Context, people: &[Person])
+@:page_base(context, "Photo people", &[], {}, {
   <ul class="allpeople">
     @for p in people {
       <li><a href="/person/@p.slug">@p.person_name</a>

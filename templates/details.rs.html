@@ -1,11 +1,9 @@
-@use nickel::Request;
-@use nickel_jwt_session::SessionRequestExtensions;
-@use crate::models::{Photo, Person, Place, Tag, Camera, Coord};
-@use crate::server::{Link, SizeTag};
 @use super::page_base;
+@use crate::models::{Photo, Person, Place, Tag, Camera, Coord};
+@use crate::server::{Context, Link, SizeTag};
 
-@(req: &Request, lpath: &[Link], people: &[Person], places: &[Place], tags: &[Tag], position: &Option<Coord>, attribution: &Option<String>, camera: &Option<Camera>, photo: &Photo)
-@:page_base(req, "Photo details", lpath, {
+@(context: &Context, lpath: &[Link], people: &[Person], places: &[Place], tags: &[Tag], position: &Option<Coord>, attribution: &Option<String>, camera: &Option<Camera>, photo: &Photo)
+@:page_base(context, "Photo details", lpath, {
   <meta property='og:title' content='Photo @if let Some(d) = photo.date {(@d.format("%F"))}'>
   <meta property='og:type' content='image' />
   <meta property='og:image' content='/img/@photo.id-m.jpg' />
@@ -14,7 +12,7 @@
   <div class="details" data-imgid="@photo.id"@if let Some(g) = photo.grade { data-grade="@g"}@if let Some(ref p) = *position { data-position="[@p.x, @p.y]"}>
     <div class="item"><img src="/img/@photo.id-m.jpg"@if let Some((w,h)) = photo.get_size(SizeTag::Medium.px()) { width="@w" height="@h"}></div>
     <div class="meta">
-    @if req.authorized_user().is_some() {
+    @if context.is_authorized() {
     <p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>
     @if photo.is_public() {<p>This photo is public.</p>}
     else {<p>This photo is not public.</p>}

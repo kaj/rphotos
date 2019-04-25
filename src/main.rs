@@ -2,20 +2,14 @@
 #![recursion_limit = "128"]
 #[macro_use]
 extern crate diesel;
-#[macro_use]
-extern crate nickel;
 
 mod adm;
 mod env;
 mod fetch_places;
-mod memcachemiddleware;
 mod models;
 mod myexif;
-mod nickel_diesel;
 mod photosdir;
-mod photosdirmiddleware;
 mod pidfiles;
-mod requestloggermiddleware;
 mod schema;
 mod server;
 

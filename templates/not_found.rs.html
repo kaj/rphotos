@@ -1,13 +1,13 @@
-@use nickel::Request;
 @use super::page_base;
-@use nickel_jwt_session::SessionRequestExtensions;
+@use crate::server::Context;
+@use warp::http::StatusCode;
 
-@(req: &Request)
+@(context: &Context, code: StatusCode, message: &str)
 
-@:page_base(req, "Not found", &[], {}, {
-  <p>No page or photo match that url.</p>
-  @if req.authorized_user().is_none() {
+@:page_base(context, code.canonical_reason().unwrap_or("error"), &[], {}, {
+  <p>@message (@code.as_u16())</p>
+  @if !context.is_authorized() {
     <p>At least nothing publicly visible, you might try
-    <a href="/login@if let Some(p) = req.path_without_query() {?next=@p}">logging in</a>.</p>
+    <a href="/login?next=@context.path_without_query()">logging in</a>.</p>
   }
 })

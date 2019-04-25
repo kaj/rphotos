@@ -1,10 +1,9 @@
-@use nickel::Request;
-@use crate::models::{Coord, Person};
-@use crate::server::PhotoLink;
 @use super::{data_positions, page_base, photo_link};
+@use crate::models::{Coord, Person};
+@use crate::server::{Context, PhotoLink};
 
-@(req: &Request, photos: &[PhotoLink], coords: &[(Coord, i32)], person: &Person)
-@:page_base(req, &format!("Photos with {}", person.person_name), &[], {}, {
+@(context: &Context, photos: &[PhotoLink], coords: &[(Coord, i32)], person: &Person)
+@:page_base(context, &format!("Photos with {}", person.person_name), &[], {}, {
   <div class="group"@:data_positions(coords)>
     @for p in photos {@:photo_link(p)}
   </div>

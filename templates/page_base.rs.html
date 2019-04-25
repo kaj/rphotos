@@ -1,10 +1,8 @@
-@use nickel::Request;
-@use nickel_jwt_session::SessionRequestExtensions;
-@use crate::server::Link;
-@use super::head;
 @use super::statics::{photos_css, admin_js, ux_js};
+@use crate::server::{Context, Link};
+@use crate::templates::head;
 
-@(req: &Request, title: &str, lpath: &[Link], meta: Content, content: Content)
+@(context: &Context, title: &str, lpath: &[Link], meta: Content, content: Content)
 
 <!doctype html>
 <html>
@@ -13,7 +11,7 @@
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/@photos_css.name" type="text/css"/>
-    @if req.authorized_user().is_some() {
+    @if context.is_authorized() {
         <script src="/static/@admin_js.name" type="text/javascript" defer>
 	</script>
     }
@@ -22,7 +20,7 @@
     @:meta()
   </head>
   <body>
-    @:head(req, lpath)
+    @:head(context, lpath)
     <main>
       <h1>@title</h1>
       @:content()
