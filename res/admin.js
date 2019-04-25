@@ -226,12 +226,12 @@
         let h = d.querySelector('head');
         var csslink = d.createElement('link');
         csslink.rel = 'stylesheet';
-        csslink.href = '/static/l131/leaflet.css';
+        csslink.href = '/static/l140/leaflet.css';
         h.append(csslink);
         f.insertAdjacentHTML('beforeend', '<div id="amap"></div>');
         var slink = d.createElement('script');
         slink.type = 'text/javascript';
-        slink.src = '/static/l131/leaflet.js';
+        slink.src = '/static/l140/leaflet.js';
         slink.async = 'async';
         var marker;
         slink.onload = () => {

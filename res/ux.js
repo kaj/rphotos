@@ -37,13 +37,13 @@
     let h = d.querySelector('head');
     var csslink = d.createElement('link');
     csslink.rel = 'stylesheet';
-    csslink.href = '/static/l131/leaflet.css';
+    csslink.href = '/static/l140/leaflet.css';
     h.append(csslink);
     let m = d.querySelector('.meta') || d.querySelector('main');
     m.insertAdjacentHTML('beforeend', '<div id="map"></div>');
     var slink = d.createElement('script');
     slink.type = 'text/javascript';
-    slink.src = '/static/l131/leaflet.js';
+    slink.src = '/static/l140/leaflet.js';
     slink.async = 'async';
     slink.onload = () => {
       map = L.map('map', {'scrollWheelZoom': false, 'trackResize': false});
@@ -71,12 +71,12 @@
       let h = d.querySelector('head');
       h.insertAdjacentHTML(
         'beforeend',
-        '<link rel="stylesheet" href="/static/lm130/lmc.css">' +
-        '<link rel="stylesheet" href="/static/lm130/lmc-default.css">'
+        '<link rel="stylesheet" href="/static/lm141/lmc.css">' +
+        '<link rel="stylesheet" href="/static/lm141/lmc-default.css">'
       )
       var slink2 = d.createElement('script');
       slink2.type = 'text/javascript';
-      slink2.src = '/static/lm130/lmc.js';
+      slink2.src = '/static/lm141/lmc.js';
       h.append(slink2);
       slink2.onload = () => {
         let pos = JSON.parse(poss);
