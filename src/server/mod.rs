@@ -15,7 +15,7 @@ use crate::env::{dburl, env_or, jwt_key};
 use crate::models::{Person, Photo, Place, Tag};
 use crate::pidfiles::handle_pid_file;
 use crate::templates::{self, Html};
-use chrono::{Datelike, Duration, Utc};
+use chrono::Datelike;
 use clap::ArgMatches;
 use diesel::prelude::*;
 use djangohashers;
@@ -27,18 +27,6 @@ use std::net::SocketAddr;
 use warp::filters::path::Tail;
 use warp::http::{header, Response, StatusCode};
 use warp::{self, reply, Filter, Rejection, Reply};
-
-/// Trait to easily add a far expires header to a response builder.
-trait FarExpires {
-    fn far_expires(&mut self) -> &mut Self;
-}
-
-impl FarExpires for warp::http::response::Builder {
-    fn far_expires(&mut self) -> &mut Self {
-        let far_expires = Utc::now() + Duration::days(180);
-        self.header(header::EXPIRES, far_expires.to_rfc2822())
-    }
-}
 
 pub struct PhotoLink {
     pub title: Option<String>,

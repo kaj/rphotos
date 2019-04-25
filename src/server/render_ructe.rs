@@ -1,6 +1,7 @@
 /// This module defines the `RenderRucte` trait for a response builer.
 ///
 /// If ructe gets a warp feature, this is probably it.
+use chrono::{Duration, Utc};
 use mime::TEXT_HTML_UTF_8;
 use std::io::{self, Write};
 use warp::http::response::Builder;
@@ -12,6 +13,8 @@ pub trait RenderRucte {
         F: FnOnce(&mut Write) -> io::Result<()>;
 
     fn redirect(&mut self, url: &str) -> Response<Vec<u8>>;
+
+    fn far_expires(&mut self) -> &mut Self;
 }
 
 impl RenderRucte for Builder {
@@ -30,5 +33,10 @@ impl RenderRucte for Builder {
             .header(header::LOCATION, url)
             .body(format!("Please refer to {}", url).into_bytes())
             .unwrap()
+    }
+
+    fn far_expires(&mut self) -> &mut Self {
+        let far_expires = Utc::now() + Duration::days(180);
+        self.header(header::EXPIRES, far_expires.to_rfc2822())
     }
 }
