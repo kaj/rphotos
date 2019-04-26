@@ -56,11 +56,7 @@
         l.htmlFor = i.id;
         var list = d.createElement("div");
         list.className = "completions";
-        i.addEventListener('keyup', e => {
-            let c = e.code;
-            if (c == 'ArrowUp' || c == 'ArrowDown' || c == 'Escape' || c == 'Enter') {
-		return true;
-            }
+        i.addEventListener('input', e => {
             let i = e.target, v = i.value;
             if (v.length > 0) {
 		let r = new XMLHttpRequest();
@@ -90,13 +86,26 @@
             } else {
 		list.innerHTML = '';
             }
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
 	});
         f.appendChild(i);
         f.appendChild(list);
-        f.addEventListener('keypress', e => {
+        f.addEventListener('keydown', e => {
+            if (!list.innerHTML) {
+                if (e.code === 'Escape') {
+                    if (i.value) {
+                        i.value = '';
+                        i.focus();
+                    } else { // close form
+                        e.target.closest('form').remove();
+                        event.target.disabled = false;
+                        event.target.focus();
+                    }
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+                return;
+            }
             let t = e.target;
             switch(e.code) {
             case 'ArrowUp':
@@ -106,14 +115,8 @@
                 (t.parentNode == list && t.nextSibling || list.querySelector('a:first-child')).focus();
                 break;
             case 'Escape':
-                if (i.value) {
-                    list.innerHTML = '';
-                    i.focus();
-                } else { // close form
-                    e.target.closest('form').remove();
-                    event.target.disabled = false;
-                    event.target.focus();
-                }
+                list.innerHTML = '';
+                i.focus();
                 break;
             default:
                 return true;
