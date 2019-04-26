@@ -182,7 +182,7 @@
             event.target.focus();
         };
         f.appendChild(c);
-        f.addEventListener('keypress', e => {
+        f.addEventListener('keydown', e => {
             switch(e.code) {
             case 'Escape':
                 e.target.closest('form').remove();
@@ -257,7 +257,6 @@
                 'autoPanPadding': [me.clientWidth/4, me.clientHeight/4],
             });
             marker.addTo(map);
-            map.addEventListener('keypress', keyHandler);
             me.focus();
         }
         h.append(slink);
@@ -274,6 +273,7 @@
             localStorage.setItem('lastpos', `[${pos.lat},${pos.lng}]`)
         }
         function keyHandler(e) {
+            console.log("In keyhandler", e);
             switch(e.code) {
             case 'Escape':
                 e.target.closest('form').remove();
@@ -302,7 +302,7 @@
             event.target.focus();
         };
         f.appendChild(c);
-        f.addEventListener('keypress', keyHandler);
+        f.addEventListener('keydown', keyHandler);
         meta.insertBefore(f, meta.querySelector('#map'));
     }
 

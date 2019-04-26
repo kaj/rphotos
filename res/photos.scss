@@ -222,6 +222,8 @@ form.admin {
             margin: 0 auto 1ex;
             max-height: 95vh;
             width: -moz-available;
+            width: -webkit-fill-available;
+            width: available;
         }
         button {
             flex-grow: 0;
