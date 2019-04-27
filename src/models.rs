@@ -212,16 +212,16 @@ impl Photo {
     }
 
     #[cfg(test)]
-    pub fn mock(y: i32, mo: u32, d: u32, h: u32, m: u32, s: u32) -> Self {
+    pub fn mock(y: i32, mo: u32, da: u32, h: u32, m: u32, s: u32) -> Self {
         use chrono::naive::NaiveDate;
         Photo {
-            id: ((((((y as u32 * 12) + mo) * 30 + d) * 24) + h) * 60 + s)
+            id: ((((((y as u32 * 12) + mo) * 30 + da) * 24) + h) * 60 + s)
                 as i32,
             path: format!(
                 "{}/{:02}/{:02}/IMG{:02}{:02}{:02}.jpg",
-                y, mo, d, h, m, s,
+                y, mo, da, h, m, s,
             ),
-            date: Some(NaiveDate::from_ymd(y, mo, d).and_hms(h, m, s)),
+            date: Some(NaiveDate::from_ymd(y, mo, da).and_hms(h, m, s)),
             grade: None,
             rotation: 0,
             is_public: false,
