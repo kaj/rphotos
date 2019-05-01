@@ -3,8 +3,8 @@ $border: 1px solid #333;
 html {
     height: 100%;
     &, body {
-	margin: 0;
-	padding: 0;
+        margin: 0;
+        padding: 0;
     }
 }
 
@@ -15,6 +15,10 @@ body {
     flex-direction: column;
     justify-content: space-between;
     min-height: 100%;
+}
+
+h1 {
+    margin: .3em 0;
 }
 
 p {
@@ -37,7 +41,7 @@ footer {
     background: #999;
     color: white;
     :link, :visited {
-	color: #edf;
+        color: #edf;
     }
     p { margin: 0; }
 }
@@ -54,10 +58,10 @@ header, footer {
         text-align: right;
     }
     a {
-	text-decoration: none;
-	&:focus, &:hover {
-	    text-decoration: underline;
-	}
+        text-decoration: none;
+        &:focus, &:hover {
+            text-decoration: underline;
+        }
     }
 }
 
@@ -72,17 +76,9 @@ header, footer, main {
 }
 
 .item {
+    box-shadow: 0 .2em 1em -.2em #000;
     background: #ccc;
-    border: $border;
-    img {
-	box-shadow: 0 .2em 1em -.2em #000;
-	vertical-align: middle;
-	max-width: 100%;
-	height: auto;
-    }
-    .lable {
-	font-size: 80%;
-    }
+    border: solid 1px white;
 }
 
 div.group {
@@ -91,19 +87,40 @@ div.group {
   justify-content: space-between;
 
   .item {
-    display: flex;
-    flex-flow: column;
-    flex-grow: 1;
-    justify-content: space-between;
-    margin: .2em;
-    padding: .2em;
-    text-align: center;
-    // The unquote is a hack to avoid collapsing space around the minus.
-    // May not be needed with a future nicer version of rsass?
-    max-width: calc(50vw unquote('-') 1.6em);
+    position: relative;
+    margin: .4em .1em;
 
-    h2, p {
-      margin: .2em;
+    img {
+      display: block;
+      height: calc(unquote('6em + 8vw'));
+      width: auto;
+    }
+    h2, .lable {
+      text-shadow: 0 0 .1em white, 0 0 .4em white;
+      padding: 0 .2em;
+    }
+    h2 {
+      position: absolute;
+      margin: 0;
+      line-height: 1.2;
+    }
+    .lable {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      font-size: 80%;
+      background: rgba(white,0.2);
+      padding-left: 1em;
+      border-top-left-radius: 1.5em 100%;
+    }
+    &:hover {
+      h2 {
+        background: rgba(white,0.5);
+        width: -moz-available;
+      }
+      .lable {
+        background: rgba(white,0.8);
+      }
     }
   }
   p.item {
@@ -113,26 +130,32 @@ div.group {
 div.details {
     display: flex;
     flex-flow: row wrap;
+    margin: -1ex;
 
     .item, .meta {
-	padding: 1em;
+        margin: 1ex;
     }
     .item {
-	align-self: flex-start;
-	flex-grow: 4;
-	flex-basis: 30em;
-	text-align: center;
-	&.zoom {
-	    flex-basis: auto;
-	}
+        align-self: flex-start;
+        flex-grow: 4;
+        text-align: center;
+        width: 30em;
+        &.zoom {
+            width: -moz-available;
+        }
+        img {
+            width: -moz-available;
+            height: auto;
+            display: block;
+        }
     }
     .meta {
-	flex-grow: 1;
-	flex-basis: 20em;
-	padding-top: 0;
+        flex-grow: 1;
+        flex-basis: 20em;
+        padding-top: 0;
     }
     .places a:nth-child(n+2) {
-	font-size: 80%;
+        font-size: 80%;
     }
 }
 
@@ -156,12 +179,12 @@ form {
     width: fit-content;
 
     p {
-	display: flex;
-	flex-flow: row wrap;
-	justify-content: space-between;
+        display: flex;
+        flex-flow: row wrap;
+        justify-content: space-between;
     }
     label {
-	padding: .2em 1em .2em 0;
+        padding: .2em 1em .2em 0;
     }
 }
 
@@ -177,7 +200,7 @@ form {
     z-index: 1111;
 
     &:target {
-	display: block;
+        display: block;
     }
     h2 { margin: 0; }
 }
@@ -192,16 +215,16 @@ form.admin {
     width: available;
 
     input[type="text"], input[type="range"] {
-	flex-grow: 1;
-	margin-right: 1ex;
+        flex-grow: 1;
+        margin-right: 1ex;
     }
     button.close {
-	font-size: 50%;
-	margin: 0;
-	padding: 0;
-	position: absolute;
-	right: -1ex;
-	top: -1ex;
+        font-size: 50%;
+        margin: 0;
+        padding: 0;
+        position: absolute;
+        right: -1ex;
+        top: -1ex;
     }
     &.location {
         background: #eee;
@@ -241,17 +264,17 @@ div.completions {
     z-index: 800;
 
     a {
-	background: rgba(255,255,255,0.95);
-	border-color: #888;
-	border-style: solid;
-	border-width: 1px 1px 0;
-	display: block;
-	padding: .2em .5em; // .2em 2.2em;
-	color: black;
-	text-decoration: none;
+        background: rgba(255,255,255,0.95);
+        border-color: #888;
+        border-style: solid;
+        border-width: 1px 1px 0;
+        display: block;
+        padding: .2em .5em; // .2em 2.2em;
+        color: black;
+        text-decoration: none;
     }
     a:focus {
-	background-color: #aaaaff;
+        background-color: #aaaaff;
     }
 }
 .leaflet-popup-content img {
