@@ -213,7 +213,7 @@ pub fn all_null_date(context: Context) -> impl Reply {
                 .load(context.db())
                 .unwrap()
                 .iter()
-                .map(PhotoLink::from)
+                .map(PhotoLink::no_title)
                 .collect::<Vec<_>>(),
             &[], // Don't care about positions here
         )
@@ -233,7 +233,7 @@ pub fn all_for_day(
     let photos = Photo::query(context.is_authorized())
         .filter(date.ge(thedate))
         .filter(date.lt(thedate + ChDuration::days(1)));
-    let (links, coords) = links_by_time(&context, photos, range);
+    let (links, coords) = links_by_time(&context, photos, range, false);
 
     if links.is_empty() {
         not_found(&context)

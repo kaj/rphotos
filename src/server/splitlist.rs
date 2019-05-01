@@ -10,6 +10,7 @@ pub fn links_by_time<'a>(
     context: &Context,
     photos: photos::BoxedQuery<'a, Pg>,
     range: ImgRange,
+    with_date: bool,
 ) -> (Vec<PhotoLink>, Vec<(Coord, i32)>) {
     let c = context.db();
     use crate::schema::photos::dsl::{date, id};
@@ -33,10 +34,17 @@ pub fn links_by_time<'a>(
             let path = context.path_without_query();
             groups
                 .iter()
-                .map(|g| PhotoLink::for_group(g, path))
+                .map(|g| PhotoLink::for_group(g, path, with_date))
                 .collect()
         } else {
-            photos.iter().map(PhotoLink::from).collect()
+            photos
+                .iter()
+                .map(if with_date {
+                    PhotoLink::date_title
+                } else {
+                    PhotoLink::no_title
+                })
+                .collect()
         },
         get_positions(&photos, c),
     )

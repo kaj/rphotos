@@ -38,17 +38,83 @@ pub struct PhotoLink {
 }
 
 impl PhotoLink {
-    fn for_group(g: &[Photo], base_url: &str) -> PhotoLink {
+    fn for_group(g: &[Photo], base_url: &str, with_date: bool) -> PhotoLink {
         if g.len() == 1 {
-            PhotoLink::from(&g[0])
+            if with_date {
+                PhotoLink::date_title(&g[0])
+            } else {
+                PhotoLink::no_title(&g[0])
+            }
         } else {
             fn imgscore(p: &Photo) -> i16 {
                 // Only score below 19 is worse than ungraded.
                 p.grade.unwrap_or(19) * if p.is_public { 5 } else { 4 }
             }
             let photo = g.iter().max_by_key(|p| imgscore(p)).unwrap();
+            let (title, lable) = {
+                let from = g.last().and_then(|p| p.date);
+                let to = g.first().and_then(|p| p.date);
+                if let (Some(from), Some(to)) = (from, to) {
+                    if from.date() == to.date() {
+                        (
+                            Some(from.format("%F").to_string()),
+                            format!(
+                                "{} - {} ({})",
+                                from.format("%R"),
+                                to.format("%R"),
+                                g.len(),
+                            ),
+                        )
+                    } else if from.year() == to.year() {
+                        if from.month() == to.month() {
+                            (
+                                Some(from.format("%Y-%m").to_string()),
+                                format!(
+                                    "{} - {} ({})",
+                                    from.format("%F"),
+                                    to.format("%d"),
+                                    g.len(),
+                                ),
+                            )
+                        } else {
+                            (
+                                Some(from.format("%Y").to_string()),
+                                format!(
+                                    "{} - {} ({})",
+                                    from.format("%F"),
+                                    to.format("%m-%d"),
+                                    g.len(),
+                                ),
+                            )
+                        }
+                    } else {
+                        (
+                            None,
+                            format!(
+                                "{} - {} ({})",
+                                from.format("%F"),
+                                to.format("%F"),
+                                g.len(),
+                            ),
+                        )
+                    }
+                } else {
+                    (
+                        None,
+                        format!(
+                            "{} - {} ({})",
+                            from.map(|d| format!("{}", d.format("%F %R")))
+                                .unwrap_or_else(|| "-".to_string()),
+                            to.map(|d| format!("{}", d.format("%F %R")))
+                                .unwrap_or_else(|| "-".to_string()),
+                            g.len(),
+                        ),
+                    )
+                }
+            };
+            let title = if with_date { title } else { None };
             PhotoLink {
-                title: None,
+                title,
                 href: format!(
                     "{}?from={}&to={}",
                     base_url,
@@ -57,49 +123,26 @@ impl PhotoLink {
                 ),
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small.px()),
-                lable: {
-                    let from = g.last().and_then(|p| p.date);
-                    let to = g.first().and_then(|p| p.date);
-                    if let (Some(from), Some(to)) = (from, to) {
-                        if from.date() == to.date() {
-                            Some(format!(
-                                "{} - {} ({})",
-                                from.format("%F %R"),
-                                to.format("%R"),
-                                g.len(),
-                            ))
-                        } else {
-                            Some(format!(
-                                "{} - {} ({})",
-                                from.format("%F"),
-                                to.format("%F"),
-                                g.len(),
-                            ))
-                        }
-                    } else {
-                        Some(format!(
-                            "{} - {} ({})",
-                            from.map(|d| format!("{}", d.format("%F %R")))
-                                .unwrap_or_else(|| "-".to_string()),
-                            to.map(|d| format!("{}", d.format("%F %R")))
-                                .unwrap_or_else(|| "-".to_string()),
-                            g.len(),
-                        ))
-                    }
-                },
+                lable: Some(lable),
             }
         }
     }
-}
-
-impl<'a> From<&'a Photo> for PhotoLink {
-    fn from(p: &'a Photo) -> PhotoLink {
+    fn date_title(p: &Photo) -> PhotoLink {
         PhotoLink {
-            title: None,
+            title: p.date.map(|d| d.format("%F").to_string()),
             href: format!("/img/{}", p.id),
             id: p.id,
             size: p.get_size(SizeTag::Small.px()),
-            lable: p.date.map(|d| format!("{}", d.format("%F %T"))),
+            lable: p.date.map(|d| d.format("%T").to_string()),
+        }
+    }
+    fn no_title(p: &Photo) -> PhotoLink {
+        PhotoLink {
+            title: None, // p.date.map(|d| d.format("%F").to_string()),
+            href: format!("/img/{}", p.id),
+            id: p.id,
+            size: p.get_size(SizeTag::Small.px()),
+            lable: p.date.map(|d| d.format("%T").to_string()),
         }
     }
 }
@@ -454,7 +497,7 @@ fn tag_one(
         let photos = Photo::query(context.is_authorized()).filter(
             id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
         );
-        let (links, coords) = links_by_time(&context, photos, range);
+        let (links, coords) = links_by_time(&context, photos, range, true);
         Response::builder()
             .html(|o| templates::tag(o, &context, &links, &coords, &tag))
     } else {
@@ -519,7 +562,7 @@ fn place_one(
         let photos = Photo::query(context.is_authorized()).filter(id.eq_any(
             photo_places.select(photo_id).filter(place_id.eq(place.id)),
         ));
-        let (links, coord) = links_by_time(&context, photos, range);
+        let (links, coord) = links_by_time(&context, photos, range, true);
         Response::builder()
             .html(|o| templates::place(o, &context, &links, &coord, &place))
     } else {
@@ -570,7 +613,7 @@ fn person_one(
                     .filter(person_id.eq(person.id)),
             ),
         );
-        let (links, coords) = links_by_time(&context, photos, range);
+        let (links, coords) = links_by_time(&context, photos, range, true);
         Response::builder()
             .html(|o| templates::person(o, &context, &links, &coords, &person))
     } else {
