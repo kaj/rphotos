@@ -6,8 +6,7 @@ use crate::server::SizeTag;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use log::{debug, info};
-use memcached::proto::{Operation, ProtoType};
-use memcached::Client;
+use r2d2_memcache::memcache::Client;
 use std::time::{Duration, Instant};
 
 /// Make sure all photos are stored in the cache.
@@ -23,8 +22,7 @@ pub fn precache(
 ) -> Result<(), Error> {
     let max_time = Duration::from_secs(max_secs);
     let timer = Instant::now();
-    let mut cache =
-        Client::connect(&[("tcp://127.0.0.1:11211", 1)], ProtoType::Binary)?;
+    let mut cache = Client::connect("memcache://127.0.0.1:11211")?;
     let size = SizeTag::Small;
     let (mut n, mut n_stored) = (0, 0);
     let photos = Photo::query(true)
@@ -34,7 +32,7 @@ pub fn precache(
     for photo in photos {
         n += 1;
         let key = &photo.cache_key(size);
-        if cache.get(key.as_bytes()).is_err() {
+        if cache.get::<Vec<u8>>(key)?.is_none() {
             let size = size.px();
             let data = pd.scale_image(&photo, size, size).map_err(|e| {
                 Error::Other(format!(
@@ -42,7 +40,7 @@ pub fn precache(
                     photo.id, photo.path, e,
                 ))
             })?;
-            cache.set(key.as_bytes(), &data, 0, no_expire)?;
+            cache.set(key, &data[..], no_expire)?;
             debug!("Cache: stored {} for {}", key, photo.path);
             n_stored += 1;
             if timer.elapsed() > max_time {

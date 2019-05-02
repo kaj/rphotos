@@ -153,7 +153,7 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
     }
     let session_filter = create_session_filter(
         &dburl(),
-        env_or("MEMCACHED_SERVER", "tcp://127.0.0.1:11211"),
+        &env_or("MEMCACHED_SERVER", "memcache://127.0.0.1:11211"),
         jwt_key(),
     );
     let s = move || session_filter.clone();

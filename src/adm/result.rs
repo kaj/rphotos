@@ -3,7 +3,7 @@ use chrono::ParseError as ChronoParseError;
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
 use exif;
-use memcached::proto::Error as MemcachedError;
+use r2d2_memcache::memcache::MemcacheError;
 use std::convert::From;
 use std::num::ParseIntError;
 use std::str::Utf8Error;
@@ -17,7 +17,7 @@ pub enum Error {
     UnknownOrientation(u32),
     BadTimeFormat(ChronoParseError),
     BadIntFormat(ParseIntError),
-    Cache(MemcachedError),
+    Cache(MemcacheError),
     MissingWidth,
     MissingHeight,
     PlacesFailed(fetch_places::Error),
@@ -46,8 +46,8 @@ impl fmt::Display for Error {
     }
 }
 
-impl From<MemcachedError> for Error {
-    fn from(e: MemcachedError) -> Self {
+impl From<MemcacheError> for Error {
+    fn from(e: MemcacheError) -> Self {
         Error::Cache(e)
     }
 }

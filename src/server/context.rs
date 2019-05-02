@@ -5,11 +5,9 @@ use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use jwt::{Claims, Header, Registered, Token};
 use log::{debug, error, warn};
-use memcached::proto::{Error as MprotError, Operation, ProtoType};
-use memcached::Client;
+use r2d2_memcache::r2d2::Error;
+use r2d2_memcache::MemcacheConnectionManager;
 use std::collections::BTreeMap;
-use std::error::Error;
-use std::io;
 use std::sync::Arc;
 use std::time::Duration;
 use warp::filters::{cookie, BoxedFilter};
@@ -17,16 +15,18 @@ use warp::path::{self, FullPath};
 use warp::reject::custom;
 use warp::{self, Filter};
 
-type PooledPg = PooledConnection<ConnectionManager<PgConnection>>;
 type PgPool = Pool<ConnectionManager<PgConnection>>;
+type PooledPg = PooledConnection<ConnectionManager<PgConnection>>;
+type MemcachePool = Pool<MemcacheConnectionManager>;
+type PooledMemcache = PooledConnection<MemcacheConnectionManager>;
 
 pub fn create_session_filter(
     db_url: &str,
-    memcached_server: String,
+    memcache_server: &str,
     jwt_secret: String,
 ) -> BoxedFilter<(Context,)> {
     let global =
-        Arc::new(GlobalContext::new(db_url, memcached_server, jwt_secret));
+        Arc::new(GlobalContext::new(db_url, memcache_server, jwt_secret));
     warp::any()
         .and(path::full())
         .and(cookie::optional("EXAUTH"))
@@ -48,22 +48,24 @@ pub fn create_session_filter(
 struct GlobalContext {
     db_pool: PgPool,
     photosdir: PhotosDir,
-    memcached_server: String, // TODO: Use a connection pool!
+    memcache_pool: MemcachePool,
     jwt_secret: String,
 }
 
 impl GlobalContext {
-    fn new(
-        db_url: &str,
-        memcached_server: String,
-        jwt_secret: String,
-    ) -> Self {
+    fn new(db_url: &str, memcache_server: &str, jwt_secret: String) -> Self {
         let db_manager = ConnectionManager::<PgConnection>::new(db_url);
+        let mc_manager = MemcacheConnectionManager::new(memcache_server);
         GlobalContext {
-            db_pool: Pool::new(db_manager)
-                .expect("Postgres connection pool could not be created"),
+            db_pool: Pool::builder()
+                .connection_timeout(Duration::from_secs(1))
+                .build(db_manager)
+                .expect("Posgresql pool"),
             photosdir: PhotosDir::new(photos_dir()),
-            memcached_server,
+            memcache_pool: Pool::builder()
+                .connection_timeout(Duration::from_secs(1))
+                .build(mc_manager)
+                .expect("Memcache pool"),
             jwt_secret,
         }
     }
@@ -101,8 +103,8 @@ impl GlobalContext {
             Err(format!("Invalid token {:?}", token))
         }
     }
-    fn cache(&self) -> Result<Client, io::Error> {
-        Client::connect(&[(&self.memcached_server, 1)], ProtoType::Binary)
+    fn cache(&self) -> Result<PooledMemcache, Error> {
+        Ok(self.memcache_pool.get()?)
     }
 }
 
@@ -153,14 +155,12 @@ impl Context {
     {
         match self.global.cache() {
             Ok(mut client) => {
-                match client.get(key.as_bytes()) {
-                    Ok((data, _flags)) => {
+                match client.get(key) {
+                    Ok(Some(data)) => {
                         debug!("Cache: {} found", key);
                         return Ok(data);
                     }
-                    Err(MprotError::BinaryProtoError(ref err))
-                        if err.description() == "key not found" =>
-                    {
+                    Ok(None) => {
                         debug!("Cache: {} not found", key);
                     }
                     Err(err) => {
@@ -168,22 +168,22 @@ impl Context {
                     }
                 }
                 let data = calculate()?;
-                match client.set(key.as_bytes(), &data, 0, 7 * 24 * 60 * 60) {
+                match client.set(key, &data[..], 7 * 24 * 60 * 60) {
                     Ok(()) => debug!("Cache: stored {}", key),
                     Err(err) => warn!("Cache: Error storing {}: {}", key, err),
                 }
                 Ok(data)
             }
             Err(err) => {
-                warn!("Error connecting to memcached: {}", err);
+                warn!("Error connecting to memcache: {}", err);
                 calculate()
             }
         }
     }
     pub fn clear_cache(&self, key: &str) {
         if let Ok(mut client) = self.global.cache() {
-            match client.delete(key.as_bytes()) {
-                Ok(()) => debug!("Cache: deleted {}", key),
+            match client.delete(key) {
+                Ok(flag) => debug!("Cache: deleted {}: {:?}", key, flag),
                 Err(e) => warn!("Cache: Failed to delete {}: {}", key, e),
             }
         }
