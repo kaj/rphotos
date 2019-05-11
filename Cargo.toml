@@ -10,27 +10,27 @@ build = "src/build.rs"
 ructe = { version = "^0.6.2", features = ["sass", "mime03"] }
 
 [dependencies]
-warp = "0.1.6"
-env_logger = "*"
-libc = "*"
-log = "*"
+brotli2 = "*"
 chrono = "~0.4.0" # Must match version used by diesel
 clap = { version = "^2.19", features = [ "color", "wrap_help" ] }
+diesel = { version = "1.4.0", features = ["r2d2", "chrono", "postgres"] }
+djangohashers = "*"
+dotenv = "0.14.0"
+env_logger = "*"
+flate2 = "^1.0.0"
 image = "0.21"
 jwt = "0.4.0"
-time = "*"
 kamadak-exif = "~0.3.0"
-diesel = { version = "1.4.0", features = ["r2d2", "chrono", "postgres"] }
-dotenv = "0.13.0"
-djangohashers = "*"
+libc = "*"
+log = "*"
+mime = "0.3.0"
 r2d2-memcache = "0.3.0"
 rand = "0.6.5"
-rust-crypto = "0.2.36"
-flate2 = "^1.0.0"
-brotli2 = "*"
-mime = "0.3.0"
 regex = "*"
-slug = "0.1"
 reqwest = "0.9"
+rust-crypto = "0.2.36"
 serde = { version = "1.0.0", features = ["derive"] }
 serde_json = "1.0"
+slug = "0.1"
+time = "*"
+warp = "0.1.6"
