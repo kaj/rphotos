@@ -9,18 +9,13 @@ use slug::slugify;
 
 pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
     use crate::schema::positions::dsl::*;
-    let coord = match positions
+    let coord = positions
         .filter(photo_id.eq(image))
         .select((latitude, longitude))
-        .first::<(i32, i32)>(c)
-    {
-        Ok((tlat, tlong)) => Coord {
-            x: f64::from(tlat) / 1e6,
-            y: f64::from(tlong) / 1e6,
-        },
-        Err(diesel::NotFound) => Err(Error::NoPosition(image))?,
-        Err(err) => Err(Error::Db(image, err))?,
-    };
+        .first::<Coord>(c)
+        .optional()
+        .map_err(|e| Error::Db(image, e))?
+        .ok_or_else(|| Error::NoPosition(image))?;
     debug!("Should get places for #{} at {:?}", image, coord);
     let data = Client::new()
         .post("https://overpass.kumi.systems/api/interpreter")

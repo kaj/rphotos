@@ -4,6 +4,7 @@ use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
+use diesel::sql_types::Integer;
 use log::error;
 use std::cmp::max;
 
@@ -311,6 +312,14 @@ impl Camera {
 pub struct Coord {
     pub x: f64,
     pub y: f64,
+}
+
+impl Queryable<(Integer, Integer), Pg> for Coord {
+    type Row = (i32, i32);
+
+    fn build(row: Self::Row) -> Self {
+        Coord::from((row.0, row.1))
+    }
 }
 
 impl From<(i32, i32)> for Coord {

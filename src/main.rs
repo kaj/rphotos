@@ -17,6 +17,7 @@ use crate::adm::result::Error;
 use crate::adm::stats::show_stats;
 use crate::adm::{findphotos, makepublic, precache, storestatics, users};
 use crate::env::{dburl, photos_dir};
+use crate::models::Coord;
 use crate::photosdir::PhotosDir;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use diesel::pg::PgConnection;
@@ -182,21 +183,17 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
                 let limit = args.value_of("LIMIT").unwrap().parse()?;
                 println!("Should find {} photos to fetch places for", limit);
                 use crate::schema::photo_places::dsl as place;
-                use crate::schema::photos::dsl::{date, id, path, photos};
                 use crate::schema::positions::dsl as pos;
-                use diesel::prelude::*;
-                let result = photos
-                    .select((id, path))
-                    .filter(id.eq_any(pos::positions.select(pos::photo_id)))
-                    .filter(
-                        id.ne_all(place::photo_places.select(place::photo_id)),
-                    )
+                let result = pos::positions
+                    .select((pos::photo_id, (pos::latitude, pos::longitude)))
+                    .filter(pos::photo_id.ne_all(
+                        place::photo_places.select(place::photo_id).distinct(),
+                    ))
+                    .order(pos::photo_id.desc())
                     .limit(limit)
-                    .order(date.desc().nulls_last())
-                    .load::<(i32, String)>(&db)?;
-                println!("Work with {:?}", result);
-                for (photo_id, ppath) in result {
-                    println!("Find places for #{}, {}", photo_id, ppath);
+                    .load::<(i32, Coord)>(&db)?;
+                for (photo_id, coord) in result {
+                    println!("Find places for #{}, {:?}", photo_id, coord);
                     fetch_places::update_image_places(&db, photo_id)?;
                 }
             } else {
