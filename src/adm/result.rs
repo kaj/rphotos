@@ -2,10 +2,10 @@ use crate::fetch_places;
 use chrono::ParseError as ChronoParseError;
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
-use exif;
 use r2d2_memcache::memcache::MemcacheError;
 use std::convert::From;
 use std::num::ParseIntError;
+use std::path::Path;
 use std::str::Utf8Error;
 use std::{fmt, io};
 
@@ -22,6 +22,12 @@ pub enum Error {
     MissingHeight,
     PlacesFailed(fetch_places::Error),
     Other(String),
+}
+
+impl Error {
+    pub fn in_file(e: &fmt::Display, file: &Path) -> Self {
+        Error::Other(format!("{} in {}", e, file.display()))
+    }
 }
 
 impl fmt::Display for Error {
@@ -79,12 +85,6 @@ impl From<DieselError> for Error {
 impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self {
         Error::Io(e)
-    }
-}
-
-impl From<exif::Error> for Error {
-    fn from(e: exif::Error) -> Self {
-        Error::Other(format!("Exif error: {}", e))
     }
 }
 impl From<Utf8Error> for Error {
