@@ -1,7 +1,7 @@
 @use crate::server::PhotoLink;
 
 @(photo: &PhotoLink)
-<div class="item">@if let Some(ref title) = photo.title {<h2>@title</h2>}
+<div class="item@if let Some((w, h)) = photo.size {@if h > w { portrait}}">@if let Some(ref title) = photo.title {<h2>@title</h2>}
   <a href="@photo.href"><img src="/img/@photo.id-s.jpg" @if let Some((w, h)) = photo.size {width="@w" height="@h"} alt="Photo @photo.id"></a>
   @if let Some(ref d) = photo.lable {<span class="lable">@d</span>}
 </div>

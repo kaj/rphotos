@@ -85,15 +85,28 @@ div.group {
   display: flex;
   flex-flow: row-reverse wrap;
   justify-content: space-between;
+  margin: 0 -.1em;
 
   .item {
     position: relative;
     margin: .4em .1em;
+    flex-grow: .1;
+    &.portrait {
+	flex-grow: .3;
+    }
 
     img {
       display: block;
-      height: calc(unquote('6em + 8vw'));
-      width: auto;
+      height: calc(unquote('5em + 10vw'));
+      object-fit: cover;
+      object-position: 50% 33%;
+      width: -moz-available;
+      width: -webkit-fill-available;
+      width: available;
+    }
+    // TODO: Set first-line class by js.
+    &.first-line img {
+	height: calc(unquote('6em + 11vw'));
     }
     h2, .lable {
       text-shadow: 0 0 .1em white, 0 0 .4em white;
@@ -117,6 +130,8 @@ div.group {
       h2 {
         background: rgba(white,0.5);
         width: -moz-available;
+        width: -webkit-fill-available;
+        width: available;
       }
       .lable {
         background: rgba(white,0.8);
@@ -142,9 +157,13 @@ div.details {
         width: 30em;
         &.zoom {
             width: -moz-available;
+            width: -webkit-fill-available;
+            width: available;
         }
         img {
             width: -moz-available;
+            width: -webkit-fill-available;
+            width: available;
             height: auto;
             display: block;
         }
