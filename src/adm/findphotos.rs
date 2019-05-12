@@ -7,6 +7,7 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use log::{debug, info, warn};
 use std::path::Path;
+use std::time::Instant;
 
 pub fn crawl(
     db: &PgConnection,
@@ -20,6 +21,46 @@ pub fn crawl(
             Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
         },
     )?;
+    Ok(())
+}
+
+pub fn find_sizes(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
+    use crate::schema::photos::dsl as p;
+    let start = Instant::now();
+    let mut c = 0;
+    while start.elapsed().as_secs() < 5 {
+        let photos = Photo::query(true)
+            .filter(p::width.is_null())
+            .filter(p::height.is_null())
+            .order((p::is_public.desc(), p::date.desc().nulls_last()))
+            .limit(10)
+            .load::<Photo>(db)?;
+
+        if photos.is_empty() {
+            break;
+        } else {
+            c += photos.len();
+        }
+
+        for photo in photos {
+            let exif = ExifData::read_from(&pd.get_raw_path(&photo))?;
+            let width = exif.width.ok_or(Error::MissingWidth)?;
+            let height = exif.height.ok_or(Error::MissingHeight)?;
+
+            diesel::update(p::photos.find(photo.id))
+                .set((p::width.eq(width as i32), p::height.eq(height as i32)))
+                .execute(db)?;
+            debug!("Store img #{} size {} x {}", photo.id, width, height);
+        }
+    }
+
+    let e = start.elapsed();
+    info!(
+        "Found size of {} images in {}.{:03} s",
+        c,
+        e.as_secs(),
+        e.subsec_millis(),
+    );
     Ok(())
 }
 

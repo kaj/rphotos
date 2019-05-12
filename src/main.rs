@@ -42,6 +42,9 @@ fn main() {
                      image root).",
                 )),
         ).subcommand(
+            SubCommand::with_name("find-sizes")
+                .about("Find sizes of images lacking that info in db"),
+        ).subcommand(
             SubCommand::with_name("stats")
                 .about("Show some statistics from the database"),
         ).subcommand(
@@ -158,6 +161,9 @@ fn run(args: &ArgMatches) -> Result<(), Error> {
                 })?;
             }
             Ok(())
+        }
+        ("find-sizes", Some(_args)) => {
+            findphotos::find_sizes(&get_db()?, &PhotosDir::new(photos_dir()))
         }
         ("makepublic", Some(args)) => {
             let db = get_db()?;

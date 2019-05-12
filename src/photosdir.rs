@@ -48,8 +48,8 @@ impl PhotosDir {
     }
 
     #[allow(dead_code)]
-    pub fn get_raw_path(&self, photo: Photo) -> PathBuf {
-        self.basedir.join(photo.path)
+    pub fn get_raw_path(&self, photo: &Photo) -> PathBuf {
+        self.basedir.join(&photo.path)
     }
 
     #[allow(dead_code)]

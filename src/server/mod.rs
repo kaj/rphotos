@@ -369,7 +369,7 @@ fn show_image(img: ImgName, context: Context) -> Response<Vec<u8>> {
                     use std::fs::File;
                     use std::io::Read;
                     // TODO: This should be done in a more async-friendly way.
-                    let path = context.photos().get_raw_path(tphoto);
+                    let path = context.photos().get_raw_path(&tphoto);
                     let mut buf = Vec::new();
                     if File::open(path)
                         .map(|mut f| f.read_to_end(&mut buf))
