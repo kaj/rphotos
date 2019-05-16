@@ -1,4 +1,3 @@
-use crate::env::photos_dir;
 use crate::photosdir::PhotosDir;
 use crypto::sha2::Sha256;
 use diesel::pg::PgConnection;
@@ -8,6 +7,7 @@ use log::{debug, error, warn};
 use r2d2_memcache::r2d2::Error;
 use r2d2_memcache::MemcacheConnectionManager;
 use std::collections::BTreeMap;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use warp::filters::{cookie, BoxedFilter};
@@ -23,10 +23,15 @@ type PooledMemcache = PooledConnection<MemcacheConnectionManager>;
 pub fn create_session_filter(
     db_url: &str,
     memcache_server: &str,
-    jwt_secret: String,
+    photos_dir: &Path,
+    jwt_secret: &str,
 ) -> BoxedFilter<(Context,)> {
-    let global =
-        Arc::new(GlobalContext::new(db_url, memcache_server, jwt_secret));
+    let global = Arc::new(GlobalContext::new(
+        db_url,
+        memcache_server,
+        photos_dir,
+        jwt_secret,
+    ));
     warp::any()
         .and(path::full())
         .and(cookie::optional("EXAUTH"))
@@ -53,7 +58,12 @@ struct GlobalContext {
 }
 
 impl GlobalContext {
-    fn new(db_url: &str, memcache_server: &str, jwt_secret: String) -> Self {
+    fn new(
+        db_url: &str,
+        memcache_server: &str,
+        photos_dir: &Path,
+        jwt_secret: &str,
+    ) -> Self {
         let db_manager = ConnectionManager::<PgConnection>::new(db_url);
         let mc_manager = MemcacheConnectionManager::new(memcache_server);
         GlobalContext {
@@ -61,12 +71,12 @@ impl GlobalContext {
                 .connection_timeout(Duration::from_secs(1))
                 .build(db_manager)
                 .expect("Posgresql pool"),
-            photosdir: PhotosDir::new(photos_dir()),
+            photosdir: PhotosDir::new(photos_dir),
             memcache_pool: Pool::builder()
                 .connection_timeout(Duration::from_secs(1))
                 .build(mc_manager)
                 .expect("Memcache pool"),
-            jwt_secret,
+            jwt_secret: jwt_secret.into(),
         }
     }
 
