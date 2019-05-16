@@ -44,30 +44,31 @@ pub fn find_sizes(db: &PgConnection, pd: &PhotosDir) -> Result<(), Error> {
         }
 
         for photo in photos {
-            let (width, height) = match ExifData::read_from(
-                &pd.get_raw_path(&photo),
-            )
-            .and_then(|exif| {
-                Ok((
-                    exif.width.ok_or(Error::MissingWidth)?,
-                    exif.height.ok_or(Error::MissingHeight)?,
-                ))
-            }) {
-                Ok((width, height)) => (width, height),
-                Err(e) => {
-                    info!(
-                        "No exif size for {}: {}, read actual size",
-                        photo.path, e
-                    );
-                    let image = image::open(&photo.path).map_err(|e| {
-                        Error::Other(format!(
-                            "Failed to read image {}: {}",
-                            photo.path, e
-                        ))
-                    })?;
-                    (image.width(), image.height())
-                }
-            };
+            let path = pd.get_raw_path(&photo);
+            let (width, height) =
+                match ExifData::read_from(&path).and_then(|exif| {
+                    Ok((
+                        exif.width.ok_or(Error::MissingWidth)?,
+                        exif.height.ok_or(Error::MissingHeight)?,
+                    ))
+                }) {
+                    Ok((width, height)) => (width, height),
+                    Err(e) => {
+                        info!(
+                            "No exif size in {}: {}, read actual size",
+                            path.display(),
+                            e
+                        );
+                        let image = image::open(&path).map_err(|e| {
+                            Error::Other(format!(
+                                "Failed to read image {}: {}",
+                                path.display(),
+                                e
+                            ))
+                        })?;
+                        (image.width(), image.height())
+                    }
+                };
             diesel::update(p::photos.find(photo.id))
                 .set((p::width.eq(width as i32), p::height.eq(height as i32)))
                 .execute(db)?;
