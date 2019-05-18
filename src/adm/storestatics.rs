@@ -1,6 +1,7 @@
 use super::result::Error;
 use crate::templates::statics::STATICS;
-use brotli2::write::BrotliEncoder;
+use brotli::enc::backward_references::BrotliEncoderParams;
+use brotli::BrotliCompress;
 use flate2::{Compression, GzBuilder};
 use std::fs::{create_dir_all, File};
 use std::io::prelude::*;
@@ -42,9 +43,8 @@ fn gzipped(data: &[u8]) -> Result<Vec<u8>, Error> {
 
 fn brcompressed(data: &[u8]) -> Result<Vec<u8>, Error> {
     let mut buf = Vec::new();
-    {
-        let mut br = BrotliEncoder::new(&mut buf, 11);
-        br.write_all(data)?;
-    }
+    let mut params = BrotliEncoderParams::default();
+    params.quality = 11;
+    BrotliCompress(&mut data.as_ref(), &mut buf, &params)?;
     Ok(buf)
 }
