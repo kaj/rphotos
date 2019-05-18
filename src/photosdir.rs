@@ -11,8 +11,10 @@ pub struct PhotosDir {
 }
 
 impl PhotosDir {
-    pub fn new(basedir: PathBuf) -> Self {
-        PhotosDir { basedir }
+    pub fn new(basedir: &Path) -> Self {
+        PhotosDir {
+            basedir: basedir.into(),
+        }
     }
 
     #[allow(dead_code)]

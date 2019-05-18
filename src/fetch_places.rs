@@ -1,4 +1,5 @@
 use crate::models::{Coord, Place};
+use crate::DbOpt;
 use diesel;
 use diesel::prelude::*;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
@@ -6,6 +7,50 @@ use log::{debug, info, warn};
 use reqwest::{self, Client, Response};
 use serde_json::Value;
 use slug::slugify;
+use structopt::StructOpt;
+
+#[derive(StructOpt)]
+#[structopt(rename_all = "kebab-case")]
+pub struct Fetchplaces {
+    #[structopt(flatten)]
+    db: DbOpt,
+    /// Max number of photos to use for --auto
+    #[structopt(long, short, default_value = "5")]
+    limit: i64,
+    /// Fetch data for photos with position but lacking places.
+    #[structopt(long, short)]
+    auto: bool,
+    /// Image ids to fetch place data for
+    photos: Vec<i32>,
+}
+
+impl Fetchplaces {
+    pub fn run(&self) -> Result<(), super::adm::result::Error> {
+        let db = self.db.connect()?;
+        if self.auto {
+            println!("Should find {} photos to fetch places for", self.limit);
+            use crate::schema::photo_places::dsl as place;
+            use crate::schema::positions::dsl as pos;
+            let result = pos::positions
+                .select((pos::photo_id, (pos::latitude, pos::longitude)))
+                .filter(pos::photo_id.ne_all(
+                    place::photo_places.select(place::photo_id).distinct(),
+                ))
+                .order(pos::photo_id.desc())
+                .limit(self.limit)
+                .load::<(i32, Coord)>(&db)?;
+            for (photo_id, coord) in result {
+                println!("Find places for #{}, {:?}", photo_id, coord);
+                update_image_places(&db, photo_id)?;
+            }
+        } else {
+            for photo in &self.photos {
+                update_image_places(&db, *photo)?;
+            }
+        }
+        Ok(())
+    }
+}
 
 pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
     use crate::schema::positions::dsl::*;

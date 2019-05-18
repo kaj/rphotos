@@ -10,13 +10,12 @@ pub use self::context::Context;
 use self::render_ructe::RenderRucte;
 use self::splitlist::*;
 use self::views_by_date::*;
+use super::{CacheOpt, DbOpt, DirOpt};
 use crate::adm::result::Error;
-use crate::env::{dburl, env_or, jwt_key};
 use crate::models::{Person, Photo, Place, Tag};
 use crate::pidfiles::handle_pid_file;
 use crate::templates::{self, Html};
 use chrono::Datelike;
-use clap::ArgMatches;
 use diesel::prelude::*;
 use djangohashers;
 use image;
@@ -24,9 +23,39 @@ use log::info;
 use mime;
 use serde::Deserialize;
 use std::net::SocketAddr;
+use structopt::StructOpt;
 use warp::filters::path::Tail;
 use warp::http::{header, Response, StatusCode};
 use warp::{self, reply, Filter, Rejection, Reply};
+
+#[derive(StructOpt)]
+#[structopt(rename_all = "kebab-case")]
+pub struct Args {
+    #[structopt(flatten)]
+    db: DbOpt,
+    #[structopt(flatten)]
+    cache: CacheOpt,
+    #[structopt(flatten)]
+    photos: DirOpt,
+
+    /// Write (and read, if --replace) a pid file with the name
+    /// given as <PIDFILE>.
+    #[structopt(long)]
+    pidfile: Option<String>,
+    /// Kill old server (identified by pid file) before running.
+    #[structopt(long, short)]
+    replace: bool,
+    /// Socket addess for rphotos to listen on.
+    #[structopt(
+        long,
+        env = "RPHOTOS_LISTEN",
+        default_value = "127.0.0.1:6767"
+    )]
+    listen: SocketAddr,
+    /// Signing key for jwt
+    #[structopt(long, env = "JWT_KEY", hide_env_values = true)]
+    jwt_key: String,
+}
 
 pub struct PhotoLink {
     pub title: Option<String>,
@@ -147,14 +176,15 @@ impl PhotoLink {
     }
 }
 
-pub fn run(args: &ArgMatches) -> Result<(), Error> {
-    if let Some(pidfile) = args.value_of("PIDFILE") {
-        handle_pid_file(pidfile, args.is_present("REPLACE")).unwrap()
+pub fn run(args: &Args) -> Result<(), Error> {
+    if let Some(pidfile) = &args.pidfile {
+        handle_pid_file(&pidfile, args.replace).unwrap()
     }
     let session_filter = create_session_filter(
-        &dburl(),
-        &env_or("MEMCACHED_SERVER", "memcache://127.0.0.1:11211"),
-        jwt_key(),
+        &args.db.db_url,
+        &args.cache.memcached_url,
+        &args.photos.photos_dir,
+        &args.jwt_key,
     );
     let s = move || session_filter.clone();
     use warp::filters::query::query;
@@ -190,10 +220,7 @@ pub fn run(args: &ArgMatches) -> Result<(), Error> {
         .or(get().and(path("ac")).and(path("tag")).and(s()).and(query()).map(auto_complete_tag))
         .or(get().and(path("ac")).and(path("person")).and(s()).and(query()).map(auto_complete_person))
         .or(path("adm").and(admin::routes(s())));
-    let addr = env_or("RPHOTOS_LISTEN", "127.0.0.1:6767")
-        .parse::<SocketAddr>()
-        .map_err(|e| Error::Other(format!("{}", e)))?;
-    warp::serve(routes.recover(customize_error)).run(addr);
+    warp::serve(routes.recover(customize_error)).run(args.listen);
     Ok(())
 }
 
