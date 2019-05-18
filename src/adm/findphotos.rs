@@ -76,7 +76,7 @@ impl FindSizes {
         let start = Instant::now();
         let mut c = 0;
         while start.elapsed().as_secs() < 5 {
-            let photos = Photo::query(true)
+            let photos = p::photos
                 .filter(p::width.is_null())
                 .filter(p::height.is_null())
                 .order((p::is_public.desc(), p::date.desc().nulls_last()))
