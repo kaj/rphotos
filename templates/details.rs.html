@@ -10,7 +10,7 @@
   <meta property='og:description' content='@for p in people {@p.person_name, }@for t in tags {#@t.tag_name, }@if let Some(p) = places.first() {@p.place_name}'>
 }, {
   <div class="details" data-imgid="@photo.id"@if let Some(g) = photo.grade { data-grade="@g"}@if let Some(ref p) = *position { data-position="[@p.x, @p.y]"}>
-    <div class="item"><img src="/img/@photo.id-m.jpg"@if let Some((w,h)) = photo.get_size(SizeTag::Medium.px()) { width="@w" height="@h"}></div>
+    <div class="item"><img src="/img/@photo.id-m.jpg" width="@photo.get_size(SizeTag::Medium).0" height="@photo.get_size(SizeTag::Medium).1"></div>
     <div class="meta">
     @if context.is_authorized() {
     <p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>

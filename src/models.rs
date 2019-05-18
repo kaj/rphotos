@@ -18,8 +18,8 @@ pub struct Photo {
     pub is_public: bool,
     pub camera_id: Option<i32>,
     pub attribution_id: Option<i32>,
-    pub width: Option<i32>,
-    pub height: Option<i32>,
+    pub width: i32,
+    pub height: i32,
 }
 
 use crate::schema::photos;
@@ -73,7 +73,7 @@ impl Photo {
         {
             let mut change = false;
             // TODO Merge updates to one update statement!
-            if pic.width != Some(newwidth) || pic.height != Some(newheight) {
+            if pic.width != newwidth || pic.height != newheight {
                 change = true;
                 pic = diesel::update(photos.find(pic.id))
                     .set((width.eq(newwidth), height.eq(newheight)))
@@ -198,17 +198,14 @@ impl Photo {
         use crate::schema::cameras::dsl::cameras;
         self.camera_id.and_then(|i| cameras.find(i).first(db).ok())
     }
-    pub fn get_size(&self, max_size: u32) -> Option<(u32, u32)> {
-        if let (Some(width), Some(height)) = (self.width, self.height) {
-            let scale = f64::from(max_size) / f64::from(max(width, height));
-            let w = (scale * f64::from(width)) as u32;
-            let h = (scale * f64::from(height)) as u32;
-            match self.rotation {
-                _x @ 0...44 | _x @ 315...360 | _x @ 135...224 => Some((w, h)),
-                _ => Some((h, w)),
-            }
-        } else {
-            None
+    pub fn get_size(&self, size: SizeTag) -> (u32, u32) {
+        let (width, height) = (self.width, self.height);
+        let scale = f64::from(size.px()) / f64::from(max(width, height));
+        let w = (scale * f64::from(width)) as u32;
+        let h = (scale * f64::from(height)) as u32;
+        match self.rotation {
+            _x @ 0...44 | _x @ 315...360 | _x @ 135...224 => (w, h),
+            _ => (h, w),
         }
     }
 
@@ -228,8 +225,8 @@ impl Photo {
             is_public: false,
             camera_id: None,
             attribution_id: None,
-            width: Some(4000),
-            height: Some(3000),
+            width: 4000,
+            height: 3000,
         }
     }
 }

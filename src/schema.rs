@@ -47,8 +47,8 @@ table! {
         is_public -> Bool,
         camera_id -> Nullable<Int4>,
         attribution_id -> Nullable<Int4>,
-        width -> Nullable<Int4>,
-        height -> Nullable<Int4>,
+        width -> Int4,
+        height -> Int4,
     }
 }
 

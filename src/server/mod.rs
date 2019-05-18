@@ -61,8 +61,7 @@ pub struct PhotoLink {
     pub title: Option<String>,
     pub href: String,
     pub id: i32,
-    // Size should not be optional, but make it best-effort for now.
-    pub size: Option<(u32, u32)>,
+    pub size: (u32, u32),
     pub lable: Option<String>,
 }
 
@@ -151,7 +150,7 @@ impl PhotoLink {
                     g.first().map(|p| p.id).unwrap_or(0),
                 ),
                 id: photo.id,
-                size: photo.get_size(SizeTag::Small.px()),
+                size: photo.get_size(SizeTag::Small),
                 lable: Some(lable),
             }
         }
@@ -161,7 +160,7 @@ impl PhotoLink {
             title: p.date.map(|d| d.format("%F").to_string()),
             href: format!("/img/{}", p.id),
             id: p.id,
-            size: p.get_size(SizeTag::Small.px()),
+            size: p.get_size(SizeTag::Small),
             lable: p.date.map(|d| d.format("%T").to_string()),
         }
     }
@@ -170,9 +169,12 @@ impl PhotoLink {
             title: None, // p.date.map(|d| d.format("%F").to_string()),
             href: format!("/img/{}", p.id),
             id: p.id,
-            size: p.get_size(SizeTag::Small.px()),
+            size: p.get_size(SizeTag::Small),
             lable: p.date.map(|d| d.format("%T").to_string()),
         }
+    }
+    pub fn is_portrait(&self) -> bool {
+        self.size.1 > self.size.0
     }
 }
 

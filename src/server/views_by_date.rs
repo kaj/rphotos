@@ -47,7 +47,7 @@ pub fn all_years(context: Context) -> impl Reply {
                 href: format!("/{}/", year.unwrap_or(0)),
                 lable: Some(format!("{} images", count)),
                 id: photo.id,
-                size: photo.get_size(SizeTag::Small.px()),
+                size: photo.get_size(SizeTag::Small),
             }
         })
         .collect::<Vec<_>>();
@@ -91,7 +91,7 @@ pub fn months_in_year(year: i32, context: Context) -> Response<Vec<u8>> {
                 href: format!("/{}/{}/", year, month),
                 lable: Some(format!("{} pictures", count)),
                 id: photo.id,
-                size: photo.get_size(SizeTag::Small.px()),
+                size: photo.get_size(SizeTag::Small),
             }
         })
         .collect::<Vec<_>>();
@@ -167,7 +167,7 @@ pub fn days_in_month(
                 href: format!("/{}/{}/{}", year, month, day),
                 lable: Some(format!("{} pictures", count)),
                 id: photo.id,
-                size: photo.get_size(SizeTag::Small.px()),
+                size: photo.get_size(SizeTag::Small),
             }
         })
         .collect::<Vec<_>>();
@@ -315,7 +315,7 @@ pub fn on_this_day(context: Context) -> impl Reply {
                         href: format!("/{}/{}/{}", year, month, day),
                         lable: Some(format!("{} pictures", count)),
                         id: photo.id,
-                        size: photo.get_size(SizeTag::Small.px()),
+                        size: photo.get_size(SizeTag::Small),
                     }
                 })
                 .collect::<Vec<_>>(),
