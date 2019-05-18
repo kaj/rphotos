@@ -20,7 +20,7 @@ pub struct Args {
     photos: DirOpt,
 
     /// Max time (in seconds) to work.
-    #[structopt(default_value = "10")]
+    #[structopt(long, short = "t", default_value = "10")]
     max_time: u64,
 }
 
