@@ -21,7 +21,6 @@ pub struct Findphotos {
     photos: DirOpt,
 
     /// Base directory to search in (relative to the image root).
-    #[structopt()]
     base: Vec<String>,
 }
 
