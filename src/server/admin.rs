@@ -64,7 +64,6 @@ fn set_tag(context: Context, form: TagForm) -> Response<Vec<u8>> {
     }
     let c = context.db();
     use crate::models::{PhotoTag, Tag};
-    use diesel;
     let tag = {
         use crate::schema::tags::dsl::*;
         tags.filter(tag_name.ilike(&form.tag))
@@ -107,7 +106,6 @@ fn set_person(context: Context, form: PersonForm) -> Response<Vec<u8>> {
     }
     let c = context.db();
     use crate::models::{Person, PhotoPerson};
-    use diesel;
     let person = {
         use crate::schema::people::dsl::*;
         people
