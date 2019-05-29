@@ -190,6 +190,18 @@ ul.alltags, ul.allpeople, ul.allplaces {
     max-height: 60vh;
 }
 
+p.admbuttons {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: space-between;
+    margin: 1ex -.1em 0;
+    button {
+        flex-grow: .1;
+        margin: .1em;
+        padding: 0;
+    }
+}
+
 form {
     border: $border;
     margin: auto;

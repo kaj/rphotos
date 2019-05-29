@@ -309,6 +309,7 @@
     var meta = details.querySelector('.meta');
     if (meta) {
         p = d.createElement("p");
+        p.className = 'admbuttons';
         r = d.createElement("button");
         r.onclick = rotate;
         r.innerHTML = "\u27f2";
