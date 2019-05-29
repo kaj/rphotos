@@ -6,6 +6,7 @@ use diesel::prelude::*;
 use diesel::result::Error as DieselError;
 use diesel::sql_types::Integer;
 use log::error;
+use slug::slugify;
 use std::cmp::max;
 
 #[derive(AsChangeset, Clone, Debug, Identifiable, Queryable)]
@@ -250,6 +251,23 @@ pub struct Person {
     pub id: i32,
     pub slug: String,
     pub person_name: String,
+}
+
+impl Person {
+    pub fn get_or_create_name(
+        db: &PgConnection,
+        name: &str,
+    ) -> Result<Person, DieselError> {
+        use crate::schema::people::dsl::*;
+        people
+            .filter(person_name.ilike(name))
+            .first(db)
+            .or_else(|_| {
+                diesel::insert_into(people)
+                    .values((person_name.eq(name), slug.eq(&slugify(name))))
+                    .get_result(db)
+            })
+    }
 }
 
 #[derive(Debug, Clone, Queryable)]

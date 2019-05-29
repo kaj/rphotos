@@ -106,21 +106,8 @@ fn set_person(context: Context, form: PersonForm) -> Response<Vec<u8>> {
     }
     let c = context.db();
     use crate::models::{Person, PhotoPerson};
-    let person = {
-        use crate::schema::people::dsl::*;
-        people
-            .filter(person_name.ilike(&form.person))
-            .first::<Person>(c)
-            .or_else(|_| {
-                diesel::insert_into(people)
-                    .values((
-                        person_name.eq(&form.person),
-                        slug.eq(&slugify(&form.person)),
-                    ))
-                    .get_result::<Person>(c)
-            })
-            .expect("Find or create tag")
-    };
+    let person = Person::get_or_create_name(&c, &form.person)
+        .expect("Find or create person");
     use crate::schema::photo_people::dsl::*;
     let q = photo_people
         .filter(photo_id.eq(form.image))
