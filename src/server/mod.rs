@@ -420,7 +420,7 @@ fn show_image(img: ImgName, context: Context) -> Response<Vec<u8>> {
                     }
                 }
             } else {
-                let data = get_image_data(context, &tphoto, img.size)
+                let data = get_image_data(&context, &tphoto, img.size)
                     .expect("Get image data");
                 return Response::builder()
                     .status(StatusCode::OK)
@@ -483,7 +483,7 @@ fn parse_bad_imgname_2() {
 }
 
 fn get_image_data(
-    context: Context,
+    context: &Context,
     photo: &Photo,
     size: SizeTag,
 ) -> Result<Vec<u8>, image::ImageError> {
