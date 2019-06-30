@@ -34,8 +34,6 @@ enum RPhotos {
     Fetchplaces(fetch_places::Fetchplaces),
     /// Find new photos in the photo directory
     Findphotos(findphotos::Findphotos),
-    /// Find sizes of images lacking that info in db
-    FindSizes(findphotos::FindSizes),
     /// Make sure the photos has thumbnails stored in cache.
     ///
     /// The time limit is checked after each stored image, so the
@@ -115,7 +113,6 @@ fn main() {
 fn run(args: &RPhotos) -> Result<(), Error> {
     match args {
         RPhotos::Findphotos(cmd) => cmd.run(),
-        RPhotos::FindSizes(cmd) => cmd.run(),
         RPhotos::Makepublic(cmd) => cmd.run(),
         RPhotos::Stats(db) => show_stats(&db.connect()?),
         RPhotos::Userlist { db } => users::list(&db.connect()?),

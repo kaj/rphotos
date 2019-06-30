@@ -6,10 +6,8 @@ use crate::{DbOpt, DirOpt};
 use diesel::insert_into;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use image::GenericImageView;
 use log::{debug, info, warn};
 use std::path::Path;
-use std::time::Instant;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -56,83 +54,6 @@ fn crawl(
         },
     )?;
     Ok(())
-}
-
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
-pub struct FindSizes {
-    #[structopt(flatten)]
-    db: DbOpt,
-    #[structopt(flatten)]
-    photos: DirOpt,
-}
-
-impl FindSizes {
-    pub fn run(&self) -> Result<(), Error> {
-        let db = self.db.connect()?;
-        let pd = PhotosDir::new(&self.photos.photos_dir);
-        use crate::schema::photos::dsl as p;
-        let start = Instant::now();
-        let mut c = 0;
-        while start.elapsed().as_secs() < 5 {
-            let photos = p::photos
-                .filter(p::width.is_null())
-                .filter(p::height.is_null())
-                .order((p::is_public.desc(), p::date.desc().nulls_last()))
-                .limit(10)
-                .load::<Photo>(&db)?;
-
-            if photos.is_empty() {
-                break;
-            } else {
-                c += photos.len();
-            }
-
-            for photo in photos {
-                let path = pd.get_raw_path(&photo);
-                let (width, height) = match ExifData::read_from(&path)
-                    .and_then(|exif| {
-                        Ok((
-                            exif.width.ok_or(Error::MissingWidth)?,
-                            exif.height.ok_or(Error::MissingHeight)?,
-                        ))
-                    }) {
-                    Ok((width, height)) => (width, height),
-                    Err(e) => {
-                        info!(
-                            "No exif size in {}: {}, read actual size",
-                            path.display(),
-                            e
-                        );
-                        let image = image::open(&path).map_err(|e| {
-                            Error::Other(format!(
-                                "Failed to read image {}: {}",
-                                path.display(),
-                                e
-                            ))
-                        })?;
-                        (image.width(), image.height())
-                    }
-                };
-                diesel::update(p::photos.find(photo.id))
-                    .set((
-                        p::width.eq(width as i32),
-                        p::height.eq(height as i32),
-                    ))
-                    .execute(&db)?;
-                debug!("Store img #{} size {} x {}", photo.id, width, height);
-            }
-        }
-
-        let e = start.elapsed();
-        info!(
-            "Found size of {} images in {}.{:03} s",
-            c,
-            e.as_secs(),
-            e.subsec_millis(),
-        );
-        Ok(())
-    }
 }
 
 fn save_photo(
