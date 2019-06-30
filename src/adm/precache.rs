@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
+#[structopt(rename_all = "kebab-case")]
 pub struct Args {
     #[structopt(flatten)]
     cache: CacheOpt,
