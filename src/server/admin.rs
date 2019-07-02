@@ -1,7 +1,7 @@
 //! Admin-only views, generally called by javascript.
-use super::{not_found, permission_denied, redirect_to_img, Context, SizeTag};
+use super::{not_found, permission_denied, redirect_to_img, Context};
 use crate::fetch_places::update_image_places;
-use crate::models::{Coord, Photo};
+use crate::models::{Coord, Photo, SizeTag};
 use diesel::{self, prelude::*};
 use log::{info, warn};
 use serde::Deserialize;

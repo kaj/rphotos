@@ -1,8 +1,7 @@
 use super::result::Error;
-use crate::models::Photo;
+use crate::models::{Photo, SizeTag};
 use crate::photosdir::PhotosDir;
 use crate::schema::photos::dsl::{date, is_public};
-use crate::server::SizeTag;
 use crate::{CacheOpt, DbOpt, DirOpt};
 use diesel::prelude::*;
 use log::{debug, info};

@@ -1,9 +1,7 @@
 use super::render_ructe::RenderRucte;
 use super::splitlist::links_by_time;
-use super::{
-    not_found, redirect_to_img, Context, ImgRange, Link, PhotoLink, SizeTag,
-};
-use crate::models::Photo;
+use super::{not_found, redirect_to_img, Context, ImgRange, Link, PhotoLink};
+use crate::models::{Photo, SizeTag};
 use crate::templates;
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use chrono::Duration as ChDuration;

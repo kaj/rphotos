@@ -1,4 +1,3 @@
-use crate::server::SizeTag;
 use chrono::naive::NaiveDateTime;
 use diesel;
 use diesel::pg::PgConnection;
@@ -342,6 +341,23 @@ impl From<(i32, i32)> for Coord {
         Coord {
             x: f64::from(lat) / 1e6,
             y: f64::from(long) / 1e6,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SizeTag {
+    Small,
+    Medium,
+    Large,
+}
+
+impl SizeTag {
+    pub fn px(self) -> u32 {
+        match self {
+            SizeTag::Small => 240,
+            SizeTag::Medium => 960,
+            SizeTag::Large => 1900,
         }
     }
 }

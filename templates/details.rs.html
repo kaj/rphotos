@@ -1,6 +1,6 @@
 @use super::page_base;
-@use crate::models::{Photo, Person, Place, Tag, Camera, Coord};
-@use crate::server::{Context, Link, SizeTag};
+@use crate::models::{Photo, Person, Place, Tag, Camera, Coord, SizeTag};
+@use crate::server::{Context, Link};
 
 @(context: &Context, lpath: &[Link], people: &[Person], places: &[Place], tags: &[Tag], position: &Option<Coord>, attribution: &Option<String>, camera: &Option<Camera>, photo: &Photo)
 @:page_base(context, "Photo details", lpath, {
