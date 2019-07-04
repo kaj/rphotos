@@ -43,7 +43,7 @@ pub fn passwd(db: &PgConnection, uname: &str) -> Result<(), Error> {
 }
 
 fn random_password(len: usize) -> String {
-    let mut rng = thread_rng();
+    let rng = thread_rng();
     // Note; I would like to have lowercase letters more probable
     use rand::distributions::Alphanumeric;
     rng.sample_iter(&Alphanumeric).take(len).collect()
