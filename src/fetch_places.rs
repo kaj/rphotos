@@ -144,6 +144,7 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
             })
             .or_else(|| match tags.get("boundary").and_then(Value::as_str) {
                 Some("national_park") => Some(14),
+                Some("historic") => Some(7), // Seems to be mainly "Landskap"
                 _ => None,
             })
             .or_else(|| match tags.get("building").and_then(Value::as_str) {
@@ -175,6 +176,7 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
             })
             .or_else(|| match tags.get("amenity").and_then(Value::as_str) {
                 Some("exhibition_center") => Some(20),
+                Some("bus_station") => Some(16),
                 Some("place_of_worship") => Some(15),
                 Some("university") => Some(12),
                 _ => None,
