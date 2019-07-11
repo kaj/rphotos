@@ -159,6 +159,7 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 _ => None,
             })
             .or_else(|| match tags.get("landuse").and_then(Value::as_str) {
+                Some("allotments") => Some(14),
                 Some("industrial") => Some(11),
                 Some("residential") => Some(11),
                 _ => None,
@@ -179,6 +180,14 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("bus_station") => Some(16),
                 Some("place_of_worship") => Some(15),
                 Some("university") => Some(12),
+                _ => None,
+            })
+            .or_else(|| match tags.get("aeroway").and_then(Value::as_str) {
+                Some("aerodrome") => Some(14),
+                _ => None,
+            })
+            .or_else(|| match tags.get("natural").and_then(Value::as_str) {
+                Some("scrub") => Some(18),
                 _ => None,
             });
         if let (Some(name), Some(level)) = (name, level) {
