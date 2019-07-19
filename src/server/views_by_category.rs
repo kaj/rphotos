@@ -170,5 +170,5 @@ pub fn auto_complete_person(context: Context, query: AcQ) -> impl Reply {
 
 #[derive(Deserialize)]
 pub struct AcQ {
-    q: String,
+    pub q: String,
 }

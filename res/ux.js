@@ -1,4 +1,8 @@
 (function(d) {
+  if (d.querySelector('main form.search')) {
+    d.querySelector('header form.search').remove();
+    d.querySelector('main form.search input#s_q').focus();
+  }
   let f = d.querySelector('footer');
   f.insertAdjacentHTML(
     'afterbegin',
@@ -92,4 +96,77 @@
       };
     })
   }
+
+  (function(form) {
+    form.classList.add('hidden');
+    let sl = form.querySelector('label');
+    sl.addEventListener('click', e => form.classList.remove('hidden'))
+    let list = d.createElement('div');
+    list.className = 'list';
+    let tags = form.querySelector('div.refs');
+    form.insertBefore(list, tags);
+    let kindname = { 't': 'tag', 'p': 'person', 'l': 'place'}
+    let input = form.querySelector('input[name=q]');
+    input.autocomplete = "off";
+    input.addEventListener('keyup', e => {
+      let v = e.target.value;
+      if (new Set(['ArrowUp', 'ArrowDown', 'Escape']).has(e.code)) {
+	return;
+      }
+      if (v.length > 1) {
+	let r = new XMLHttpRequest();
+	r.onload = function() {
+	  let t = JSON.parse(this.responseText);
+	  list.innerHTML = '';
+	  t.map(x => {
+	    let a = d.createElement('a');
+	    a.innerHTML = x.t + ' <small>(' + kindname[x.k] + ')</small>';
+	    a.className='hit ' + x.k;
+	    a.href = x.s;
+	    a.onclick = function() {
+	      let s = d.createElement('label');
+	      s.innerHTML = x.t + ' <input type="checkbox" checked name="' + x.k +
+		'" value="' + x.s + '">';
+	      s.className = x.k;
+	      tags.insertBefore(s, input);
+	      list.innerHTML = '';
+	      input.value = '';
+	      input.focus();
+	      return false;
+	    }
+	    list.appendChild(a)
+	  })
+	};
+	r.open('GET', d.location.origin + '/ac?q=' + encodeURIComponent(v));
+	r.send(null);
+      } else {
+	list.innerHTML = '';
+      }
+    })
+    form.addEventListener('keyup', e => {
+      let t = e.target;
+      switch(e.code) {
+      case 'ArrowUp':
+	(t.parentNode == list && t.previousSibling || list.querySelector('a:last-child')).focus();
+	break;
+      case 'ArrowDown':
+	(t.parentNode == list && t.nextSibling || list.querySelector('a:first-child')).focus();
+	break;
+      case 'Escape':
+	if (list.hasChildNodes()) {
+	  input.focus();
+	  list.innerHTML = '';
+	} else {
+	  form.classList.add('hidden');
+	}
+	break;
+      default:
+	return true;
+      };
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    });
+    //form.querySelector('.help .js').innerHTML = 'Du kan begränsa din sökning till de taggar som föreslås.';
+  })(d.querySelector('form.search'));
 })(document)

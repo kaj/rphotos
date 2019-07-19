@@ -1,0 +1,38 @@
+@use super::{data_positions, page_base, photo_link};
+@use crate::models::Coord;
+@use crate::server::{Context, PhotoLink};
+@use crate::server::search::SearchQuery;
+
+@(context: &Context, query: &SearchQuery, photos: &[PhotoLink], coords: &[(Coord, i32)])
+
+@:page_base(context, "Search", &[], {}, {
+
+  <form class="search" action="/search/" method="get">
+    <label for="s_q" accesskey="s" title="Search">🔍</label>
+    <div class="refs">
+      @for tag in &query.t {
+        <label class="t">@tag.tag_name <input type="checkbox" name="t" value="@tag.slug" checked/></label>
+      }
+      @for location in &query.l {
+        <label class="l">@location.place_name <input type="checkbox" name="l" value="@location.slug" checked/></label>
+      }
+      @for person in &query.p {
+        <label class="p">@person.person_name <input type="checkbox" name="p" value="@person.slug" checked/></label>
+      }
+      <input id="s_q" name="q" type="search"/>
+    </div>
+    <div class="time">
+      <span><input type="date" name="since_date" value='@query.since.map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default()'><input type="time" name="since_time" value='@query.since.map(|d| d.format("%H:%M:%S").to_string()).unwrap_or_default()'></span>
+      -
+      <span><input type="date" name="until_date" value='@query.until.map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default()'><input type="time" name="until_time" value='@query.until.map(|d| d.format("%H:%M:%S").to_string()).unwrap_or_default()'></span>
+    </div>
+  </form>
+  @if !query.q.is_empty() {
+  <p>Sorry, no raw queries supported yet.
+  Try selection some suggestions
+  (javascript is needed for this, sorry again).</p>
+  }
+  <div class="group"@:data_positions(coords)>
+    @for p in photos {@:photo_link(p)}
+  </div>
+})

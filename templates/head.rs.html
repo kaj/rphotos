@@ -13,4 +13,8 @@
 <span>· <a href="/random" accesskey="r">Random pic</a></span>
 @if let Some(ref u) = context.authorized_user() {<span class="user">@u (<a href="/logout">log out</a>)</span>}
 else {<span class="user">(<a href="/login?next=@context.path_without_query()">log in</a>)</span>}
+<form class="search" action="/search/" method="get">
+  <label for="s_q" accesskey="s" title="Search">🔍</label>
+  <div class="refs"><input id="s_q" name="q" type="search"/></div>
+</form>
 </header>

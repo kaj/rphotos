@@ -4,6 +4,7 @@ mod image;
 mod login;
 mod photolink;
 mod render_ructe;
+pub mod search;
 mod splitlist;
 mod views_by_category;
 mod views_by_date;
@@ -12,6 +13,7 @@ use self::context::create_session_filter;
 pub use self::context::Context;
 pub use self::photolink::PhotoLink;
 use self::render_ructe::RenderRucte;
+use self::search::*;
 use self::splitlist::*;
 use self::views_by_category::*;
 use self::views_by_date::*;
@@ -100,8 +102,10 @@ pub fn run(args: &Args) -> Result<(), Error> {
         .or(get().and(path("thisday")).and(end()).and(s()).map(on_this_day))
         .or(get().and(path("next")).and(end()).and(s()).and(query()).map(next_image))
         .or(get().and(path("prev")).and(end()).and(s()).and(query()).map(prev_image))
+        .or(get().and(path("ac")).and(end()).and(s()).and(query()).map(auto_complete_any))
         .or(get().and(path("ac")).and(path("tag")).and(s()).and(query()).map(auto_complete_tag))
         .or(get().and(path("ac")).and(path("person")).and(s()).and(query()).map(auto_complete_person))
+        .or(get().and(path("search")).and(end()).and(s()).and(query()).map(search))
         .or(path("adm").and(admin::routes(s())));
     warp::serve(routes.recover(customize_error)).run(args.listen);
     Ok(())
