@@ -130,24 +130,24 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
             .get("admin_level")
             .and_then(Value::as_str)
             .and_then(|l| l.parse().ok())
-            .or_else(|| match tags.get("leisure").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "leisure") {
                 Some("garden") => Some(18),
                 Some("nature_reserve") => Some(12),
                 Some("park") => Some(14),
                 Some("playground") => Some(16),
                 _ => None,
             })
-            .or_else(|| match tags.get("tourism").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "tourism") {
                 Some("attraction") => Some(16),
                 Some("theme_park") | Some("zoo") => Some(14),
                 _ => None,
             })
-            .or_else(|| match tags.get("boundary").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "boundary") {
                 Some("national_park") => Some(14),
                 Some("historic") => Some(7), // Seems to be mainly "Landskap"
                 _ => None,
             })
-            .or_else(|| match tags.get("building").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "building") {
                 Some("church") => Some(20),
                 Some("exhibition_center") => Some(19),
                 Some("industrial") => Some(20),
@@ -160,7 +160,7 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("yes") => Some(20),
                 _ => None,
             })
-            .or_else(|| match tags.get("landuse").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "landuse") {
                 Some("allotments") => Some(14),
                 Some("commercial") => Some(12),
                 Some("grass") => Some(13),
@@ -169,18 +169,16 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("retail") => Some(13),
                 _ => None,
             })
-            .or_else(|| match tags.get("highway").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "highway") {
                 Some("pedestrian") => Some(15), // torg
                 Some("rest_area") => Some(16),
                 _ => None,
             })
-            .or_else(|| {
-                match tags.get("public_transport").and_then(Value::as_str) {
-                    Some("station") => Some(18),
-                    _ => None,
-                }
+            .or_else(|| match tag_str(tags, "public_transport") {
+                Some("station") => Some(18),
+                _ => None,
             })
-            .or_else(|| match tags.get("amenity").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "amenity") {
                 Some("bus_station") => Some(16),
                 Some("exhibition_center") => Some(20),
                 Some("kindergarten") => Some(15),
@@ -189,40 +187,38 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("university") => Some(12),
                 _ => None,
             })
-            .or_else(|| match tags.get("aeroway").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "aeroway") {
                 Some("aerodrome") => Some(14),
                 _ => None,
             })
-            .or_else(|| match tags.get("water").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "water") {
                 Some("lake") => Some(15),
                 _ => None,
             })
-            .or_else(|| match tags.get("waterway").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "waterway") {
                 Some("riverbank") => Some(16),
                 _ => None,
             })
-            .or_else(|| match tags.get("man_made").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "man_made") {
                 Some("bridge") => Some(17),
                 _ => None,
             })
-            .or_else(|| match tags.get("place").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "place") {
                 Some("islet") => Some(17),
                 Some("island") => Some(13),
                 Some("region") => Some(8),
                 Some("suburb") => Some(11),
                 _ => None,
             })
-            .or_else(|| match tags.get("natural").and_then(Value::as_str) {
+            .or_else(|| match tag_str(tags, "natural") {
                 Some("bay") => Some(14),
                 Some("wood") => Some(14),
                 Some("scrub") => Some(18),
                 _ => None,
             })
-            .or_else(|| {
-                match tags.get("political_division").and_then(Value::as_str) {
-                    Some("canton") => Some(9),
-                    _ => None,
-                }
+            .or_else(|| match tag_str(tags, "political_division") {
+                Some("canton") => Some(9),
+                _ => None,
             });
         if let (Some(name), Some(level)) = (name, level) {
             debug!("{} is level {}", name, level);
@@ -234,6 +230,10 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
         warn!("Tag-less object {:?}", obj);
         None
     }
+}
+
+fn tag_str<'a>(tags: &'a Value, name: &str) -> Option<&'a str> {
+    tags.get(name).and_then(Value::as_str)
 }
 
 fn get_or_create_place(
