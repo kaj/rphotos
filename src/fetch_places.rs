@@ -149,19 +149,24 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
             })
             .or_else(|| match tags.get("building").and_then(Value::as_str) {
                 Some("church") => Some(20),
-                Some("exhibition_center") => Some(20),
+                Some("exhibition_center") => Some(19),
                 Some("industrial") => Some(20),
+                Some("museum") => Some(20),
                 Some("office") => Some(20),
                 Some("public") => Some(20),
                 Some("retail") => Some(20),
+                Some("sports_hall") => Some(19),
                 Some("university") => Some(20),
                 Some("yes") => Some(20),
                 _ => None,
             })
             .or_else(|| match tags.get("landuse").and_then(Value::as_str) {
                 Some("allotments") => Some(14),
+                Some("commercial") => Some(12),
+                Some("grass") => Some(13),
                 Some("industrial") => Some(11),
                 Some("residential") => Some(11),
+                Some("retail") => Some(13),
                 _ => None,
             })
             .or_else(|| match tags.get("highway").and_then(Value::as_str) {
@@ -176,9 +181,11 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 }
             })
             .or_else(|| match tags.get("amenity").and_then(Value::as_str) {
-                Some("exhibition_center") => Some(20),
                 Some("bus_station") => Some(16),
+                Some("exhibition_center") => Some(20),
+                Some("kindergarten") => Some(15),
                 Some("place_of_worship") => Some(15),
+                Some("school") => Some(14),
                 Some("university") => Some(12),
                 _ => None,
             })
@@ -186,9 +193,36 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("aerodrome") => Some(14),
                 _ => None,
             })
+            .or_else(|| match tags.get("water").and_then(Value::as_str) {
+                Some("lake") => Some(15),
+                _ => None,
+            })
+            .or_else(|| match tags.get("waterway").and_then(Value::as_str) {
+                Some("riverbank") => Some(16),
+                _ => None,
+            })
+            .or_else(|| match tags.get("man_made").and_then(Value::as_str) {
+                Some("bridge") => Some(17),
+                _ => None,
+            })
+            .or_else(|| match tags.get("place").and_then(Value::as_str) {
+                Some("islet") => Some(17),
+                Some("island") => Some(13),
+                Some("region") => Some(8),
+                Some("suburb") => Some(11),
+                _ => None,
+            })
             .or_else(|| match tags.get("natural").and_then(Value::as_str) {
+                Some("bay") => Some(14),
+                Some("wood") => Some(14),
                 Some("scrub") => Some(18),
                 _ => None,
+            })
+            .or_else(|| {
+                match tags.get("political_division").and_then(Value::as_str) {
+                    Some("canton") => Some(9),
+                    _ => None,
+                }
             });
         if let (Some(name), Some(level)) = (name, level) {
             debug!("{} is level {}", name, level);
