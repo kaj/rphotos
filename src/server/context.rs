@@ -1,3 +1,5 @@
+use super::Args;
+use crate::fetch_places::OverpassOpt;
 use crate::photosdir::PhotosDir;
 use crypto::sha2::Sha256;
 use diesel::pg::PgConnection;
@@ -7,7 +9,6 @@ use log::{debug, error, warn};
 use r2d2_memcache::r2d2::Error;
 use r2d2_memcache::MemcacheConnectionManager;
 use std::collections::BTreeMap;
-use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use warp::filters::{cookie, BoxedFilter};
@@ -20,18 +21,8 @@ type PooledPg = PooledConnection<ConnectionManager<PgConnection>>;
 type MemcachePool = Pool<MemcacheConnectionManager>;
 type PooledMemcache = PooledConnection<MemcacheConnectionManager>;
 
-pub fn create_session_filter(
-    db_url: &str,
-    memcache_server: &str,
-    photos_dir: &Path,
-    jwt_secret: &str,
-) -> BoxedFilter<(Context,)> {
-    let global = Arc::new(GlobalContext::new(
-        db_url,
-        memcache_server,
-        photos_dir,
-        jwt_secret,
-    ));
+pub fn create_session_filter(args: &Args) -> BoxedFilter<(Context,)> {
+    let global = Arc::new(GlobalContext::new(args));
     warp::any()
         .and(path::full())
         .and(cookie::optional("EXAUTH"))
@@ -55,28 +46,27 @@ struct GlobalContext {
     photosdir: PhotosDir,
     memcache_pool: MemcachePool,
     jwt_secret: String,
+    overpass: OverpassOpt,
 }
 
 impl GlobalContext {
-    fn new(
-        db_url: &str,
-        memcache_server: &str,
-        photos_dir: &Path,
-        jwt_secret: &str,
-    ) -> Self {
-        let db_manager = ConnectionManager::<PgConnection>::new(db_url);
-        let mc_manager = MemcacheConnectionManager::new(memcache_server);
+    fn new(args: &Args) -> Self {
+        let db_manager =
+            ConnectionManager::<PgConnection>::new(&args.db.db_url);
+        let mc_manager =
+            MemcacheConnectionManager::new(args.cache.memcached_url.as_ref());
         GlobalContext {
             db_pool: Pool::builder()
                 .connection_timeout(Duration::from_secs(1))
                 .build(db_manager)
                 .expect("Posgresql pool"),
-            photosdir: PhotosDir::new(photos_dir),
+            photosdir: PhotosDir::new(&args.photos.photos_dir),
             memcache_pool: Pool::builder()
                 .connection_timeout(Duration::from_secs(1))
                 .build(mc_manager)
                 .expect("Memcache pool"),
-            jwt_secret: jwt_secret.into(),
+            jwt_secret: args.jwt_key.clone(),
+            overpass: args.overpass.clone(),
         }
     }
 
@@ -200,6 +190,9 @@ impl Context {
     }
     pub fn photos(&self) -> &PhotosDir {
         &self.global.photosdir
+    }
+    pub fn overpass(&self) -> &OverpassOpt {
+        &self.global.overpass
     }
 
     pub fn make_token(&self, user: &str) -> Option<String> {

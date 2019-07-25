@@ -1,6 +1,5 @@
 //! Admin-only views, generally called by javascript.
 use super::{not_found, permission_denied, redirect_to_img, Context};
-use crate::fetch_places::update_image_places;
 use crate::models::{Coord, Photo, SizeTag};
 use diesel::{self, prelude::*};
 use log::{info, warn};
@@ -186,7 +185,7 @@ fn set_location(context: Context, form: CoordForm) -> Response<Vec<u8>> {
         .execute(db)
         .expect("Insert image position");
 
-    match update_image_places(db, form.image) {
+    match context.overpass().update_image_places(db, form.image) {
         Ok(()) => (),
         // TODO Tell the user something failed?
         Err(err) => warn!("Failed to fetch places: {:?}", err),

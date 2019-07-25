@@ -19,6 +19,7 @@ use self::views_by_category::*;
 use self::views_by_date::*;
 use super::{CacheOpt, DbOpt, DirOpt};
 use crate::adm::result::Error;
+use crate::fetch_places::OverpassOpt;
 use crate::models::Photo;
 use crate::pidfiles::handle_pid_file;
 use crate::templates::{self, Html};
@@ -41,6 +42,8 @@ pub struct Args {
     cache: CacheOpt,
     #[structopt(flatten)]
     photos: DirOpt,
+    #[structopt(flatten)]
+    overpass: OverpassOpt,
 
     /// Write (and read, if --replace) a pid file with the name
     /// given as <PIDFILE>.
@@ -65,12 +68,7 @@ pub fn run(args: &Args) -> Result<(), Error> {
     if let Some(pidfile) = &args.pidfile {
         handle_pid_file(&pidfile, args.replace).unwrap()
     }
-    let session_filter = create_session_filter(
-        &args.db.db_url,
-        &args.cache.memcached_url,
-        &args.photos.photos_dir,
-        &args.jwt_key,
-    );
+    let session_filter = create_session_filter(args);
     let s = move || session_filter.clone();
     use warp::filters::query::query;
     use warp::path::{end, param};

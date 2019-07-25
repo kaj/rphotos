@@ -14,6 +14,9 @@ use structopt::StructOpt;
 pub struct Fetchplaces {
     #[structopt(flatten)]
     db: DbOpt,
+    #[structopt(flatten)]
+    overpass: OverpassOpt,
+
     /// Max number of photos to use for --auto
     #[structopt(long, short, default_value = "5")]
     limit: i64,
@@ -41,78 +44,101 @@ impl Fetchplaces {
                 .load::<(i32, Coord)>(&db)?;
             for (photo_id, coord) in result {
                 println!("Find places for #{}, {:?}", photo_id, coord);
-                update_image_places(&db, photo_id)?;
+                self.overpass.update_image_places(&db, photo_id)?;
             }
         } else {
             for photo in &self.photos {
-                update_image_places(&db, *photo)?;
+                self.overpass.update_image_places(&db, *photo)?;
             }
         }
         Ok(())
     }
 }
 
-pub fn update_image_places(c: &PgConnection, image: i32) -> Result<(), Error> {
-    use crate::schema::positions::dsl::*;
-    let coord = positions
-        .filter(photo_id.eq(image))
-        .select((latitude, longitude))
-        .first::<Coord>(c)
-        .optional()
-        .map_err(|e| Error::Db(image, e))?
-        .ok_or_else(|| Error::NoPosition(image))?;
-    debug!("Should get places for #{} at {:?}", image, coord);
-    let data = Client::new()
-        .post("https://overpass.kumi.systems/api/interpreter")
-        .body(format!("[out:json];is_in({},{});out;", coord.x, coord.y))
-        .send()
-        .and_then(Response::error_for_status)
-        .and_then(|mut r| r.json::<Value>())
-        .map_err(|e| Error::Server(image, e))?;
+#[derive(Clone, Debug, StructOpt)]
+#[structopt(rename_all = "kebab-case")]
+pub struct OverpassOpt {
+    /// How to connect to the overpass API.
+    ///
+    /// See https://wiki.openstreetmap.org/wiki/Overpass_API for
+    /// available servers and policies.
+    #[structopt(long, env = "OVERPASS_URL")]
+    overpass_url: String,
+}
 
-    if let Some(elements) = data
-        .as_object()
-        .and_then(|o| o.get("elements"))
-        .and_then(Value::as_array)
-    {
-        for obj in elements {
-            if let (Some(t_osm_id), Some((name, level))) =
-                (osm_id(obj), name_and_level(obj))
-            {
-                debug!("{}: {} (level {})", t_osm_id, name, level);
-                let place = get_or_create_place(c, t_osm_id, name, level)
-                    .map_err(|e| Error::Db(image, e))?;
-                if place.osm_id.is_none() {
-                    debug!("Matched {:?} by name, update osm info", place);
-                    use crate::schema::places::dsl::*;
-                    diesel::update(places)
-                        .filter(id.eq(place.id))
-                        .set((osm_id.eq(Some(t_osm_id)), osm_level.eq(level)))
-                        .execute(c)
+impl OverpassOpt {
+    pub fn update_image_places(
+        &self,
+        c: &PgConnection,
+        image: i32,
+    ) -> Result<(), Error> {
+        use crate::schema::positions::dsl::*;
+        let coord = positions
+            .filter(photo_id.eq(image))
+            .select((latitude, longitude))
+            .first::<Coord>(c)
+            .optional()
+            .map_err(|e| Error::Db(image, e))?
+            .ok_or_else(|| Error::NoPosition(image))?;
+        debug!("Should get places for #{} at {:?}", image, coord);
+        let data = Client::new()
+            .post(&self.overpass_url)
+            .body(format!("[out:json];is_in({},{});out;", coord.x, coord.y))
+            .send()
+            .and_then(Response::error_for_status)
+            .and_then(|mut r| r.json::<Value>())
+            .map_err(|e| Error::Server(image, e))?;
+
+        if let Some(elements) = data
+            .as_object()
+            .and_then(|o| o.get("elements"))
+            .and_then(Value::as_array)
+        {
+            for obj in elements {
+                if let (Some(t_osm_id), Some((name, level))) =
+                    (osm_id(obj), name_and_level(obj))
+                {
+                    debug!("{}: {} (level {})", t_osm_id, name, level);
+                    let place = get_or_create_place(c, t_osm_id, name, level)
                         .map_err(|e| Error::Db(image, e))?;
-                }
-                use crate::models::PhotoPlace;
-                use crate::schema::photo_places::dsl::*;
-                let q = photo_places
-                    .filter(photo_id.eq(image))
-                    .filter(place_id.eq(place.id));
-                if q.first::<PhotoPlace>(c).is_ok() {
-                    debug!(
-                        "Photo #{} already has {} ({})",
-                        image, place.id, place.place_name
-                    );
+                    if place.osm_id.is_none() {
+                        debug!("Matched {:?} by name, update osm info", place);
+                        use crate::schema::places::dsl::*;
+                        diesel::update(places)
+                            .filter(id.eq(place.id))
+                            .set((
+                                osm_id.eq(Some(t_osm_id)),
+                                osm_level.eq(level),
+                            ))
+                            .execute(c)
+                            .map_err(|e| Error::Db(image, e))?;
+                    }
+                    use crate::models::PhotoPlace;
+                    use crate::schema::photo_places::dsl::*;
+                    let q = photo_places
+                        .filter(photo_id.eq(image))
+                        .filter(place_id.eq(place.id));
+                    if q.first::<PhotoPlace>(c).is_ok() {
+                        debug!(
+                            "Photo #{} already has {} ({})",
+                            image, place.id, place.place_name
+                        );
+                    } else {
+                        diesel::insert_into(photo_places)
+                            .values((
+                                photo_id.eq(image),
+                                place_id.eq(place.id),
+                            ))
+                            .execute(c)
+                            .map_err(|e| Error::Db(image, e))?;
+                    }
                 } else {
-                    diesel::insert_into(photo_places)
-                        .values((photo_id.eq(image), place_id.eq(place.id)))
-                        .execute(c)
-                        .map_err(|e| Error::Db(image, e))?;
+                    info!("Unused area: {}", obj);
                 }
-            } else {
-                info!("Unused area: {}", obj);
             }
         }
+        Ok(())
     }
-    Ok(())
 }
 
 fn osm_id(obj: &Value) -> Option<i64> {
@@ -156,6 +182,7 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("public") => Some(20),
                 Some("retail") => Some(20),
                 Some("sports_hall") => Some(19),
+                Some("theatre") => Some(20),
                 Some("university") => Some(20),
                 Some("yes") => Some(20),
                 _ => None,
