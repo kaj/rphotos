@@ -12,22 +12,22 @@ pub fn links_by_time<'a>(
     range: ImgRange,
     with_date: bool,
 ) -> (Vec<PhotoLink>, Vec<(Coord, i32)>) {
-    let c = context.db();
+    let c = context.db().unwrap();
     use crate::schema::photos::dsl::{date, id};
-    let photos = if let Some(from_date) = range.from.map(|i| date_of_img(c, i))
-    {
-        photos.filter(date.ge(from_date))
-    } else {
-        photos
-    };
-    let photos = if let Some(to_date) = range.to.map(|i| date_of_img(c, i)) {
+    let photos =
+        if let Some(from_date) = range.from.map(|i| date_of_img(&c, i)) {
+            photos.filter(date.ge(from_date))
+        } else {
+            photos
+        };
+    let photos = if let Some(to_date) = range.to.map(|i| date_of_img(&c, i)) {
         photos.filter(date.le(to_date))
     } else {
         photos
     };
     let photos = photos
         .order((date.desc().nulls_last(), id.desc()))
-        .load(c)
+        .load(&c)
         .unwrap();
     (
         if let Some(groups) = split_to_groups(&photos) {
@@ -46,7 +46,7 @@ pub fn links_by_time<'a>(
                 })
                 .collect()
         },
-        get_positions(&photos, c),
+        get_positions(&photos, &c),
     )
 }
 

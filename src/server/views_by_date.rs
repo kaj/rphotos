@@ -16,14 +16,14 @@ use warp::Reply;
 
 pub fn all_years(context: Context) -> impl Reply {
     use crate::schema::photos::dsl::{date, grade};
-
+    let db = context.db().unwrap();
     let groups = Photo::query(context.is_authorized())
         .select(sql::<(Nullable<Integer>, BigInt)>(
             "cast(extract(year from date) as int) y, count(*)",
         ))
         .group_by(sql::<Nullable<Integer>>("y"))
         .order(sql::<Nullable<Integer>>("y").desc().nulls_last())
-        .load::<(Option<i32>, i64)>(context.db())
+        .load::<(Option<i32>, i64)>(&db)
         .unwrap()
         .iter()
         .map(|&(year, count)| {
@@ -36,7 +36,7 @@ pub fn all_years(context: Context) -> impl Reply {
             } else {
                 q.filter(date.is_null())
             };
-            let photo = photo.first::<Photo>(context.db()).unwrap();
+            let photo = photo.first::<Photo>(&db).unwrap();
             PhotoLink {
                 title: Some(
                     year.map(|y| format!("{}", y))
@@ -63,6 +63,7 @@ pub fn months_in_year(year: i32, context: Context) -> Response<Vec<u8>> {
     use crate::schema::photos::dsl::{date, grade};
 
     let title: String = format!("Photos from {}", year);
+    let db = context.db().unwrap();
     let groups = Photo::query(context.is_authorized())
         .filter(date.ge(start_of_year(year)))
         .filter(date.lt(start_of_year(year + 1)))
@@ -71,7 +72,7 @@ pub fn months_in_year(year: i32, context: Context) -> Response<Vec<u8>> {
         ))
         .group_by(sql::<Integer>("m"))
         .order(sql::<Integer>("m").desc().nulls_last())
-        .load::<(i32, i64)>(context.db())
+        .load::<(i32, i64)>(&db)
         .unwrap()
         .iter()
         .map(|&(month, count)| {
@@ -81,7 +82,7 @@ pub fn months_in_year(year: i32, context: Context) -> Response<Vec<u8>> {
                 .filter(date.lt(start_of_month(year, month + 1)))
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1)
-                .first::<Photo>(context.db())
+                .first::<Photo>(&db)
                 .unwrap();
 
             PhotoLink {
@@ -105,7 +106,7 @@ pub fn months_in_year(year: i32, context: Context) -> Response<Vec<u8>> {
             .filter(date.ge(start_of_year(year)))
             .filter(date.lt(start_of_year(year + 1)))
             .select((photo_id, latitude, longitude))
-            .load(context.db())
+            .load(&db)
             .map_err(|e| warn!("Failed to load positions: {}", e))
             .unwrap_or_default()
             .into_iter()
@@ -137,6 +138,7 @@ pub fn days_in_month(
 
     let lpath: Vec<Link> = vec![Link::year(year)];
     let title: String = format!("Photos from {} {}", monthname(month), year);
+    let db = context.db().unwrap();
     let groups = Photo::query(context.is_authorized())
         .filter(date.ge(start_of_month(year, month)))
         .filter(date.lt(start_of_month(year, month + 1)))
@@ -145,7 +147,7 @@ pub fn days_in_month(
         ))
         .group_by(sql::<Integer>("d"))
         .order(sql::<Integer>("d").desc().nulls_last())
-        .load::<(i32, i64)>(context.db())
+        .load::<(i32, i64)>(&db)
         .unwrap()
         .iter()
         .map(|&(day, count)| {
@@ -157,7 +159,7 @@ pub fn days_in_month(
                 .filter(date.lt(fromdate + ChDuration::days(1)))
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1)
-                .first::<Photo>(context.db())
+                .first::<Photo>(&db)
                 .unwrap();
 
             PhotoLink {
@@ -181,7 +183,7 @@ pub fn days_in_month(
             .filter(date.ge(start_of_month(year, month)))
             .filter(date.lt(start_of_month(year, month + 1)))
             .select((photo_id, latitude, longitude))
-            .load(context.db())
+            .load(&db)
             .map_err(|e| warn!("Failed to load positions: {}", e))
             .unwrap_or_default()
             .into_iter()
@@ -208,7 +210,7 @@ pub fn all_null_date(context: Context) -> impl Reply {
                 .filter(date.is_null())
                 .order(path.asc())
                 .limit(500)
-                .load(context.db())
+                .load(&context.db().unwrap())
                 .unwrap()
                 .iter()
                 .map(PhotoLink::no_title)
@@ -259,6 +261,7 @@ pub fn on_this_day(context: Context) -> impl Reply {
         let now = time::now();
         (now.tm_mon as u32 + 1, now.tm_mday as u32)
     };
+    let db = context.db().unwrap();
     let pos = Photo::query(context.is_authorized())
         .inner_join(positions)
         .filter(
@@ -266,7 +269,7 @@ pub fn on_this_day(context: Context) -> impl Reply {
         )
         .filter(sql("extract(day from date)=").bind::<Integer, _>(day as i32))
         .select((photo_id, latitude, longitude))
-        .load(context.db())
+        .load(&db)
         .map_err(|e| warn!("Failed to load positions: {}", e))
         .unwrap_or_default()
         .into_iter()
@@ -293,7 +296,7 @@ pub fn on_this_day(context: Context) -> impl Reply {
                         .bind::<Integer, _>(day as i32),
                 )
                 .order(sql::<Integer>("y").desc())
-                .load::<(i32, i64)>(context.db())
+                .load::<(i32, i64)>(&db)
                 .unwrap()
                 .iter()
                 .map(|&(year, count)| {
@@ -305,7 +308,7 @@ pub fn on_this_day(context: Context) -> impl Reply {
                         .filter(date.lt(fromdate + ChDuration::days(1)))
                         .order((grade.desc().nulls_last(), date.asc()))
                         .limit(1)
-                        .first::<Photo>(context.db())
+                        .first::<Photo>(&db)
                         .unwrap();
 
                     PhotoLink {
@@ -324,7 +327,8 @@ pub fn on_this_day(context: Context) -> impl Reply {
 
 pub fn next_image(context: Context, param: FromParam) -> impl Reply {
     use crate::schema::photos::dsl::{date, id};
-    if let Some(from_date) = date_of_img(context.db(), param.from) {
+    let db = context.db().unwrap();
+    if let Some(from_date) = date_of_img(&db, param.from) {
         let q = Photo::query(context.is_authorized())
             .select(id)
             .filter(
@@ -332,7 +336,7 @@ pub fn next_image(context: Context, param: FromParam) -> impl Reply {
                     .or(date.eq(from_date).and(id.gt(param.from))),
             )
             .order((date, id));
-        if let Ok(photo) = q.first::<i32>(context.db()) {
+        if let Ok(photo) = q.first::<i32>(&db) {
             return redirect_to_img(photo);
         }
     }
@@ -341,7 +345,8 @@ pub fn next_image(context: Context, param: FromParam) -> impl Reply {
 
 pub fn prev_image(context: Context, param: FromParam) -> impl Reply {
     use crate::schema::photos::dsl::{date, id};
-    if let Some(from_date) = date_of_img(context.db(), param.from) {
+    let db = context.db().unwrap();
+    if let Some(from_date) = date_of_img(&db, param.from) {
         let q = Photo::query(context.is_authorized())
             .select(id)
             .filter(
@@ -349,7 +354,7 @@ pub fn prev_image(context: Context, param: FromParam) -> impl Reply {
                     .or(date.eq(from_date).and(id.lt(param.from))),
             )
             .order((date.desc().nulls_last(), id.desc()));
-        if let Ok(photo) = q.first::<i32>(context.db()) {
+        if let Ok(photo) = q.first::<i32>(&db) {
             return redirect_to_img(photo);
         }
     }

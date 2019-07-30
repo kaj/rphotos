@@ -26,7 +26,7 @@ pub fn person_all(context: Context) -> Response<Vec<u8>> {
             &context,
             &query
                 .order(person_name)
-                .load(context.db())
+                .load(&context.db().unwrap())
                 .expect("list people"),
         )
     })
@@ -38,8 +38,8 @@ pub fn person_one(
     range: ImgRange,
 ) -> Response<Vec<u8>> {
     use crate::schema::people::dsl::{people, slug};
-    let c = context.db();
-    if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(c) {
+    let c = context.db().unwrap();
+    if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(&c) {
         use crate::schema::photo_people::dsl::{
             person_id, photo_id, photo_people,
         };
@@ -61,7 +61,7 @@ pub fn person_one(
 
 pub fn tag_all(context: Context) -> Response<Vec<u8>> {
     use crate::schema::tags::dsl::{id, tag_name, tags};
-    let query = tags.into_boxed();
+    let query = tags.order(tag_name).into_boxed();
     let query = if context.is_authorized() {
         query
     } else {
@@ -75,7 +75,7 @@ pub fn tag_all(context: Context) -> Response<Vec<u8>> {
         templates::tags(
             o,
             &context,
-            &query.order(tag_name).load(context.db()).expect("List tags"),
+            &query.load(&context.db().unwrap()).expect("List tags"),
         )
     })
 }
@@ -86,7 +86,10 @@ pub fn tag_one(
     range: ImgRange,
 ) -> Response<Vec<u8>> {
     use crate::schema::tags::dsl::{slug, tags};
-    if let Ok(tag) = tags.filter(slug.eq(tslug)).first::<Tag>(context.db()) {
+    if let Ok(tag) = tags
+        .filter(slug.eq(tslug))
+        .first::<Tag>(&context.db().unwrap())
+    {
         use crate::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         use crate::schema::photos::dsl::id;
         let photos = Photo::query(context.is_authorized()).filter(
@@ -118,7 +121,7 @@ pub fn place_all(context: Context) -> Response<Vec<u8>> {
             &context,
             &query
                 .order(place_name)
-                .load(context.db())
+                .load(&context.db().unwrap())
                 .expect("List places"),
         )
     })
@@ -130,8 +133,9 @@ pub fn place_one(
     range: ImgRange,
 ) -> Response<Vec<u8>> {
     use crate::schema::places::dsl::{places, slug};
-    if let Ok(place) =
-        places.filter(slug.eq(tslug)).first::<Place>(context.db())
+    if let Ok(place) = places
+        .filter(slug.eq(tslug))
+        .first::<Place>(&context.db().unwrap())
     {
         use crate::schema::photo_places::dsl::{
             photo_id, photo_places, place_id,
@@ -155,7 +159,7 @@ pub fn auto_complete_tag(context: Context, query: AcQ) -> impl Reply {
         .filter(tag_name.ilike(query.q + "%"))
         .order(tag_name)
         .limit(10);
-    reply::json(&q.load::<String>(context.db()).unwrap())
+    reply::json(&q.load::<String>(&context.db().unwrap()).unwrap())
 }
 
 pub fn auto_complete_person(context: Context, query: AcQ) -> impl Reply {
@@ -165,7 +169,7 @@ pub fn auto_complete_person(context: Context, query: AcQ) -> impl Reply {
         .filter(person_name.ilike(query.q + "%"))
         .order(person_name)
         .limit(10);
-    reply::json(&q.load::<String>(context.db()).unwrap())
+    reply::json(&q.load::<String>(&context.db().unwrap()).unwrap())
 }
 
 #[derive(Deserialize)]

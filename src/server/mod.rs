@@ -185,7 +185,7 @@ fn random_image(context: Context) -> Response<Vec<u8>> {
         .select(id)
         .limit(1)
         .order(sql::<Integer>("random()"))
-        .first(context.db())
+        .first(&context.db().unwrap())
     {
         info!("Random: {:?}", photo);
         redirect_to_img(photo)
@@ -196,8 +196,8 @@ fn random_image(context: Context) -> Response<Vec<u8>> {
 
 fn photo_details(id: i32, context: Context) -> Response<Vec<u8>> {
     use crate::schema::photos::dsl::photos;
-    let c = context.db();
-    if let Ok(tphoto) = photos.find(id).first::<Photo>(c) {
+    let c = context.db().unwrap();
+    if let Ok(tphoto) = photos.find(id).first::<Photo>(&c) {
         if context.is_authorized() || tphoto.is_public() {
             return Response::builder().html(|o| {
                 templates::details(
@@ -215,12 +215,12 @@ fn photo_details(id: i32, context: Context) -> Response<Vec<u8>> {
                             ]
                         })
                         .unwrap_or_default(),
-                    &tphoto.load_people(c).unwrap(),
-                    &tphoto.load_places(c).unwrap(),
-                    &tphoto.load_tags(c).unwrap(),
-                    &tphoto.load_position(c),
-                    &tphoto.load_attribution(c),
-                    &tphoto.load_camera(c),
+                    &tphoto.load_people(&c).unwrap(),
+                    &tphoto.load_places(&c).unwrap(),
+                    &tphoto.load_tags(&c).unwrap(),
+                    &tphoto.load_position(&c),
+                    &tphoto.load_attribution(&c),
+                    &tphoto.load_camera(&c),
                     &tphoto,
                 )
             });

@@ -23,7 +23,7 @@ pub fn post_login(context: Context, form: LoginForm) -> Response<Vec<u8>> {
     if let Ok(hash) = users
         .filter(username.eq(&form.user))
         .select(password)
-        .first::<String>(context.db())
+        .first::<String>(&context.db().unwrap())
     {
         if djangohashers::check_password_tolerant(&form.password, &hash) {
             info!("User {} logged in", form.user);

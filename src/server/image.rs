@@ -7,7 +7,9 @@ use warp::http::{header, Response, StatusCode};
 
 pub fn show_image(img: ImgName, context: Context) -> Response<Vec<u8>> {
     use crate::schema::photos::dsl::photos;
-    if let Ok(tphoto) = photos.find(img.id).first::<Photo>(context.db()) {
+    if let Ok(tphoto) =
+        photos.find(img.id).first::<Photo>(&context.db().unwrap())
+    {
         if context.is_authorized() || tphoto.is_public() {
             if img.size == SizeTag::Large {
                 if context.is_authorized() {

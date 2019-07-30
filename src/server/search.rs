@@ -43,10 +43,11 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> impl Reply {
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
+    let db = context.db().unwrap();
     let mut tags = query
         .order(t::tag_name)
         .limit(10)
-        .load::<(String, String)>(context.db())
+        .load::<(String, String)>(&db)
         .unwrap()
         .into_iter()
         .map(|(t, s)| SearchTag { k: 't', t, s })
@@ -71,7 +72,7 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> impl Reply {
         query
             .order(h::person_name)
             .limit(10)
-            .load::<(String, String)>(context.db())
+            .load::<(String, String)>(&db)
             .unwrap()
             .into_iter()
             .map(|(t, s)| SearchTag { k: 'p', t, s })
@@ -97,7 +98,7 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> impl Reply {
         query
             .order(l::place_name)
             .limit(10)
-            .load::<(String, String)>(context.db())
+            .load::<(String, String)>(&db)
             .unwrap()
             .into_iter()
             .map(|(t, s)| SearchTag { k: 'l', t, s })
@@ -106,7 +107,7 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> impl Reply {
 }
 
 pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
-    let query = SearchQuery::load(query, context.db()).unwrap();
+    let query = SearchQuery::load(query, &context.db().unwrap()).unwrap();
     let range = ImgRange::default();
 
     let mut photos = Photo::query(context.is_authorized());

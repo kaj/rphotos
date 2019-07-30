@@ -5,7 +5,7 @@ use crypto::sha2::Sha256;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use jwt::{Claims, Header, Registered, Token};
-use log::{debug, error, warn};
+use log::{debug, warn};
 use r2d2_memcache::r2d2::Error;
 use r2d2_memcache::MemcacheConnectionManager;
 use std::collections::BTreeMap;
@@ -13,7 +13,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use warp::filters::{cookie, BoxedFilter};
 use warp::path::{self, FullPath};
-use warp::reject::custom;
 use warp::{self, Filter};
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -26,17 +25,15 @@ pub fn create_session_filter(args: &Args) -> BoxedFilter<(Context,)> {
     warp::any()
         .and(path::full())
         .and(cookie::optional("EXAUTH"))
-        .and_then(move |path, key: Option<String>| {
+        .map(move |path, key: Option<String>| {
+            let global = global.clone();
             let user = key.and_then(|k| {
                 global
                     .verify_key(&k)
                     .map_err(|e| warn!("Auth failed: {}", e))
                     .ok()
             });
-            Context::new(global.clone(), path, user).map_err(|e| {
-                error!("Failed to initialize session: {}", e);
-                custom(e)
-            })
+            Context { global, path, user }
         })
         .boxed()
 }
@@ -111,30 +108,16 @@ impl GlobalContext {
 /// The request context, providing database, memcache and authorized user.
 pub struct Context {
     global: Arc<GlobalContext>,
-    db: PooledPg,
     path: FullPath,
     user: Option<String>,
 }
 
 impl Context {
-    fn new(
-        global: Arc<GlobalContext>,
-        path: FullPath,
-        user: Option<String>,
-    ) -> Result<Self, String> {
-        let db = global
+    pub fn db(&self) -> Result<PooledPg, String> {
+        self.global
             .db_pool
             .get()
-            .map_err(|e| format!("Failed to get db {}", e))?;
-        Ok(Context {
-            global,
-            db,
-            path,
-            user,
-        })
-    }
-    pub fn db(&self) -> &PgConnection {
-        &self.db
+            .map_err(|e| format!("Failed to get db {}", e))
     }
     pub fn authorized_user(&self) -> Option<&str> {
         self.user.as_ref().map(AsRef::as_ref)
