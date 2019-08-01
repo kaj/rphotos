@@ -144,6 +144,15 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
             ),
         );
     }
+    if let Some(pos) = query.pos {
+        use crate::schema::positions::dsl as pos;
+        let pos_ids = pos::positions.select(pos::photo_id);
+        if pos {
+            photos = photos.filter(p::id.eq_any(pos_ids));
+        } else {
+            photos = photos.filter(p::id.ne_all(pos_ids));
+        }
+    }
 
     let (mut links, coords) = links_by_time(&context, photos, range, true);
     let addendum = query
@@ -180,6 +189,7 @@ pub struct SearchQuery {
     pub l: Vec<Place>,
     pub since: Option<NaiveDateTime>,
     pub until: Option<NaiveDateTime>,
+    pub pos: Option<bool>,
     /// Query (free-text, don't know what to do)
     pub q: String,
 }
@@ -206,7 +216,14 @@ impl SearchQuery {
         result.until = datetime_from_parts(u_d, u_t, until_midnight);
         for (key, val) in query {
             match key.as_ref() {
-                "q" => result.q = val,
+                "q" => {
+                    if val.contains("!pos") {
+                        result.pos = Some(false);
+                    } else if val.contains("pos") {
+                        result.pos = Some(true);
+                    }
+                    result.q = val;
+                }
                 "t" => {
                     result.t.push(t::tags.filter(t::slug.eq(val)).first(db)?)
                 }
@@ -215,6 +232,12 @@ impl SearchQuery {
                 }
                 "l" => {
                     result.l.push(l::places.filter(l::slug.eq(val)).first(db)?)
+                }
+                "pos" => {
+                    result.pos = Some(
+                        val.parse()
+                            .map_err(|e| Error::Other(format!("{}", e)))?,
+                    );
                 }
                 "from" => {
                     result.since = p::photos

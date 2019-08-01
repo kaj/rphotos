@@ -19,6 +19,9 @@
       @for person in &query.p {
         <label class="p">@person.person_name <input type="checkbox" name="p" value="@person.slug" checked/></label>
       }
+      @if let Some(pos) = &query.pos {
+        <label>@if !pos {!}pos <input type="checkbox" name="pos" value="@pos" checked/></label>
+      }
       <input id="s_q" name="q" type="search"/>
     </div>
     <div class="time">
