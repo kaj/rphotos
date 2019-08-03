@@ -155,21 +155,14 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
     }
 
     let (mut links, coords) = links_by_time(&context, photos, range, true);
-    let addendum = query
+    let addendum = &query
         .t
         .iter()
         .map(|v| format!("&t={}", v.slug))
-        .collect::<String>()
-        + &query
-            .l
-            .iter()
-            .map(|v| format!("&l={}", v.slug))
-            .collect::<String>()
-        + &query
-            .p
-            .iter()
-            .map(|v| format!("&p={}", v.slug))
-            .collect::<String>();
+        .chain(query.l.iter().map(|v| format!("&l={}", v.slug)))
+        .chain(query.p.iter().map(|v| format!("&p={}", v.slug)))
+        .chain(query.pos.map(|v| format!("&pos={}", v)))
+        .collect::<String>();
     for link in &mut links {
         if link.href.starts_with("/search/?") {
             link.href += &addendum;
