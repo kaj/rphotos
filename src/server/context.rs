@@ -1,14 +1,12 @@
 use super::Args;
 use crate::fetch_places::OverpassOpt;
 use crate::photosdir::PhotosDir;
-use crypto::sha2::Sha256;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use jwt::{Claims, Header, Registered, Token};
 use log::{debug, warn};
+use medallion::{Header, Payload, Token};
 use r2d2_memcache::r2d2::Error;
 use r2d2_memcache::MemcacheConnectionManager;
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
 use warp::filters::{cookie, BoxedFilter};
@@ -38,6 +36,8 @@ pub fn create_session_filter(args: &Args) -> BoxedFilter<(Context,)> {
         .boxed()
 }
 
+// Does _not_ derive debug, copy or clone, since it contains the jwt
+// secret and some connection pools.
 struct GlobalContext {
     db_pool: PgPool,
     photosdir: PhotosDir,
@@ -68,14 +68,14 @@ impl GlobalContext {
     }
 
     fn verify_key(&self, jwtstr: &str) -> Result<String, String> {
-        let token = Token::<Header, Claims>::parse(&jwtstr)
+        let token = Token::<Header, ()>::parse(&jwtstr)
             .map_err(|e| format!("Bad jwt token: {:?}", e))?;
 
-        if token.verify(self.jwt_secret.as_ref(), Sha256::new()) {
-            let claims = token.claims;
+        if token.verify(self.jwt_secret.as_ref()).unwrap_or(false) {
+            let claims = token.payload;
             debug!("Verified token for: {:?}", claims);
             let now = current_numeric_date();
-            if let Some(nbf) = claims.reg.nbf {
+            if let Some(nbf) = claims.nbf {
                 if now < nbf {
                     return Err(format!(
                         "Not-yet valid token, {} < {}",
@@ -83,7 +83,7 @@ impl GlobalContext {
                     ));
                 }
             }
-            if let Some(exp) = claims.reg.exp {
+            if let Some(exp) = claims.exp {
                 if now > exp {
                     return Err(format!(
                         "Got an expired token: {} > {}",
@@ -91,7 +91,7 @@ impl GlobalContext {
                     ));
                 }
             }
-            if let Some(user) = claims.reg.sub {
+            if let Some(user) = claims.sub {
                 return Ok(user);
             } else {
                 return Err("User missing in claims".to_string());
@@ -182,20 +182,15 @@ impl Context {
         let header: Header = Default::default();
         let now = current_numeric_date();
         let expiration_time = Duration::from_secs(14 * 24 * 60 * 60);
-        let claims = Claims {
-            reg: Registered {
-                iss: None, // TODO?
-                sub: Some(user.into()),
-                exp: Some(now + expiration_time.as_secs()),
-                nbf: Some(now),
-                ..Default::default()
-            },
-            private: BTreeMap::new(),
+        let claims = Payload::<()> {
+            iss: None, // TODO?
+            sub: Some(user.into()),
+            exp: Some(now + expiration_time.as_secs()),
+            nbf: Some(now),
+            ..Default::default()
         };
         let token = Token::new(header, claims);
-        token
-            .signed(self.global.jwt_secret.as_ref(), Sha256::new())
-            .ok()
+        token.sign(self.global.jwt_secret.as_ref()).ok()
     }
 }
 
