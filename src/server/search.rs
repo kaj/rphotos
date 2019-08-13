@@ -126,6 +126,15 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
             ),
         );
     }
+    for tag in &query.t_not {
+        photos = photos.filter(
+            p::id.ne_all(
+                pt::photo_tags
+                    .select(pt::photo_id)
+                    .filter(pt::tag_id.eq(tag.id)),
+            ),
+        );
+    }
     for location in &query.l {
         photos = photos.filter(
             p::id.eq_any(
@@ -135,9 +144,27 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
             ),
         );
     }
+    for location in &query.l_not {
+        photos = photos.filter(
+            p::id.ne_all(
+                pl::photo_places
+                    .select(pl::photo_id)
+                    .filter(pl::place_id.eq(location.id)),
+            ),
+        );
+    }
     for person in &query.p {
         photos = photos.filter(
             p::id.eq_any(
+                pp::photo_people
+                    .select(pp::photo_id)
+                    .filter(pp::person_id.eq(person.id)),
+            ),
+        );
+    }
+    for person in &query.p_not {
+        photos = photos.filter(
+            p::id.ne_all(
                 pp::photo_people
                     .select(pp::photo_id)
                     .filter(pp::person_id.eq(person.id)),
@@ -176,10 +203,13 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
 pub struct SearchQuery {
     /// Keys
     pub t: Vec<Tag>,
+    pub t_not: Vec<Tag>,
     /// People
     pub p: Vec<Person>,
+    pub p_not: Vec<Person>,
     /// Places (locations)
     pub l: Vec<Place>,
+    pub l_not: Vec<Place>,
     pub since: Option<NaiveDateTime>,
     pub until: Option<NaiveDateTime>,
     pub pos: Option<bool>,
@@ -218,13 +248,25 @@ impl SearchQuery {
                     result.q = val;
                 }
                 "t" => {
-                    result.t.push(t::tags.filter(t::slug.eq(val)).first(db)?)
+                    if val.starts_with('!') {
+                        result.t_not.push(Tag::by_slug(&val[1..], db)?)
+                    } else {
+                        result.t.push(Tag::by_slug(&val, db)?)
+                    }
                 }
                 "p" => {
-                    result.p.push(h::people.filter(h::slug.eq(val)).first(db)?)
+                    if val.starts_with('!') {
+                        result.p_not.push(Person::by_slug(&val[1..], db)?)
+                    } else {
+                        result.p.push(Person::by_slug(&val, db)?)
+                    }
                 }
                 "l" => {
-                    result.l.push(l::places.filter(l::slug.eq(val)).first(db)?)
+                    if val.starts_with('!') {
+                        result.l_not.push(Place::by_slug(&val[1..], db)?)
+                    } else {
+                        result.l.push(Place::by_slug(&val, db)?)
+                    }
                 }
                 "pos" => {
                     result.pos = Some(

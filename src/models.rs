@@ -2,7 +2,7 @@ use chrono::naive::NaiveDateTime;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::result::Error as DieselError;
+use diesel::result::Error;
 use diesel::sql_types::Integer;
 use log::error;
 use slug::slugify;
@@ -64,7 +64,7 @@ impl Photo {
         newheight: i32,
         exifdate: Option<NaiveDateTime>,
         camera: &Option<Camera>,
-    ) -> Result<Option<Modification<Photo>>, DieselError> {
+    ) -> Result<Option<Modification<Photo>>, Error> {
         use crate::schema::photos::dsl::*;
         if let Some(mut pic) = photos
             .filter(path.eq(&file_path.to_string()))
@@ -111,7 +111,7 @@ impl Photo {
         exifdate: Option<NaiveDateTime>,
         exifrotation: i16,
         camera: Option<Camera>,
-    ) -> Result<Modification<Photo>, DieselError> {
+    ) -> Result<Modification<Photo>, Error> {
         use crate::schema::photos::dsl::*;
         if let Some(result) = Self::update_by_path(
             db, file_path, newwidth, newheight, exifdate, &camera,
@@ -135,7 +135,7 @@ impl Photo {
     pub fn load_people(
         &self,
         db: &PgConnection,
-    ) -> Result<Vec<Person>, DieselError> {
+    ) -> Result<Vec<Person>, Error> {
         use crate::schema::people::dsl::{id, people};
         use crate::schema::photo_people::dsl::{
             person_id, photo_id, photo_people,
@@ -147,10 +147,7 @@ impl Photo {
             .load(db)
     }
 
-    pub fn load_places(
-        &self,
-        db: &PgConnection,
-    ) -> Result<Vec<Place>, DieselError> {
+    pub fn load_places(&self, db: &PgConnection) -> Result<Vec<Place>, Error> {
         use crate::schema::photo_places::dsl::{
             photo_id, photo_places, place_id,
         };
@@ -162,10 +159,7 @@ impl Photo {
             .order(osm_level.desc().nulls_first())
             .load(db)
     }
-    pub fn load_tags(
-        &self,
-        db: &PgConnection,
-    ) -> Result<Vec<Tag>, DieselError> {
+    pub fn load_tags(&self, db: &PgConnection) -> Result<Vec<Tag>, Error> {
         use crate::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
         use crate::schema::tags::dsl::{id, tags};
         tags.filter(
@@ -238,6 +232,13 @@ pub struct Tag {
     pub tag_name: String,
 }
 
+impl Tag {
+    pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Tag, Error> {
+        use crate::schema::tags::dsl as t;
+        t::tags.filter(t::slug.eq(slug)).first(db)
+    }
+}
+
 #[derive(Debug, Clone, Queryable)]
 pub struct PhotoTag {
     pub id: i32,
@@ -253,10 +254,14 @@ pub struct Person {
 }
 
 impl Person {
+    pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Person, Error> {
+        use crate::schema::people::dsl as h;
+        h::people.filter(h::slug.eq(slug)).first(db)
+    }
     pub fn get_or_create_name(
         db: &PgConnection,
         name: &str,
-    ) -> Result<Person, DieselError> {
+    ) -> Result<Person, Error> {
         use crate::schema::people::dsl::*;
         people
             .filter(person_name.ilike(name))
@@ -285,6 +290,13 @@ pub struct Place {
     pub osm_level: Option<i16>,
 }
 
+impl Place {
+    pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Place, Error> {
+        use crate::schema::places::dsl as l;
+        l::places.filter(l::slug.eq(slug)).first(db)
+    }
+}
+
 #[derive(Debug, Clone, Queryable)]
 pub struct PhotoPlace {
     pub id: i32,
@@ -305,7 +317,7 @@ impl Camera {
         db: &PgConnection,
         make: &str,
         modl: &str,
-    ) -> Result<Camera, DieselError> {
+    ) -> Result<Camera, Error> {
         use crate::schema::cameras::dsl::*;
         if let Some(camera) = cameras
             .filter(manufacturer.eq(make))

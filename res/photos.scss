@@ -126,6 +126,10 @@ form.search {
             line-height: 1.4;
             margin: .1em;
             padding: 0 1ex;
+	    &.not {
+		background: #fbb;
+		text-decoration: line-through;
+	    }
         }
         input {
             background: transparent;

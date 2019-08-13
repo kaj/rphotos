@@ -98,6 +98,21 @@
   }
 
   (function(form) {
+    function prepareQtag(s) {
+      const i = s.querySelector('input');
+      i.addEventListener('change', function(e) {
+	if (!i.checked && !i.value.startsWith('!')) {
+	  i.value = '!' + i.value;
+	  i.checked = true;
+	  s.classList.add('not');
+	} else if (i.value.startsWith('!')) {
+	  i.value = i.value.substring(1);
+	  s.classList.remove('not');
+	}
+	console.log("->", i.checked, i.value);
+      });
+    }
+    [].forEach.call(form.querySelectorAll('.refs label'), prepareQtag)
     form.classList.add('hidden');
     let sl = form.querySelector('label');
     sl.addEventListener('click', e => form.classList.remove('hidden'))
@@ -128,6 +143,7 @@
 	      s.innerHTML = x.t + ' <input type="checkbox" checked name="' + x.k +
 		'" value="' + x.s + '">';
 	      s.className = x.k;
+	      prepareQtag(s);
 	      tags.insertBefore(s, input);
 	      list.innerHTML = '';
 	      input.value = '';
