@@ -1,6 +1,18 @@
-use chrono::naive::NaiveDateTime;
+use crate::schema::attributions::dsl as a;
+use crate::schema::cameras;
+use crate::schema::cameras::dsl as c;
+use crate::schema::people::dsl as h;
+use crate::schema::photo_people::dsl as ph;
+use crate::schema::photo_places::dsl as pl;
+use crate::schema::photo_tags::dsl as pt;
+use crate::schema::photos;
+use crate::schema::photos::dsl as p;
+use crate::schema::places::dsl as l;
+use crate::schema::positions::dsl as pos;
+use crate::schema::tags::dsl as t;
+use chrono::naive::{NaiveDate, NaiveDateTime};
 use diesel;
-use diesel::pg::PgConnection;
+use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::sql_types::Integer;
@@ -22,8 +34,6 @@ pub struct Photo {
     pub height: i32,
 }
 
-use crate::schema::photos;
-
 #[derive(Debug)]
 pub enum Modification<T> {
     Created(T),
@@ -31,7 +41,6 @@ pub enum Modification<T> {
     Unchanged(T),
 }
 
-use diesel::pg::Pg;
 impl Photo {
     #[allow(dead_code)]
     pub fn is_public(&self) -> bool {
@@ -44,14 +53,12 @@ impl Photo {
 
     #[allow(dead_code)]
     pub fn query<'a>(auth: bool) -> photos::BoxedQuery<'a, Pg> {
-        use super::schema::photos::dsl::{is_public, path, photos};
-        use diesel::prelude::*;
-        let result = photos
-            .filter(path.not_like("%.CR2"))
-            .filter(path.not_like("%.dng"))
+        let result = p::photos
+            .filter(p::path.not_like("%.CR2"))
+            .filter(p::path.not_like("%.dng"))
             .into_boxed();
         if !auth {
-            result.filter(is_public)
+            result.filter(p::is_public)
         } else {
             result
         }
@@ -65,9 +72,8 @@ impl Photo {
         exifdate: Option<NaiveDateTime>,
         camera: &Option<Camera>,
     ) -> Result<Option<Modification<Photo>>, Error> {
-        use crate::schema::photos::dsl::*;
-        if let Some(mut pic) = photos
-            .filter(path.eq(&file_path.to_string()))
+        if let Some(mut pic) = p::photos
+            .filter(p::path.eq(&file_path.to_string()))
             .first::<Photo>(db)
             .optional()?
         {
@@ -75,21 +81,21 @@ impl Photo {
             // TODO Merge updates to one update statement!
             if pic.width != newwidth || pic.height != newheight {
                 change = true;
-                pic = diesel::update(photos.find(pic.id))
-                    .set((width.eq(newwidth), height.eq(newheight)))
+                pic = diesel::update(p::photos.find(pic.id))
+                    .set((p::width.eq(newwidth), p::height.eq(newheight)))
                     .get_result::<Photo>(db)?;
             }
             if exifdate.is_some() && exifdate != pic.date {
                 change = true;
-                pic = diesel::update(photos.find(pic.id))
-                    .set(date.eq(exifdate))
+                pic = diesel::update(p::photos.find(pic.id))
+                    .set(p::date.eq(exifdate))
                     .get_result::<Photo>(db)?;
             }
             if let Some(ref camera) = *camera {
                 if pic.camera_id != Some(camera.id) {
                     change = true;
-                    pic = diesel::update(photos.find(pic.id))
-                        .set(camera_id.eq(camera.id))
+                    pic = diesel::update(p::photos.find(pic.id))
+                        .set(p::camera_id.eq(camera.id))
                         .get_result::<Photo>(db)?;
                 }
             }
@@ -112,20 +118,19 @@ impl Photo {
         exifrotation: i16,
         camera: Option<Camera>,
     ) -> Result<Modification<Photo>, Error> {
-        use crate::schema::photos::dsl::*;
         if let Some(result) = Self::update_by_path(
             db, file_path, newwidth, newheight, exifdate, &camera,
         )? {
             Ok(result)
         } else {
-            let pic = diesel::insert_into(photos)
+            let pic = diesel::insert_into(p::photos)
                 .values((
-                    path.eq(file_path),
-                    date.eq(exifdate),
-                    rotation.eq(exifrotation),
-                    width.eq(newwidth),
-                    height.eq(newheight),
-                    camera_id.eq(camera.map(|c| c.id)),
+                    p::path.eq(file_path),
+                    p::date.eq(exifdate),
+                    p::rotation.eq(exifrotation),
+                    p::width.eq(newwidth),
+                    p::height.eq(newheight),
+                    p::camera_id.eq(camera.map(|c| c.id)),
                 ))
                 .get_result::<Photo>(db)?;
             Ok(Modification::Created(pic))
@@ -136,43 +141,45 @@ impl Photo {
         &self,
         db: &PgConnection,
     ) -> Result<Vec<Person>, Error> {
-        use crate::schema::people::dsl::{id, people};
-        use crate::schema::photo_people::dsl::{
-            person_id, photo_id, photo_people,
-        };
-        people
-            .filter(id.eq_any(
-                photo_people.select(person_id).filter(photo_id.eq(self.id)),
-            ))
+        h::people
+            .filter(
+                h::id.eq_any(
+                    ph::photo_people
+                        .select(ph::person_id)
+                        .filter(ph::photo_id.eq(self.id)),
+                ),
+            )
             .load(db)
     }
 
     pub fn load_places(&self, db: &PgConnection) -> Result<Vec<Place>, Error> {
-        use crate::schema::photo_places::dsl::{
-            photo_id, photo_places, place_id,
-        };
-        use crate::schema::places::dsl::{id, osm_level, places};
-        places
-            .filter(id.eq_any(
-                photo_places.select(place_id).filter(photo_id.eq(self.id)),
-            ))
-            .order(osm_level.desc().nulls_first())
+        l::places
+            .filter(
+                l::id.eq_any(
+                    pl::photo_places
+                        .select(pl::place_id)
+                        .filter(pl::photo_id.eq(self.id)),
+                ),
+            )
+            .order(l::osm_level.desc().nulls_first())
             .load(db)
     }
     pub fn load_tags(&self, db: &PgConnection) -> Result<Vec<Tag>, Error> {
-        use crate::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
-        use crate::schema::tags::dsl::{id, tags};
-        tags.filter(
-            id.eq_any(photo_tags.select(tag_id).filter(photo_id.eq(self.id))),
-        )
-        .load(db)
+        t::tags
+            .filter(
+                t::id.eq_any(
+                    pt::photo_tags
+                        .select(pt::tag_id)
+                        .filter(pt::photo_id.eq(self.id)),
+                ),
+            )
+            .load(db)
     }
 
     pub fn load_position(&self, db: &PgConnection) -> Option<Coord> {
-        use crate::schema::positions::dsl::*;
-        match positions
-            .filter(photo_id.eq(self.id))
-            .select((latitude, longitude))
+        match pos::positions
+            .filter(pos::photo_id.eq(self.id))
+            .select((pos::latitude, pos::longitude))
             .first::<(i32, i32)>(db)
         {
             Ok(c) => Some(c.into()),
@@ -184,13 +191,13 @@ impl Photo {
         }
     }
     pub fn load_attribution(&self, db: &PgConnection) -> Option<String> {
-        use crate::schema::attributions::dsl::*;
-        self.attribution_id
-            .and_then(|i| attributions.find(i).select(name).first(db).ok())
+        self.attribution_id.and_then(|i| {
+            a::attributions.find(i).select(a::name).first(db).ok()
+        })
     }
     pub fn load_camera(&self, db: &PgConnection) -> Option<Camera> {
-        use crate::schema::cameras::dsl::cameras;
-        self.camera_id.and_then(|i| cameras.find(i).first(db).ok())
+        self.camera_id
+            .and_then(|i| c::cameras.find(i).first(db).ok())
     }
     pub fn get_size(&self, size: SizeTag) -> (u32, u32) {
         let (width, height) = (self.width, self.height);
@@ -205,7 +212,6 @@ impl Photo {
 
     #[cfg(test)]
     pub fn mock(y: i32, mo: u32, da: u32, h: u32, m: u32, s: u32) -> Self {
-        use chrono::naive::NaiveDate;
         Photo {
             id: ((((((y as u32 * 12) + mo) * 30 + da) * 24) + h) * 60 + s)
                 as i32,
@@ -234,7 +240,6 @@ pub struct Tag {
 
 impl Tag {
     pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Tag, Error> {
-        use crate::schema::tags::dsl as t;
         t::tags.filter(t::slug.eq(slug)).first(db)
     }
 }
@@ -255,20 +260,21 @@ pub struct Person {
 
 impl Person {
     pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Person, Error> {
-        use crate::schema::people::dsl as h;
         h::people.filter(h::slug.eq(slug)).first(db)
     }
     pub fn get_or_create_name(
         db: &PgConnection,
         name: &str,
     ) -> Result<Person, Error> {
-        use crate::schema::people::dsl::*;
-        people
-            .filter(person_name.ilike(name))
+        h::people
+            .filter(h::person_name.ilike(name))
             .first(db)
             .or_else(|_| {
-                diesel::insert_into(people)
-                    .values((person_name.eq(name), slug.eq(&slugify(name))))
+                diesel::insert_into(h::people)
+                    .values((
+                        h::person_name.eq(name),
+                        h::slug.eq(&slugify(name)),
+                    ))
                     .get_result(db)
             })
     }
@@ -292,7 +298,6 @@ pub struct Place {
 
 impl Place {
     pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Place, Error> {
-        use crate::schema::places::dsl as l;
         l::places.filter(l::slug.eq(slug)).first(db)
     }
 }
@@ -304,7 +309,6 @@ pub struct PhotoPlace {
     pub place_id: i32,
 }
 
-use super::schema::cameras;
 #[derive(Debug, Clone, Identifiable, Queryable)]
 pub struct Camera {
     pub id: i32,
@@ -318,17 +322,16 @@ impl Camera {
         make: &str,
         modl: &str,
     ) -> Result<Camera, Error> {
-        use crate::schema::cameras::dsl::*;
-        if let Some(camera) = cameras
-            .filter(manufacturer.eq(make))
-            .filter(model.eq(modl))
+        if let Some(camera) = c::cameras
+            .filter(c::manufacturer.eq(make))
+            .filter(c::model.eq(modl))
             .first::<Camera>(db)
             .optional()?
         {
             Ok(camera)
         } else {
-            diesel::insert_into(cameras)
-                .values((manufacturer.eq(make), model.eq(modl)))
+            diesel::insert_into(c::cameras)
+                .values((c::manufacturer.eq(make), c::model.eq(modl)))
                 .get_result(db)
         }
     }
