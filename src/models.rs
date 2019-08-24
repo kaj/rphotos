@@ -205,7 +205,7 @@ impl Photo {
         let w = (scale * f64::from(width)) as u32;
         let h = (scale * f64::from(height)) as u32;
         match self.rotation {
-            _x @ 0...44 | _x @ 315...360 | _x @ 135...224 => (w, h),
+            _x @ 0..=44 | _x @ 315..=360 | _x @ 135..=224 => (w, h),
             _ => (h, w),
         }
     }

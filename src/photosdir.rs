@@ -35,10 +35,10 @@ impl PhotosDir {
             img
         };
         let img = match photo.rotation {
-            _x @ 0...44 | _x @ 315...360 => img,
-            _x @ 45...134 => img.rotate90(),
-            _x @ 135...224 => img.rotate180(),
-            _x @ 225...314 => img.rotate270(),
+            _x @ 0..=44 | _x @ 315..=360 => img,
+            _x @ 45..=134 => img.rotate90(),
+            _x @ 135..=224 => img.rotate180(),
+            _x @ 225..=314 => img.rotate270(),
             x => {
                 warn!("Should rotate photo {} deg, which is unsupported", x);
                 img
@@ -63,7 +63,7 @@ impl PhotosDir {
     pub fn find_files(
         &self,
         dir: &Path,
-        cb: &Fn(&str, &ExifData),
+        cb: &dyn Fn(&str, &ExifData),
     ) -> io::Result<()> {
         let absdir = self.basedir.join(dir);
         if fs::metadata(&absdir)?.is_dir() {

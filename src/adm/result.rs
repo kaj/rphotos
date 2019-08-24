@@ -25,7 +25,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn in_file(e: &fmt::Display, file: &Path) -> Self {
+    pub fn in_file(e: &dyn fmt::Display, file: &Path) -> Self {
         Error::Other(format!("{} in {}", e, file.display()))
     }
 }

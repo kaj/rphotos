@@ -10,7 +10,7 @@ use warp::http::{header, Response, StatusCode};
 pub trait RenderRucte {
     fn html<F>(&mut self, f: F) -> Response<Vec<u8>>
     where
-        F: FnOnce(&mut Write) -> io::Result<()>;
+        F: FnOnce(&mut dyn Write) -> io::Result<()>;
 
     fn redirect(&mut self, url: &str) -> Response<Vec<u8>>;
 
@@ -20,7 +20,7 @@ pub trait RenderRucte {
 impl RenderRucte for Builder {
     fn html<F>(&mut self, f: F) -> Response<Vec<u8>>
     where
-        F: FnOnce(&mut Write) -> io::Result<()>,
+        F: FnOnce(&mut dyn Write) -> io::Result<()>,
     {
         let mut buf = Vec::new();
         f(&mut buf).unwrap();
