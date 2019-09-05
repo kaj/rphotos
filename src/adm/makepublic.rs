@@ -13,7 +13,7 @@ use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(rename_all = "kebab-case")]
-#[structopt(raw(group = "ArgGroup::with_name(\"spec\").required(true)"))]
+#[structopt(group = ArgGroup::with_name("spec").required(true))]
 pub struct Makepublic {
     #[structopt(flatten)]
     db: DbOpt,

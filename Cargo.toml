@@ -30,6 +30,6 @@ reqwest = "=0.9.17"
 serde = { version = "1.0.0", features = ["derive"] }
 serde_json = "1.0"
 slug = "0.1"
-structopt = { version = "0.2.14", features = ["wrap_help"] }
+structopt = { version = "0.3.0", features = ["wrap_help"] }
 time = "*"
 warp = "0.1.6"
