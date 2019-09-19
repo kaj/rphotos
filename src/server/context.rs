@@ -71,34 +71,33 @@ impl GlobalContext {
         let token = Token::<Header, ()>::parse(&jwtstr)
             .map_err(|e| format!("Bad jwt token: {:?}", e))?;
 
-        if token.verify(self.jwt_secret.as_ref()).unwrap_or(false) {
-            let claims = token.payload;
-            debug!("Verified token for: {:?}", claims);
-            let now = current_numeric_date();
-            if let Some(nbf) = claims.nbf {
-                if now < nbf {
-                    return Err(format!(
-                        "Not-yet valid token, {} < {}",
-                        now, nbf,
-                    ));
-                }
-            }
-            if let Some(exp) = claims.exp {
-                if now > exp {
-                    return Err(format!(
-                        "Got an expired token: {} > {}",
-                        now, exp,
-                    ));
-                }
-            }
-            if let Some(user) = claims.sub {
-                return Ok(user);
-            } else {
-                return Err("User missing in claims".to_string());
-            }
-        } else {
-            Err(format!("Invalid token {:?}", token))
+        if !token.verify(self.jwt_secret.as_ref()).map_err(|e| {
+            format!("Failed to verify token {:?}: {}", token, e)
+        })? {
+            Err(format!("Invalid token {:?}", token))?
         }
+        let claims = token.payload;
+        debug!("Verified token for: {:?}", claims);
+        let now = current_numeric_date();
+        if let Some(nbf) = claims.nbf {
+            if now < nbf {
+                return Err(
+                    format!("Not-yet valid token, {} < {}", now, nbf,),
+                );
+            }
+        }
+        if let Some(exp) = claims.exp {
+            if now > exp {
+                return Err(format!(
+                    "Got an expired token: {} > {}",
+                    now, exp,
+                ));
+            }
+        }
+        // the claimed sub is the username
+        claims
+            .sub
+            .ok_or_else(|| "User missing in jwt claims".to_string())
     }
     fn cache(&self) -> Result<PooledMemcache, Error> {
         Ok(self.memcache_pool.get()?)
