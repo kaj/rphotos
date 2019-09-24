@@ -29,7 +29,7 @@
         <label class="not l">@location.place_name <input type="checkbox" name="l" value="!@location.slug" checked/></label>
       }
       @if let Some(pos) = &query.pos {
-        <label>@if !pos {!}pos <input type="checkbox" name="pos" value="@pos" checked/></label>
+        <label@if !pos { class="not"}>pos <input type="checkbox" name="pos" value="@if !pos {!}t" checked/></label>
       }
       <input id="s_q" name="q" type="search"/>
     </div>

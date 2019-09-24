@@ -14,6 +14,7 @@ use crate::templates;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use log::warn;
 use serde::Serialize;
 use warp::http::Response;
 use warp::{reply, Reply};
@@ -269,10 +270,15 @@ impl SearchQuery {
                     }
                 }
                 "pos" => {
-                    result.pos = Some(
-                        val.parse()
-                            .map_err(|e| Error::Other(format!("{}", e)))?,
-                    );
+                    result.pos = match val.as_str() {
+                        "t" => Some(true),
+                        "!t" => Some(false),
+                        "" => None,
+                        val => {
+                            warn!("Bad value for \"pos\": {:?}", val);
+                            None
+                        }
+                    }
                 }
                 "from" => {
                     result.since = p::photos
