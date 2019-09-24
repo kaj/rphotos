@@ -10,7 +10,7 @@ use crate::schema::photos::dsl as p;
 use crate::schema::places::dsl as l;
 use crate::schema::positions::dsl as pos;
 use crate::schema::tags::dsl as t;
-use chrono::naive::{NaiveDate, NaiveDateTime};
+use chrono::naive::NaiveDateTime;
 use diesel;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
@@ -212,6 +212,7 @@ impl Photo {
 
     #[cfg(test)]
     pub fn mock(y: i32, mo: u32, da: u32, h: u32, m: u32, s: u32) -> Self {
+        use chrono::naive::NaiveDate;
         Photo {
             id: ((((((y as u32 * 12) + mo) * 30 + da) * 24) + h) * 60 + s)
                 as i32,
