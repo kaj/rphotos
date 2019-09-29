@@ -192,7 +192,7 @@ div.group {
 
     img {
       display: block;
-      height: calc(unquote('5em + 10vw'));
+      height: calc(5em + 10vw);
       object-fit: cover;
       object-position: 50% 33%;
       width: -moz-available;
@@ -201,7 +201,7 @@ div.group {
     }
     // TODO: Set first-line class by js.
     &.first-line img {
-	height: calc(unquote('6em + 11vw'));
+	height: calc(6em + 11vw);
     }
     h2, .lable {
       text-shadow: 0 0 .1em white, 0 0 .4em white;
@@ -357,12 +357,12 @@ form.admin {
         box-shadow: .2em .4em 1em rgba(0,0,0,.7);
         display: flex;
         flex-flow: column;
-        height: calc(95vh  unquote('-') 6em);
+        height: calc(95vh - 6em);
         left: 5vw;
         padding-bottom: 1em;
         position: fixed;
         top: 3em;
-        width: calc(90vw  unquote('-') 1ex);
+        width: calc(90vw - 1ex);
         z-index: 10000;
 
         #amap {
