@@ -232,6 +232,12 @@ impl Photo {
     }
 }
 
+pub trait Facet {
+    fn by_slug(slug: &str, db: &PgConnection) -> Result<Self, Error>
+    where
+        Self: Sized;
+}
+
 #[derive(Debug, Clone, Queryable)]
 pub struct Tag {
     pub id: i32,
@@ -239,8 +245,8 @@ pub struct Tag {
     pub tag_name: String,
 }
 
-impl Tag {
-    pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Tag, Error> {
+impl Facet for Tag {
+    fn by_slug(slug: &str, db: &PgConnection) -> Result<Tag, Error> {
         t::tags.filter(t::slug.eq(slug)).first(db)
     }
 }
@@ -260,9 +266,6 @@ pub struct Person {
 }
 
 impl Person {
-    pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Person, Error> {
-        h::people.filter(h::slug.eq(slug)).first(db)
-    }
     pub fn get_or_create_name(
         db: &PgConnection,
         name: &str,
@@ -278,6 +281,12 @@ impl Person {
                     ))
                     .get_result(db)
             })
+    }
+}
+
+impl Facet for Person {
+    fn by_slug(slug: &str, db: &PgConnection) -> Result<Person, Error> {
+        h::people.filter(h::slug.eq(slug)).first(db)
     }
 }
 
@@ -297,8 +306,8 @@ pub struct Place {
     pub osm_level: Option<i16>,
 }
 
-impl Place {
-    pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Place, Error> {
+impl Facet for Place {
+    fn by_slug(slug: &str, db: &PgConnection) -> Result<Place, Error> {
         l::places.filter(l::slug.eq(slug)).first(db)
     }
 }

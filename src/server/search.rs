@@ -2,7 +2,7 @@ use super::render_ructe::RenderRucte;
 use super::views_by_category::AcQ;
 use super::{links_by_time, Context, ImgRange};
 use crate::adm::result::Error;
-use crate::models::{Person, Photo, Place, Tag};
+use crate::models::{Facet, Person, Photo, Place, Tag};
 use crate::schema::people::dsl as h; // h as in human
 use crate::schema::photo_people::dsl as pp;
 use crate::schema::photo_places::dsl as pl;
@@ -119,58 +119,34 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
         photos = photos.filter(p::date.le(until));
     }
     for tag in &query.t {
-        photos = photos.filter(
-            p::id.eq_any(
-                pt::photo_tags
-                    .select(pt::photo_id)
-                    .filter(pt::tag_id.eq(tag.id)),
-            ),
-        );
-    }
-    for tag in &query.t_not {
-        photos = photos.filter(
-            p::id.ne_all(
-                pt::photo_tags
-                    .select(pt::photo_id)
-                    .filter(pt::tag_id.eq(tag.id)),
-            ),
-        );
+        let ids = pt::photo_tags
+            .select(pt::photo_id)
+            .filter(pt::tag_id.eq(tag.item.id));
+        photos = if tag.inc {
+            photos.filter(p::id.eq_any(ids))
+        } else {
+            photos.filter(p::id.ne_all(ids))
+        };
     }
     for location in &query.l {
-        photos = photos.filter(
-            p::id.eq_any(
-                pl::photo_places
-                    .select(pl::photo_id)
-                    .filter(pl::place_id.eq(location.id)),
-            ),
-        );
-    }
-    for location in &query.l_not {
-        photos = photos.filter(
-            p::id.ne_all(
-                pl::photo_places
-                    .select(pl::photo_id)
-                    .filter(pl::place_id.eq(location.id)),
-            ),
-        );
+        let ids = pl::photo_places
+            .select(pl::photo_id)
+            .filter(pl::place_id.eq(location.item.id));
+        photos = if location.inc {
+            photos.filter(p::id.eq_any(ids))
+        } else {
+            photos.filter(p::id.ne_all(ids))
+        };
     }
     for person in &query.p {
-        photos = photos.filter(
-            p::id.eq_any(
-                pp::photo_people
-                    .select(pp::photo_id)
-                    .filter(pp::person_id.eq(person.id)),
-            ),
-        );
-    }
-    for person in &query.p_not {
-        photos = photos.filter(
-            p::id.ne_all(
-                pp::photo_people
-                    .select(pp::photo_id)
-                    .filter(pp::person_id.eq(person.id)),
-            ),
-        );
+        let ids = pp::photo_people
+            .select(pp::photo_id)
+            .filter(pp::person_id.eq(person.item.id));
+        photos = if person.inc {
+            photos.filter(p::id.eq_any(ids))
+        } else {
+            photos.filter(p::id.ne_all(ids))
+        }
     }
     if let Some(pos) = query.pos {
         use crate::schema::positions::dsl as pos;
@@ -186,9 +162,13 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
     let addendum = &query
         .t
         .iter()
-        .map(|v| format!("&t={}", v.slug))
-        .chain(query.l.iter().map(|v| format!("&l={}", v.slug)))
-        .chain(query.p.iter().map(|v| format!("&p={}", v.slug)))
+        .map(|v| format!("&t={}{}", if v.inc { "" } else { "!" }, v.item.slug))
+        .chain(query.l.iter().map(|v| {
+            format!("&l={}{}", if v.inc { "" } else { "!" }, v.item.slug)
+        }))
+        .chain(query.p.iter().map(|v| {
+            format!("&p={}{}", if v.inc { "" } else { "!" }, v.item.slug)
+        }))
         .chain(query.pos.map(|v| format!("&pos={}", v)))
         .collect::<String>();
     for link in &mut links {
@@ -203,19 +183,39 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
 #[derive(Debug, Default)]
 pub struct SearchQuery {
     /// Keys
-    pub t: Vec<Tag>,
-    pub t_not: Vec<Tag>,
+    pub t: Vec<Filter<Tag>>,
     /// People
-    pub p: Vec<Person>,
-    pub p_not: Vec<Person>,
+    pub p: Vec<Filter<Person>>,
     /// Places (locations)
-    pub l: Vec<Place>,
-    pub l_not: Vec<Place>,
+    pub l: Vec<Filter<Place>>,
     pub since: Option<NaiveDateTime>,
     pub until: Option<NaiveDateTime>,
     pub pos: Option<bool>,
     /// Query (free-text, don't know what to do)
     pub q: String,
+}
+
+#[derive(Debug)]
+pub struct Filter<T> {
+    pub inc: bool,
+    pub item: T,
+}
+
+impl<T: Facet> Filter<T> {
+    fn load(val: &str, db: &PgConnection) -> Option<Filter<T>> {
+        let (inc, slug) = if val.starts_with('!') {
+            (false, &val[1..])
+        } else {
+            (true, val)
+        };
+        match T::by_slug(slug, db) {
+            Ok(item) => Some(Filter { inc, item }),
+            Err(err) => {
+                warn!("No filter {:?}: {:?}", slug, err);
+                None
+            }
+        }
+    }
 }
 
 impl SearchQuery {
@@ -248,26 +248,14 @@ impl SearchQuery {
                     }
                     result.q = val;
                 }
-                "t" => {
-                    if val.starts_with('!') {
-                        result.t_not.push(Tag::by_slug(&val[1..], db)?)
-                    } else {
-                        result.t.push(Tag::by_slug(&val, db)?)
-                    }
+                "t" => if let Some(f) = Filter::load(&val, db) {
+                    result.t.push(f);
                 }
-                "p" => {
-                    if val.starts_with('!') {
-                        result.p_not.push(Person::by_slug(&val[1..], db)?)
-                    } else {
-                        result.p.push(Person::by_slug(&val, db)?)
-                    }
+                "p" => if let Some(f) = Filter::load(&val, db) {
+                    result.p.push(f);
                 }
-                "l" => {
-                    if val.starts_with('!') {
-                        result.l_not.push(Place::by_slug(&val[1..], db)?)
-                    } else {
-                        result.l.push(Place::by_slug(&val, db)?)
-                    }
+                "l" => if let Some(f) = Filter::load(&val, db) {
+                    result.l.push(f);
                 }
                 "pos" => {
                     result.pos = match val.as_str() {
