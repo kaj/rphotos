@@ -248,14 +248,20 @@ impl SearchQuery {
                     }
                     result.q = val;
                 }
-                "t" => if let Some(f) = Filter::load(&val, db) {
-                    result.t.push(f);
+                "t" => {
+                    if let Some(f) = Filter::load(&val, db) {
+                        result.t.push(f);
+                    }
                 }
-                "p" => if let Some(f) = Filter::load(&val, db) {
-                    result.p.push(f);
+                "p" => {
+                    if let Some(f) = Filter::load(&val, db) {
+                        result.p.push(f);
+                    }
                 }
-                "l" => if let Some(f) = Filter::load(&val, db) {
-                    result.l.push(f);
+                "l" => {
+                    if let Some(f) = Filter::load(&val, db) {
+                        result.l.push(f);
+                    }
                 }
                 "pos" => {
                     result.pos = match val.as_str() {
