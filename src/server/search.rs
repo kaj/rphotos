@@ -159,18 +159,7 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
     }
 
     let (mut links, coords) = links_by_time(&context, photos, range, true);
-    let addendum = &query
-        .t
-        .iter()
-        .map(|v| format!("&t={}{}", if v.inc { "" } else { "!" }, v.item.slug))
-        .chain(query.l.iter().map(|v| {
-            format!("&l={}{}", if v.inc { "" } else { "!" }, v.item.slug)
-        }))
-        .chain(query.p.iter().map(|v| {
-            format!("&p={}{}", if v.inc { "" } else { "!" }, v.item.slug)
-        }))
-        .chain(query.pos.map(|v| format!("&pos={}", v)))
-        .collect::<String>();
+    let addendum = query.to_query_string();
     for link in &mut links {
         if link.href.starts_with("/search/?") {
             link.href += &addendum;
@@ -290,6 +279,30 @@ impl SearchQuery {
             }
         }
         Ok(result)
+    }
+    fn to_query_string(&self) -> String {
+        fn or_bang(cond: bool) -> &'static str {
+            if cond {
+                ""
+            } else {
+                "!"
+            }
+        }
+        self.t
+            .iter()
+            .map(|v| format!("&t={}{}", or_bang(v.inc), v.item.slug))
+            .chain(
+                self.l
+                    .iter()
+                    .map(|v| format!("&l={}{}", or_bang(v.inc), v.item.slug)),
+            )
+            .chain(
+                self.p
+                    .iter()
+                    .map(|v| format!("&p={}{}", or_bang(v.inc), v.item.slug)),
+            )
+            .chain(self.pos.map(|v| format!("&pos={}t", or_bang(v))))
+            .collect()
     }
 }
 

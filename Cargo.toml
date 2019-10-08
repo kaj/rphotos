@@ -1,6 +1,6 @@
 [package]
 name = "rphotos"
-version = "0.6.10"
+version = "0.6.12"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 edition = "2018"
 
@@ -21,7 +21,7 @@ image = "0.22"
 medallion = "2.3.1"
 kamadak-exif = "~0.3.0"
 libc = "*"
-log = "*"
+log = "0.4.8"
 mime = "0.3.0"
 r2d2-memcache = "0.4.0"
 rand = "0.7.0"
