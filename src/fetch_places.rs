@@ -160,6 +160,7 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("garden") => Some(18),
                 Some("nature_reserve") => Some(12),
                 Some("park") => Some(14),
+                Some("pitch") => Some(15),
                 Some("playground") => Some(16),
                 _ => None,
             })
@@ -171,20 +172,6 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
             .or_else(|| match tag_str(tags, "boundary") {
                 Some("national_park") => Some(14),
                 Some("historic") => Some(7), // Seems to be mainly "Landskap"
-                _ => None,
-            })
-            .or_else(|| match tag_str(tags, "building") {
-                Some("church") => Some(20),
-                Some("exhibition_center") => Some(19),
-                Some("industrial") => Some(20),
-                Some("museum") => Some(20),
-                Some("office") => Some(20),
-                Some("public") => Some(20),
-                Some("retail") => Some(20),
-                Some("sports_hall") => Some(19),
-                Some("theatre") => Some(20),
-                Some("university") => Some(20),
-                Some("yes") => Some(20),
                 _ => None,
             })
             .or_else(|| match tag_str(tags, "landuse") {
@@ -231,9 +218,11 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 _ => None,
             })
             .or_else(|| match tag_str(tags, "place") {
-                Some("islet") => Some(17),
                 Some("island") => Some(13),
+                Some("islet") => Some(17),
+                Some("penisula") => Some(13),
                 Some("region") => Some(8),
+                Some("square") => Some(18),
                 Some("suburb") => Some(11),
                 _ => None,
             })
@@ -241,6 +230,12 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("bay") => Some(14),
                 Some("wood") => Some(14),
                 Some("scrub") => Some(18),
+                _ => None,
+            })
+            .or_else(|| match tag_str(tags, "building") {
+                Some("exhibition_center") => Some(19),
+                Some("sports_hall") => Some(19),
+                Some(_) => Some(20),
                 _ => None,
             })
             .or_else(|| match tag_str(tags, "political_division") {
