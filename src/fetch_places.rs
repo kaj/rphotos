@@ -218,6 +218,7 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 _ => None,
             })
             .or_else(|| match tag_str(tags, "place") {
+                Some("city_block") => Some(17),
                 Some("island") => Some(13),
                 Some("islet") => Some(17),
                 Some("penisula") => Some(13),
