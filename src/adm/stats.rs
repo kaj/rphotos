@@ -1,4 +1,3 @@
-#![allow(dead_code)] // for the date_part macro-created function
 use super::result::Error;
 use crate::schema::people::dsl::people;
 use crate::schema::photos::dsl::photos;
@@ -7,11 +6,7 @@ use crate::schema::tags::dsl::tags;
 use diesel::expression::dsl::{count_star, sql};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::sql_types::{BigInt, Double, Nullable, Text, Timestamp};
-
-sql_function!(date_part,
-              date_part_t,
-              (part: Text, date: Nullable<Timestamp>) -> Nullable<Double>);
+use diesel::sql_types::{BigInt, Double, Nullable};
 
 pub fn show_stats(db: &PgConnection) -> Result<(), Error> {
     println!(
