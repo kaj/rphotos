@@ -14,7 +14,7 @@ brotli = "3.3.0"
 chrono = "~0.4.0" # Must match version used by diesel
 diesel = { version = "1.4.0", features = ["r2d2", "chrono", "postgres"] }
 djangohashers = "*"
-dotenv = "0.14.0"
+dotenv = "0.15"
 env_logger = "*"
 flate2 = "^1.0.0"
 image = "0.22"
