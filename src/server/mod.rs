@@ -1,4 +1,5 @@
 mod admin;
+mod api;
 mod context;
 mod image;
 mod login;
@@ -104,6 +105,7 @@ pub fn run(args: &Args) -> Result<(), Error> {
         .or(get().and(path("ac")).and(path("tag")).and(s()).and(query()).map(auto_complete_tag))
         .or(get().and(path("ac")).and(path("person")).and(s()).and(query()).map(auto_complete_person))
         .or(get().and(path("search")).and(end()).and(s()).and(query()).map(search))
+        .or(path("api").and(api::routes(s())))
         .or(path("adm").and(admin::routes(s())));
     warp::serve(routes.recover(customize_error)).run(args.listen);
     Ok(())

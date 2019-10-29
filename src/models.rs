@@ -385,4 +385,11 @@ impl SizeTag {
             SizeTag::Large => 1900,
         }
     }
+    pub fn tag(self) -> char {
+        match self {
+            SizeTag::Small => 's',
+            SizeTag::Medium => 'm',
+            SizeTag::Large => 'l',
+        }
+    }
 }
