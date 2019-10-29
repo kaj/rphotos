@@ -9,7 +9,7 @@ use r2d2_memcache::r2d2::Error;
 use r2d2_memcache::MemcacheConnectionManager;
 use std::sync::Arc;
 use std::time::Duration;
-use warp::filters::{cookie, BoxedFilter};
+use warp::filters::{cookie, header, BoxedFilter};
 use warp::path::{self, FullPath};
 use warp::{self, Filter};
 
@@ -20,17 +20,23 @@ type PooledMemcache = PooledConnection<MemcacheConnectionManager>;
 
 pub fn create_session_filter(args: &Args) -> BoxedFilter<(Context,)> {
     let global = Arc::new(GlobalContext::new(args));
+    let g1 = global.clone();
     warp::any()
         .and(path::full())
-        .and(cookie::optional("EXAUTH"))
-        .map(move |path, key: Option<String>| {
+        .and(
+            cookie::cookie("EXAUTH")
+                .or(header::header("Authorization"))
+                .unify()
+                .map(move |key: String| {
+                    g1.verify_key(&key)
+                        .map_err(|e| warn!("Auth failed: {}", e))
+                        .ok()
+                })
+                .or(warp::any().map(|| None))
+                .unify(),
+        )
+        .map(move |path, user| {
             let global = global.clone();
-            let user = key.and_then(|k| {
-                global
-                    .verify_key(&k)
-                    .map_err(|e| warn!("Auth failed: {}", e))
-                    .ok()
-            });
             Context { global, path, user }
         })
         .boxed()
@@ -112,11 +118,8 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn db(&self) -> Result<PooledPg, String> {
-        self.global
-            .db_pool
-            .get()
-            .map_err(|e| format!("Failed to get db {}", e))
+    pub fn db(&self) -> Result<PooledPg, Error> {
+        self.global.db_pool.get()
     }
     pub fn authorized_user(&self) -> Option<&str> {
         self.user.as_ref().map(AsRef::as_ref)
