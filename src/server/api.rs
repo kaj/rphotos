@@ -1,7 +1,7 @@
 //! API views
 use super::Context;
 use crate::models::{Photo, SizeTag};
-use diesel::{self, prelude::*, result::Error as DbError};
+use diesel::{self, prelude::*, result::Error as DbError, update};
 use log::warn;
 use serde::{Deserialize, Serialize};
 use warp::filters::BoxedFilter;
@@ -10,10 +10,18 @@ use warp::reply::Response;
 use warp::{Filter, Reply};
 
 pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
-    use warp::filters::method::v2::get;
-    use warp::{path, query};
-    let img = path("image").and(s.clone()).and(query()).map(get_img);
-    get().and(img).boxed()
+    use warp::filters::method::v2::{get, post};
+    use warp::path::{end, path};
+    use warp::query;
+    let gimg = get().and(end()).and(s.clone()).and(query()).map(get_img);
+    let pimg = post()
+        .and(path("makepublic"))
+        .and(end())
+        .and(s.clone())
+        .and(query())
+        .map(make_public);
+
+    path("image").and(gimg.or(pimg).unify()).boxed()
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,12 +70,35 @@ fn get_img(context: Context, q: ImgQuery) -> Response {
             if !context.is_authorized() && !img.is_public() {
                 return Err(NOT_FOUND);
             }
-            Ok(warp::reply::json(&GetImgResult {
-                small: ImgLink::new(&img, SizeTag::Small),
-                medium: ImgLink::new(&img, SizeTag::Medium),
-                public: img.is_public,
-            })
-            .into_response())
+            Ok(
+                warp::reply::json(&GetImgResult::for_img(&img))
+                    .into_response(),
+            )
+        })
+        .unwrap_or_else(|err| err.into_response())
+}
+
+fn make_public(context: Context, q: ImgQuery) -> Response {
+    if !context.is_authorized() {
+        return ApiError {
+            code: StatusCode::UNAUTHORIZED,
+            msg: "Authorization required",
+        }
+        .into_response();
+    }
+    q.validate()
+        .map_err(ApiError::bad_request)
+        .and_then(|id| {
+            let db = context.db()?;
+            let img = id.load(&db)?.ok_or(NOT_FOUND)?;
+            use crate::schema::photos::dsl as p;
+            let img = update(p::photos.find(img.id))
+                .set(p::is_public.eq(true))
+                .get_result(&db)?;
+            Ok(
+                warp::reply::json(&GetImgResult::for_img(&img))
+                    .into_response(),
+            )
         })
         .unwrap_or_else(|err| err.into_response())
 }
@@ -124,6 +155,16 @@ struct GetImgResult {
     small: ImgLink,
     medium: ImgLink,
     public: bool,
+}
+
+impl GetImgResult {
+    fn for_img(img: &Photo) -> Self {
+        GetImgResult {
+            small: ImgLink::new(img, SizeTag::Small),
+            medium: ImgLink::new(img, SizeTag::Medium),
+            public: img.is_public,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
