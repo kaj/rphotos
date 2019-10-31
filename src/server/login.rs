@@ -19,28 +19,14 @@ pub struct NextQ {
 
 pub fn post_login(context: Context, form: LoginForm) -> Response<Vec<u8>> {
     let next = sanitize_next(form.next.as_ref().map(AsRef::as_ref));
-    use crate::schema::users::dsl::*;
-    if let Ok(hash) = users
-        .filter(username.eq(&form.user))
-        .select(password)
-        .first::<String>(&context.db().unwrap())
-    {
-        if djangohashers::check_password_tolerant(&form.password, &hash) {
-            info!("User {} logged in", form.user);
-            let token = context.make_token(&form.user).unwrap();
-            return Response::builder()
-                .header(
-                    header::SET_COOKIE,
-                    format!("EXAUTH={}; SameSite=Strict; HttpOpnly", token),
-                )
-                .redirect(next.unwrap_or("/"));
-        }
-        info!(
-            "Login failed: Password verification failed for {:?}",
-            form.user,
-        );
-    } else {
-        info!("Login failed: No hash found for {:?}", form.user);
+    if let Some(user) = form.validate(&*context.db().unwrap()) {
+        let token = context.make_token(&user).unwrap();
+        return Response::builder()
+            .header(
+                header::SET_COOKIE,
+                format!("EXAUTH={}; SameSite=Strict; HttpOpnly", token),
+            )
+            .redirect(next.unwrap_or("/"));
     }
     let message = Some("Login failed, please try again");
     Response::builder().html(|o| templates::login(o, &context, next, message))
@@ -53,6 +39,30 @@ pub struct LoginForm {
     user: String,
     password: String,
     next: Option<String>,
+}
+
+impl LoginForm {
+    /// Retur user if and only if password is correct for user.
+    pub fn validate(&self, db: &PgConnection) -> Option<String> {
+        use crate::schema::users::dsl::*;
+        if let Ok(hash) = users
+            .filter(username.eq(&self.user))
+            .select(password)
+            .first::<String>(db)
+        {
+            if djangohashers::check_password_tolerant(&self.password, &hash) {
+                info!("User {} logged in", self.user);
+                return Some(self.user.clone());
+            }
+            info!(
+                "Login failed: Password verification failed for {:?}",
+                self.user,
+            );
+        } else {
+            info!("Login failed: No hash found for {:?}", self.user);
+        }
+        None
+    }
 }
 
 fn sanitize_next(next: Option<&str>) -> Option<&str> {
