@@ -13,8 +13,12 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
     use warp::filters::method::v2::{get, post};
     use warp::path::{end, path};
     use warp::{body, query};
-    let login = path("login").and(end()).and(post()).and(s.clone())
-        .and(body::json()).map(login);
+    let login = path("login")
+        .and(end())
+        .and(post())
+        .and(s.clone())
+        .and(body::json())
+        .map(login);
     let gimg = end().and(get()).and(s.clone()).and(query()).map(get_img);
     let pimg = path("makepublic")
         .and(end())
@@ -28,25 +32,26 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
 use super::login::LoginForm;
 
 fn login(context: Context, form: LoginForm) -> Response {
-    context.db()
+    context
+        .db()
         .map_err(Into::into)
         .and_then(|db| {
-            let user = form.validate(&db)
+            let user = form
+                .validate(&db)
                 .ok_or_else(|| ApiError::bad_request("login failed"))?;
-            Ok(
-                warp::reply::json(&LoginOk {
-                    token: context.make_token(&user)
-                        .ok_or_else(|| ApiError::bad_request("failed to make token"))?,
-                })
-                .into_response()
-            )
+            Ok(warp::reply::json(&LoginOk {
+                token: context.make_token(&user).ok_or_else(|| {
+                    ApiError::bad_request("failed to make token")
+                })?,
+            })
+            .into_response())
         })
         .unwrap_or_else(|err: ApiError| err.into_response())
 }
 
 #[derive(Debug, Serialize)]
 struct LoginOk {
-    token: String
+    token: String,
 }
 
 #[derive(Debug, Deserialize)]
