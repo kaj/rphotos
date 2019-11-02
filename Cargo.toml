@@ -12,7 +12,6 @@ ructe = { version = "^0.7.2", features = ["sass", "mime03"] }
 [dependencies]
 brotli = "3.3.0"
 chrono = "~0.4.0" # Must match version used by diesel
-diesel = { version = "1.4.0", features = ["r2d2", "chrono", "postgres"] }
 djangohashers = "*"
 dotenv = "0.15"
 env_logger = "*"
@@ -32,6 +31,11 @@ serde_json = "1.0"
 slug = "0.1"
 structopt = { version = "0.3.0", features = ["wrap_help"] }
 time = "*"
+
+[dependencies.diesel]
+default-features = false
+features = ["r2d2", "chrono", "postgres"]
+version = "1.4.0"
 
 [dependencies.warp]
 default-features = false
