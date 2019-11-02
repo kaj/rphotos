@@ -1,4 +1,5 @@
 //! API views
+use super::login::LoginForm;
 use super::Context;
 use crate::models::{Photo, SizeTag};
 use diesel::{self, prelude::*, result::Error as DbError, update};
@@ -9,6 +10,8 @@ use warp::http::StatusCode;
 use warp::reply::Response;
 use warp::{Filter, Reply};
 
+type ApiResult<T> = Result<T, ApiError>;
+
 pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
     use warp::filters::method::v2::{get, post};
     use warp::path::{end, path};
@@ -18,7 +21,8 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
         .and(post())
         .and(s.clone())
         .and(body::json())
-        .map(login);
+        .map(login)
+        .map(w);
     let gimg = end().and(get()).and(s.clone()).and(query()).map(get_img);
     let pimg = path("makepublic")
         .and(end())
@@ -27,26 +31,27 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
         .and(body::json())
         .map(make_public);
 
-    login.or(path("image").and(gimg.or(pimg))).boxed()
+    login
+        .or(path("image").and(gimg.or(pimg).unify().map(w)))
+        .boxed()
 }
-use super::login::LoginForm;
 
-fn login(context: Context, form: LoginForm) -> Response {
-    context
-        .db()
-        .map_err(Into::into)
-        .and_then(|db| {
-            let user = form
-                .validate(&db)
-                .ok_or_else(|| ApiError::bad_request("login failed"))?;
-            Ok(warp::reply::json(&LoginOk {
-                token: context.make_token(&user).ok_or_else(|| {
-                    ApiError::bad_request("failed to make token")
-                })?,
-            })
-            .into_response())
-        })
-        .unwrap_or_else(|err: ApiError| err.into_response())
+fn w<T: Serialize>(result: ApiResult<T>) -> Response {
+    result
+        .map(|result| warp::reply::json(&result).into_response())
+        .unwrap_or_else(|err| err.into_response())
+}
+
+fn login(context: Context, form: LoginForm) -> ApiResult<LoginOk> {
+    let db = context.db()?;
+    let user = form
+        .validate(&db)
+        .ok_or_else(|| ApiError::bad_request("login failed"))?;
+    Ok(LoginOk {
+        token: context
+            .make_token(&user)
+            .ok_or_else(|| ApiError::bad_request("failed to make token"))?,
+    })
 }
 
 #[derive(Debug, Serialize)]
@@ -91,46 +96,31 @@ impl ImgIdentifier {
     }
 }
 
-fn get_img(context: Context, q: ImgQuery) -> Response {
-    q.validate()
-        .map_err(ApiError::bad_request)
-        .and_then(|id| {
-            let db = context.db()?;
-            let img = id.load(&db)?.ok_or(NOT_FOUND)?;
-            if !context.is_authorized() && !img.is_public() {
-                return Err(NOT_FOUND);
-            }
-            Ok(
-                warp::reply::json(&GetImgResult::for_img(&img))
-                    .into_response(),
-            )
-        })
-        .unwrap_or_else(|err| err.into_response())
+fn get_img(context: Context, q: ImgQuery) -> ApiResult<GetImgResult> {
+    let id = q.validate().map_err(ApiError::bad_request)?;
+    let db = context.db()?;
+    let img = id.load(&db)?.ok_or(NOT_FOUND)?;
+    if !context.is_authorized() && !img.is_public() {
+        return Err(NOT_FOUND);
+    }
+    Ok(GetImgResult::for_img(&img))
 }
 
-fn make_public(context: Context, q: ImgQuery) -> Response {
+fn make_public(context: Context, q: ImgQuery) -> ApiResult<GetImgResult> {
     if !context.is_authorized() {
-        return ApiError {
+        return Err(ApiError {
             code: StatusCode::UNAUTHORIZED,
             msg: "Authorization required",
-        }
-        .into_response();
+        });
     }
-    q.validate()
-        .map_err(ApiError::bad_request)
-        .and_then(|id| {
-            let db = context.db()?;
-            let img = id.load(&db)?.ok_or(NOT_FOUND)?;
-            use crate::schema::photos::dsl as p;
-            let img = update(p::photos.find(img.id))
-                .set(p::is_public.eq(true))
-                .get_result(&db)?;
-            Ok(
-                warp::reply::json(&GetImgResult::for_img(&img))
-                    .into_response(),
-            )
-        })
-        .unwrap_or_else(|err| err.into_response())
+    let id = q.validate().map_err(ApiError::bad_request)?;
+    let db = context.db()?;
+    let img = id.load(&db)?.ok_or(NOT_FOUND)?;
+    use crate::schema::photos::dsl as p;
+    let img = update(p::photos.find(img.id))
+        .set(p::is_public.eq(true))
+        .get_result(&db)?;
+    Ok(GetImgResult::for_img(&img))
 }
 
 struct ApiError {
