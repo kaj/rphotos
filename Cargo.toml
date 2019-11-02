@@ -25,7 +25,7 @@ mime = "0.3.0"
 r2d2-memcache = "0.4.0"
 rand = "0.7.0"
 regex = "*"
-reqwest = "=0.9.17"
+reqwest = "0.9.22"
 serde = { version = "1.0.0", features = ["derive"] }
 serde_json = "1.0"
 slug = "0.1"
