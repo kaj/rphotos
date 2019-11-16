@@ -67,25 +67,36 @@ impl PhotosDir {
     ) -> io::Result<()> {
         let absdir = self.basedir.join(dir);
         if fs::metadata(&absdir)?.is_dir() {
-            let bl = self.basedir.to_str().unwrap().len() + 1;
             debug!("Should look in {:?}", absdir);
             for entry in fs::read_dir(absdir)? {
                 let path = entry?.path();
                 if fs::metadata(&path)?.is_dir() {
                     self.find_files(&path, cb)?;
                 } else if let Ok(exif) = ExifData::read_from(&path) {
-                    cb(&path.to_str().unwrap()[bl..], &exif);
+                    cb(self.subpath(&path)?, &exif);
                 } else if let Ok(image) = image::open(&path) {
                     let mut meta = ExifData::default();
                     meta.width = Some(image.width());
                     meta.height = Some(image.height());
                     info!("{:?} seems like a pic with no exif.", path);
-                    cb(&path.to_str().unwrap()[bl..], &meta);
+                    cb(self.subpath(&path)?, &meta);
                 } else {
                     debug!("{:?} is no pic.", path)
                 }
             }
         }
         Ok(())
+    }
+
+    fn subpath<'a>(&self, fullpath: &'a Path) -> Result<&'a str, io::Error> {
+        let path = fullpath
+            .strip_prefix(&self.basedir)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        path.to_str().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("Non-utf8 path {:?}", path),
+            )
+        })
     }
 }
