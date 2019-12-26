@@ -4,13 +4,13 @@ use super::{not_found, redirect_to_img, Context, ImgRange, Link, PhotoLink};
 use crate::models::{Photo, SizeTag};
 use crate::templates;
 use chrono::naive::{NaiveDate, NaiveDateTime};
-use chrono::Duration as ChDuration;
+use chrono::{DateTime, Datelike, Duration, Local};
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Nullable};
 use log::warn;
 use serde::Deserialize;
-use time;
+use std::time::SystemTime;
 use warp::http::Response;
 use warp::Reply;
 
@@ -156,7 +156,7 @@ pub fn days_in_month(
                 NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
             let photo = Photo::query(context.is_authorized())
                 .filter(date.ge(fromdate))
-                .filter(date.lt(fromdate + ChDuration::days(1)))
+                .filter(date.lt(fromdate + Duration::days(1)))
                 .order((grade.desc().nulls_last(), date.asc()))
                 .limit(1)
                 .first::<Photo>(&db)
@@ -232,7 +232,7 @@ pub fn all_for_day(
 
     let photos = Photo::query(context.is_authorized())
         .filter(date.ge(thedate))
-        .filter(date.lt(thedate + ChDuration::days(1)));
+        .filter(date.lt(thedate + Duration::days(1)));
     let (links, coords) = links_by_time(&context, photos, range, false);
 
     if links.is_empty() {
@@ -258,8 +258,8 @@ pub fn on_this_day(context: Context) -> impl Reply {
     };
 
     let (month, day) = {
-        let now = time::now();
-        (now.tm_mon as u32 + 1, now.tm_mday as u32)
+        let today = DateTime::<Local>::from(SystemTime::now()).date();
+        (today.month(), today.day())
     };
     let db = context.db().unwrap();
     let pos = Photo::query(context.is_authorized())
@@ -305,7 +305,7 @@ pub fn on_this_day(context: Context) -> impl Reply {
                             .and_hms(0, 0, 0);
                     let photo = Photo::query(context.is_authorized())
                         .filter(date.ge(fromdate))
-                        .filter(date.lt(fromdate + ChDuration::days(1)))
+                        .filter(date.lt(fromdate + Duration::days(1)))
                         .order((grade.desc().nulls_last(), date.asc()))
                         .limit(1)
                         .first::<Photo>(&db)
