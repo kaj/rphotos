@@ -1,7 +1,7 @@
 //! Extract all the exif data I care about
 use crate::adm::result::Error;
 use chrono::{Date, Local, NaiveDate, NaiveDateTime, Utc};
-use exif::{Field, Reader, Tag, Value};
+use exif::{Field, In, Reader, Tag, Value};
 use log::{debug, error, warn};
 use std::fs::File;
 use std::io::BufReader;
@@ -31,7 +31,7 @@ impl ExifData {
         let reader = Reader::new(&mut BufReader::new(&file))
             .map_err(|e| Error::in_file(&e, path))?;
         for f in reader.fields() {
-            if !f.thumbnail {
+            if f.ifd_num == In::PRIMARY {
                 if let Some(d) = is_datetime(f, Tag::DateTimeOriginal) {
                     result.dateval = Some(d);
                 } else if let Some(d) = is_datetime(f, Tag::DateTime) {
@@ -252,7 +252,7 @@ fn is_u32(f: &Field, tag: Tag) -> Option<u32> {
 
 fn single_ascii<'a>(value: &'a Value) -> Result<&'a str, Error> {
     match value {
-        &Value::Ascii(ref v) if v.len() == 1 => Ok(from_utf8(v[0])?),
+        &Value::Ascii(ref v) if v.len() == 1 => Ok(from_utf8(&v[0])?),
         &Value::Ascii(ref v) if v.len() > 1 => {
             for t in &v[1..] {
                 if !t.is_empty() {
@@ -262,7 +262,7 @@ fn single_ascii<'a>(value: &'a Value) -> Result<&'a str, Error> {
                     )));
                 }
             }
-            Ok(from_utf8(v[0])?)
+            Ok(from_utf8(&v[0])?)
         }
         v => Err(Error::Other(format!(
             "Got {:?}, expected single ascii value",
