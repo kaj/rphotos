@@ -4,13 +4,12 @@ use super::{not_found, redirect_to_img, Context, ImgRange, Link, PhotoLink};
 use crate::models::{Photo, SizeTag};
 use crate::templates;
 use chrono::naive::{NaiveDate, NaiveDateTime};
-use chrono::{DateTime, Datelike, Duration, Local};
+use chrono::{Datelike, Duration, Local};
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Nullable};
 use log::warn;
 use serde::Deserialize;
-use std::time::SystemTime;
 use warp::http::Response;
 use warp::Reply;
 
@@ -258,7 +257,7 @@ pub fn on_this_day(context: Context) -> impl Reply {
     };
 
     let (month, day) = {
-        let today = DateTime::<Local>::from(SystemTime::now()).date();
+        let today = Local::now();
         (today.month(), today.day())
     };
     let db = context.db().unwrap();
