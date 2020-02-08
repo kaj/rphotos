@@ -28,7 +28,8 @@ impl ExifData {
     pub fn read_from(path: &Path) -> Result<Self, Error> {
         let mut result = Self::default();
         let file = File::open(path).map_err(|e| Error::in_file(&e, path))?;
-        let reader = Reader::new(&mut BufReader::new(&file))
+        let reader = Reader::new()
+            .read_from_container(&mut BufReader::new(&file))
             .map_err(|e| Error::in_file(&e, path))?;
         for f in reader.fields() {
             if f.ifd_num == In::PRIMARY {
