@@ -1,6 +1,7 @@
 use crate::models::Photo;
 use crate::myexif::ExifData;
-use image::{self, FilterType, GenericImageView, ImageError, ImageFormat};
+use image::imageops::FilterType;
+use image::{self, GenericImageView, ImageError, ImageFormat};
 use log::{debug, info, warn};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -45,7 +46,7 @@ impl PhotosDir {
             }
         };
         let mut buf = Vec::new();
-        img.write_to(&mut buf, ImageFormat::JPEG)?;
+        img.write_to(&mut buf, ImageFormat::Jpeg)?;
         Ok(buf)
     }
 
