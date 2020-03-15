@@ -1,14 +1,57 @@
 //! Handle photos by tag, person, or place.
 use super::render_ructe::RenderRucte;
-use super::{links_by_time, not_found, Context, ImgRange};
+use super::{links_by_time, not_found, Context, ContextFilter, ImgRange};
 use crate::models::{Person, Photo, Place, Tag};
 use crate::templates;
 use diesel::prelude::*;
-use serde::Deserialize;
+use warp::filters::method::v2::get;
+use warp::filters::BoxedFilter;
 use warp::http::Response;
-use warp::{reply, Reply};
+use warp::path::{end, param};
+use warp::query::query;
+use warp::{Filter, Reply};
 
-pub fn person_all(context: Context) -> Response<Vec<u8>> {
+pub fn person_routes(s: ContextFilter) -> BoxedFilter<(impl Reply,)> {
+    end()
+        .and(s.clone())
+        .and(get())
+        .map(person_all)
+        .or(s
+            .and(param())
+            .and(end())
+            .and(get())
+            .and(query())
+            .map(person_one))
+        .boxed()
+}
+pub fn place_routes(s: ContextFilter) -> BoxedFilter<(impl Reply,)> {
+    end()
+        .and(s.clone())
+        .and(get())
+        .map(place_all)
+        .or(s
+            .and(param())
+            .and(end())
+            .and(get())
+            .and(query())
+            .map(place_one))
+        .boxed()
+}
+pub fn tag_routes(s: ContextFilter) -> BoxedFilter<(impl Reply,)> {
+    end()
+        .and(s.clone())
+        .and(get())
+        .map(tag_all)
+        .or(s
+            .and(param())
+            .and(end())
+            .and(get())
+            .and(query())
+            .map(tag_one))
+        .boxed()
+}
+
+fn person_all(context: Context) -> Response<Vec<u8>> {
     use crate::schema::people::dsl::{id, people, person_name};
     let query = people.into_boxed();
     let query = if context.is_authorized() {
@@ -32,7 +75,7 @@ pub fn person_all(context: Context) -> Response<Vec<u8>> {
     })
 }
 
-pub fn person_one(
+fn person_one(
     context: Context,
     tslug: String,
     range: ImgRange,
@@ -59,7 +102,7 @@ pub fn person_one(
     }
 }
 
-pub fn tag_all(context: Context) -> Response<Vec<u8>> {
+fn tag_all(context: Context) -> Response<Vec<u8>> {
     use crate::schema::tags::dsl::{id, tag_name, tags};
     let query = tags.order(tag_name).into_boxed();
     let query = if context.is_authorized() {
@@ -80,7 +123,7 @@ pub fn tag_all(context: Context) -> Response<Vec<u8>> {
     })
 }
 
-pub fn tag_one(
+fn tag_one(
     context: Context,
     tslug: String,
     range: ImgRange,
@@ -103,7 +146,7 @@ pub fn tag_one(
     }
 }
 
-pub fn place_all(context: Context) -> Response<Vec<u8>> {
+fn place_all(context: Context) -> Response<Vec<u8>> {
     use crate::schema::places::dsl::{id, place_name, places};
     let query = places.into_boxed();
     let query = if context.is_authorized() {
@@ -127,7 +170,7 @@ pub fn place_all(context: Context) -> Response<Vec<u8>> {
     })
 }
 
-pub fn place_one(
+fn place_one(
     context: Context,
     tslug: String,
     range: ImgRange,
@@ -150,29 +193,4 @@ pub fn place_one(
     } else {
         not_found(&context)
     }
-}
-
-pub fn auto_complete_tag(context: Context, query: AcQ) -> impl Reply {
-    use crate::schema::tags::dsl::{tag_name, tags};
-    let q = tags
-        .select(tag_name)
-        .filter(tag_name.ilike(query.q + "%"))
-        .order(tag_name)
-        .limit(10);
-    reply::json(&q.load::<String>(&context.db().unwrap()).unwrap())
-}
-
-pub fn auto_complete_person(context: Context, query: AcQ) -> impl Reply {
-    use crate::schema::people::dsl::{people, person_name};
-    let q = people
-        .select(person_name)
-        .filter(person_name.ilike(query.q + "%"))
-        .order(person_name)
-        .limit(10);
-    reply::json(&q.load::<String>(&context.db().unwrap()).unwrap())
-}
-
-#[derive(Deserialize)]
-pub struct AcQ {
-    pub q: String,
 }

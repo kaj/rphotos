@@ -1,5 +1,6 @@
 mod admin;
 mod api;
+mod autocomplete;
 mod context;
 mod image;
 mod login;
@@ -11,7 +12,7 @@ mod views_by_category;
 mod views_by_date;
 
 use self::context::create_session_filter;
-pub use self::context::Context;
+pub use self::context::{Context, ContextFilter};
 pub use self::photolink::PhotoLink;
 use self::render_ructe::RenderRucte;
 use self::search::*;
@@ -91,20 +92,15 @@ pub fn run(args: &Args) -> Result<(), Error> {
         .or(get().and(param()).and(end()).and(s()).map(months_in_year))
         .or(get().and(param()).and(param()).and(end()).and(s()).map(days_in_month))
         .or(get().and(param()).and(param()).and(param()).and(end()).and(query()).and(s()).map(all_for_day))
-        .or(get().and(path("person")).and(end()).and(s()).map(person_all))
-        .or(get().and(path("person")).and(s()).and(param()).and(end()).and(query()).map(person_one))
-        .or(get().and(path("place")).and(end()).and(s()).map(place_all))
-        .or(get().and(path("place")).and(s()).and(param()).and(end()).and(query()).map(place_one))
-        .or(get().and(path("tag")).and(end()).and(s()).map(tag_all))
-        .or(get().and(path("tag")).and(s()).and(param()).and(end()).and(query()).map(tag_one))
+        .or(path("person").and(person_routes(s())))
+        .or(path("place").and(place_routes(s())))
+        .or(path("tag").and(tag_routes(s())))
         .or(get().and(path("random")).and(end()).and(s()).map(random_image))
         .or(get().and(path("thisday")).and(end()).and(s()).map(on_this_day))
         .or(get().and(path("next")).and(end()).and(s()).and(query()).map(next_image))
         .or(get().and(path("prev")).and(end()).and(s()).and(query()).map(prev_image))
-        .or(get().and(path("ac")).and(end()).and(s()).and(query()).map(auto_complete_any))
-        .or(get().and(path("ac")).and(path("tag")).and(s()).and(query()).map(auto_complete_tag))
-        .or(get().and(path("ac")).and(path("person")).and(s()).and(query()).map(auto_complete_person))
-        .or(get().and(path("search")).and(end()).and(s()).and(query()).map(search))
+        .or(path("ac").and(autocomplete::routes(s())))
+        .or(path("search").and(end()).and(get()).and(s()).and(query()).map(search))
         .or(path("api").and(api::routes(s())))
         .or(path("adm").and(admin::routes(s())));
     warp::serve(routes.recover(customize_error)).run(args.listen);

@@ -13,10 +13,11 @@ use warp::filters::{cookie, header, BoxedFilter};
 use warp::path::{self, FullPath};
 use warp::{self, Filter};
 
+pub type ContextFilter = BoxedFilter<(Context,)>;
 type MemcachePool = Pool<MemcacheConnectionManager>;
 type PooledMemcache = PooledConnection<MemcacheConnectionManager>;
 
-pub fn create_session_filter(args: &Args) -> BoxedFilter<(Context,)> {
+pub fn create_session_filter(args: &Args) -> ContextFilter {
     let global = Arc::new(GlobalContext::new(args));
     let g1 = global.clone();
     warp::any()
