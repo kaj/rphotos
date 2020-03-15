@@ -1,8 +1,8 @@
 use super::Args;
+use crate::dbopt::{PgPool, PooledPg};
 use crate::fetch_places::OverpassOpt;
 use crate::photosdir::PhotosDir;
-use diesel::pg::PgConnection;
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::r2d2::{Pool, PooledConnection};
 use log::{debug, warn};
 use medallion::{Header, Payload, Token};
 use r2d2_memcache::r2d2::Error;
@@ -13,8 +13,6 @@ use warp::filters::{cookie, header, BoxedFilter};
 use warp::path::{self, FullPath};
 use warp::{self, Filter};
 
-type PgPool = Pool<ConnectionManager<PgConnection>>;
-type PooledPg = PooledConnection<ConnectionManager<PgConnection>>;
 type MemcachePool = Pool<MemcacheConnectionManager>;
 type PooledMemcache = PooledConnection<MemcacheConnectionManager>;
 
@@ -54,15 +52,10 @@ struct GlobalContext {
 
 impl GlobalContext {
     fn new(args: &Args) -> Self {
-        let db_manager =
-            ConnectionManager::<PgConnection>::new(&args.db.db_url);
         let mc_manager =
             MemcacheConnectionManager::new(args.cache.memcached_url.as_ref());
         GlobalContext {
-            db_pool: Pool::builder()
-                .connection_timeout(Duration::from_secs(1))
-                .build(db_manager)
-                .expect("Posgresql pool"),
+            db_pool: args.db.create_pool().expect("Posgresql pool"),
             photosdir: PhotosDir::new(&args.photos.photos_dir),
             memcache_pool: Pool::builder()
                 .connection_timeout(Duration::from_secs(1))

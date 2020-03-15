@@ -4,6 +4,7 @@
 extern crate diesel;
 
 mod adm;
+mod dbopt;
 mod fetch_places;
 mod models;
 mod myexif;
@@ -15,8 +16,7 @@ mod server;
 use crate::adm::result::Error;
 use crate::adm::stats::show_stats;
 use crate::adm::{findphotos, makepublic, precache, storestatics, users};
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
+use crate::dbopt::DbOpt;
 use dotenv::dotenv;
 use std::path::PathBuf;
 use std::process::exit;
@@ -74,20 +74,6 @@ struct CacheOpt {
         default_value = "memcache://127.0.0.1:11211"
     )]
     memcached_url: String,
-}
-
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
-struct DbOpt {
-    /// How to connect to the postgres database.
-    #[structopt(long, env = "DATABASE_URL", hide_env_values = true)]
-    db_url: String,
-}
-
-impl DbOpt {
-    fn connect(&self) -> Result<PgConnection, ConnectionError> {
-        PgConnection::establish(&self.db_url)
-    }
 }
 
 #[derive(StructOpt)]
