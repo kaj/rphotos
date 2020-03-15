@@ -1,7 +1,7 @@
+use crate::Error;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ConnectionError};
-use std::error::Error;
 use std::time::Duration;
 use structopt::StructOpt;
 
@@ -20,10 +20,10 @@ impl DbOpt {
     pub fn connect(&self) -> Result<PgConnection, ConnectionError> {
         PgConnection::establish(&self.db_url)
     }
-    pub fn create_pool(&self) -> Result<PgPool, impl Error> {
+    pub fn create_pool(&self) -> Result<PgPool, Error> {
         let db_manager = ConnectionManager::<PgConnection>::new(&self.db_url);
-        Pool::builder()
+        Ok(Pool::builder()
             .connection_timeout(Duration::from_secs(1))
-            .build(db_manager)
+            .build(db_manager)?)
     }
 }

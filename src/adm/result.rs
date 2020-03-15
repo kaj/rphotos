@@ -3,6 +3,7 @@ use chrono::ParseError as ChronoParseError;
 use diesel::prelude::ConnectionError;
 use diesel::result::Error as DieselError;
 use r2d2_memcache::memcache::MemcacheError;
+use r2d2_memcache::r2d2::Error as R2d2Error;
 use std::convert::From;
 use std::num::ParseIntError;
 use std::path::Path;
@@ -96,5 +97,11 @@ impl From<Utf8Error> for Error {
 impl From<fetch_places::Error> for Error {
     fn from(e: fetch_places::Error) -> Self {
         Error::PlacesFailed(e)
+    }
+}
+
+impl From<R2d2Error> for Error {
+    fn from(e: R2d2Error) -> Self {
+        Error::Other(format!("{}", e))
     }
 }
