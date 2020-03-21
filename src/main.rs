@@ -84,10 +84,11 @@ struct DirOpt {
     photos_dir: PathBuf,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     dotenv().ok();
     env_logger::init();
-    match run(&RPhotos::from_args()) {
+    match run(&RPhotos::from_args()).await {
         Ok(()) => (),
         Err(err) => {
             println!("{}", err);
@@ -96,17 +97,17 @@ fn main() {
     }
 }
 
-fn run(args: &RPhotos) -> Result<(), Error> {
+async fn run(args: &RPhotos) -> Result<(), Error> {
     match args {
         RPhotos::Findphotos(cmd) => cmd.run(),
         RPhotos::Makepublic(cmd) => cmd.run(),
         RPhotos::Stats(db) => show_stats(&db.connect()?),
         RPhotos::Userlist { db } => users::list(&db.connect()?),
         RPhotos::Userpass { db, user } => users::passwd(&db.connect()?, user),
-        RPhotos::Fetchplaces(cmd) => cmd.run(),
+        RPhotos::Fetchplaces(cmd) => cmd.run().await,
         RPhotos::Precache(cmd) => cmd.run(),
         RPhotos::Storestatics { dir } => storestatics::to_dir(dir),
-        RPhotos::Runserver(ra) => server::run(ra),
+        RPhotos::Runserver(ra) => server::run(ra).await,
     }
 }
 

@@ -1,14 +1,15 @@
 //! Handle photos by tag, person, or place.
-use super::render_ructe::RenderRucte;
+use super::RenderRucte;
 use super::{links_by_time, not_found, Context, ContextFilter, ImgRange};
 use crate::models::{Person, Photo, Place, Tag};
 use crate::templates;
 use diesel::prelude::*;
-use warp::filters::method::v2::get;
+use warp::filters::method::get;
 use warp::filters::BoxedFilter;
-use warp::http::Response;
+use warp::http::response::Builder;
 use warp::path::{end, param};
 use warp::query::query;
+use warp::reply::Response;
 use warp::{Filter, Reply};
 
 pub fn person_routes(s: ContextFilter) -> BoxedFilter<(impl Reply,)> {
@@ -51,7 +52,7 @@ pub fn tag_routes(s: ContextFilter) -> BoxedFilter<(impl Reply,)> {
         .boxed()
 }
 
-fn person_all(context: Context) -> Response<Vec<u8>> {
+fn person_all(context: Context) -> Response {
     use crate::schema::people::dsl::{id, people, person_name};
     let query = people.into_boxed();
     let query = if context.is_authorized() {
@@ -63,23 +64,21 @@ fn person_all(context: Context) -> Response<Vec<u8>> {
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    Response::builder().html(|o| {
-        templates::people(
-            o,
-            &context,
-            &query
-                .order(person_name)
-                .load(&context.db().unwrap())
-                .expect("list people"),
-        )
-    })
+    Builder::new()
+        .html(|o| {
+            templates::people(
+                o,
+                &context,
+                &query
+                    .order(person_name)
+                    .load(&context.db().unwrap())
+                    .expect("list people"),
+            )
+        })
+        .unwrap()
 }
 
-fn person_one(
-    context: Context,
-    tslug: String,
-    range: ImgRange,
-) -> Response<Vec<u8>> {
+fn person_one(context: Context, tslug: String, range: ImgRange) -> Response {
     use crate::schema::people::dsl::{people, slug};
     let c = context.db().unwrap();
     if let Ok(person) = people.filter(slug.eq(tslug)).first::<Person>(&c) {
@@ -95,14 +94,15 @@ fn person_one(
             ),
         );
         let (links, coords) = links_by_time(&context, photos, range, true);
-        Response::builder()
+        Builder::new()
             .html(|o| templates::person(o, &context, &links, &coords, &person))
+            .unwrap()
     } else {
         not_found(&context)
     }
 }
 
-fn tag_all(context: Context) -> Response<Vec<u8>> {
+fn tag_all(context: Context) -> Response {
     use crate::schema::tags::dsl::{id, tag_name, tags};
     let query = tags.order(tag_name).into_boxed();
     let query = if context.is_authorized() {
@@ -114,20 +114,18 @@ fn tag_all(context: Context) -> Response<Vec<u8>> {
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    Response::builder().html(|o| {
-        templates::tags(
-            o,
-            &context,
-            &query.load(&context.db().unwrap()).expect("List tags"),
-        )
-    })
+    Builder::new()
+        .html(|o| {
+            templates::tags(
+                o,
+                &context,
+                &query.load(&context.db().unwrap()).expect("List tags"),
+            )
+        })
+        .unwrap()
 }
 
-fn tag_one(
-    context: Context,
-    tslug: String,
-    range: ImgRange,
-) -> Response<Vec<u8>> {
+fn tag_one(context: Context, tslug: String, range: ImgRange) -> Response {
     use crate::schema::tags::dsl::{slug, tags};
     if let Ok(tag) = tags
         .filter(slug.eq(tslug))
@@ -139,14 +137,15 @@ fn tag_one(
             id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
         );
         let (links, coords) = links_by_time(&context, photos, range, true);
-        Response::builder()
+        Builder::new()
             .html(|o| templates::tag(o, &context, &links, &coords, &tag))
+            .unwrap()
     } else {
         not_found(&context)
     }
 }
 
-fn place_all(context: Context) -> Response<Vec<u8>> {
+fn place_all(context: Context) -> Response {
     use crate::schema::places::dsl::{id, place_name, places};
     let query = places.into_boxed();
     let query = if context.is_authorized() {
@@ -158,23 +157,21 @@ fn place_all(context: Context) -> Response<Vec<u8>> {
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    Response::builder().html(|o| {
-        templates::places(
-            o,
-            &context,
-            &query
-                .order(place_name)
-                .load(&context.db().unwrap())
-                .expect("List places"),
-        )
-    })
+    Builder::new()
+        .html(|o| {
+            templates::places(
+                o,
+                &context,
+                &query
+                    .order(place_name)
+                    .load(&context.db().unwrap())
+                    .expect("List places"),
+            )
+        })
+        .unwrap()
 }
 
-fn place_one(
-    context: Context,
-    tslug: String,
-    range: ImgRange,
-) -> Response<Vec<u8>> {
+fn place_one(context: Context, tslug: String, range: ImgRange) -> Response {
     use crate::schema::places::dsl::{places, slug};
     if let Ok(place) = places
         .filter(slug.eq(tslug))
@@ -188,8 +185,9 @@ fn place_one(
             photo_places.select(photo_id).filter(place_id.eq(place.id)),
         ));
         let (links, coord) = links_by_time(&context, photos, range, true);
-        Response::builder()
+        Builder::new()
             .html(|o| templates::place(o, &context, &links, &coord, &place))
+            .unwrap()
     } else {
         not_found(&context)
     }

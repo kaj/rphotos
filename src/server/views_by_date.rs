@@ -1,8 +1,7 @@
-use super::render_ructe::RenderRucte;
 use super::splitlist::links_by_time;
 use super::{not_found, redirect_to_img, Context, ImgRange, Link, PhotoLink};
 use crate::models::{Photo, SizeTag};
-use crate::templates;
+use crate::templates::{self, RenderRucte};
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use chrono::{Datelike, Duration, Local};
 use diesel::dsl::sql;
@@ -10,10 +9,10 @@ use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Nullable};
 use log::warn;
 use serde::Deserialize;
-use warp::http::Response;
-use warp::Reply;
+use warp::http::response::Builder;
+use warp::reply::Response;
 
-pub fn all_years(context: Context) -> impl Reply {
+pub fn all_years(context: Context) -> Response {
     use crate::schema::photos::dsl::{date, grade};
     let db = context.db().unwrap();
     let groups = Photo::query(context.is_authorized())
@@ -49,16 +48,18 @@ pub fn all_years(context: Context) -> impl Reply {
         })
         .collect::<Vec<_>>();
 
-    Response::builder().html(|o| {
-        templates::index(o, &context, "All photos", &[], &groups, &[])
-    })
+    Builder::new()
+        .html(|o| {
+            templates::index(o, &context, "All photos", &[], &groups, &[])
+        })
+        .unwrap()
 }
 
 fn start_of_year(year: i32) -> NaiveDateTime {
     NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0)
 }
 
-pub fn months_in_year(year: i32, context: Context) -> Response<Vec<u8>> {
+pub fn months_in_year(year: i32, context: Context) -> Response {
     use crate::schema::photos::dsl::{date, grade};
 
     let title: String = format!("Photos from {}", year);
@@ -113,9 +114,11 @@ pub fn months_in_year(year: i32, context: Context) -> Response<Vec<u8>> {
                 ((lat, long).into(), p_id)
             })
             .collect::<Vec<_>>();
-        Response::builder().html(|o| {
-            templates::index(o, &context, &title, &[], &groups, &pos)
-        })
+        Builder::new()
+            .html(|o| {
+                templates::index(o, &context, &title, &[], &groups, &pos)
+            })
+            .unwrap()
     }
 }
 
@@ -128,11 +131,7 @@ fn start_of_month(year: i32, month: u32) -> NaiveDateTime {
     date.and_hms(0, 0, 0)
 }
 
-pub fn days_in_month(
-    year: i32,
-    month: u32,
-    context: Context,
-) -> Response<Vec<u8>> {
+pub fn days_in_month(year: i32, month: u32, context: Context) -> Response {
     use crate::schema::photos::dsl::{date, grade};
 
     let lpath: Vec<Link> = vec![Link::year(year)];
@@ -190,33 +189,37 @@ pub fn days_in_month(
                 ((lat, long).into(), p_id)
             })
             .collect::<Vec<_>>();
-        Response::builder().html(|o| {
-            templates::index(o, &context, &title, &lpath, &groups, &pos)
-        })
+        Builder::new()
+            .html(|o| {
+                templates::index(o, &context, &title, &lpath, &groups, &pos)
+            })
+            .unwrap()
     }
 }
 
-pub fn all_null_date(context: Context) -> impl Reply {
+pub fn all_null_date(context: Context) -> Response {
     use crate::schema::photos::dsl::{date, path};
 
-    Response::builder().html(|o| {
-        templates::index(
-            o,
-            &context,
-            "Photos without a date",
-            &[],
-            &Photo::query(context.is_authorized())
-                .filter(date.is_null())
-                .order(path.asc())
-                .limit(500)
-                .load(&context.db().unwrap())
-                .unwrap()
-                .iter()
-                .map(PhotoLink::no_title)
-                .collect::<Vec<_>>(),
-            &[], // Don't care about positions here
-        )
-    })
+    Builder::new()
+        .html(|o| {
+            templates::index(
+                o,
+                &context,
+                "Photos without a date",
+                &[],
+                &Photo::query(context.is_authorized())
+                    .filter(date.is_null())
+                    .order(path.asc())
+                    .limit(500)
+                    .load(&context.db().unwrap())
+                    .unwrap()
+                    .iter()
+                    .map(PhotoLink::no_title)
+                    .collect::<Vec<_>>(),
+                &[], // Don't care about positions here
+            )
+        })
+        .unwrap()
 }
 
 pub fn all_for_day(
@@ -225,7 +228,7 @@ pub fn all_for_day(
     day: u32,
     range: ImgRange,
     context: Context,
-) -> impl Reply {
+) -> Response {
     let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
     use crate::schema::photos::dsl::date;
 
@@ -237,20 +240,27 @@ pub fn all_for_day(
     if links.is_empty() {
         not_found(&context)
     } else {
-        Response::builder().html(|o| {
-            templates::index(
-                o,
-                &context,
-                &format!("Photos from {} {} {}", day, monthname(month), year),
-                &[Link::year(year), Link::month(year, month)],
-                &links,
-                &coords,
-            )
-        })
+        Builder::new()
+            .html(|o| {
+                templates::index(
+                    o,
+                    &context,
+                    &format!(
+                        "Photos from {} {} {}",
+                        day,
+                        monthname(month),
+                        year
+                    ),
+                    &[Link::year(year), Link::month(year, month)],
+                    &links,
+                    &coords,
+                )
+            })
+            .unwrap()
     }
 }
 
-pub fn on_this_day(context: Context) -> impl Reply {
+pub fn on_this_day(context: Context) -> Response {
     use crate::schema::photos::dsl::{date, grade};
     use crate::schema::positions::dsl::{
         latitude, longitude, photo_id, positions,
@@ -275,56 +285,58 @@ pub fn on_this_day(context: Context) -> impl Reply {
         .map(|(p_id, lat, long): (i32, i32, i32)| ((lat, long).into(), p_id))
         .collect::<Vec<_>>();
 
-    Response::builder().html(|o| {
-        templates::index(
-            o,
-            &context,
-            &format!("Photos from {} {}", day, monthname(month)),
-            &[],
-            &Photo::query(context.is_authorized())
-                .select(sql::<(Integer, BigInt)>(
-                    "cast(extract(year from date) as int) y, count(*)",
-                ))
-                .group_by(sql::<Integer>("y"))
-                .filter(
-                    sql("extract(month from date)=")
-                        .bind::<Integer, _>(month as i32),
-                )
-                .filter(
-                    sql("extract(day from date)=")
-                        .bind::<Integer, _>(day as i32),
-                )
-                .order(sql::<Integer>("y").desc())
-                .load::<(i32, i64)>(&db)
-                .unwrap()
-                .iter()
-                .map(|&(year, count)| {
-                    let fromdate =
-                        NaiveDate::from_ymd(year, month as u32, day)
-                            .and_hms(0, 0, 0);
-                    let photo = Photo::query(context.is_authorized())
-                        .filter(date.ge(fromdate))
-                        .filter(date.lt(fromdate + Duration::days(1)))
-                        .order((grade.desc().nulls_last(), date.asc()))
-                        .limit(1)
-                        .first::<Photo>(&db)
-                        .unwrap();
+    Builder::new()
+        .html(|o| {
+            templates::index(
+                o,
+                &context,
+                &format!("Photos from {} {}", day, monthname(month)),
+                &[],
+                &Photo::query(context.is_authorized())
+                    .select(sql::<(Integer, BigInt)>(
+                        "cast(extract(year from date) as int) y, count(*)",
+                    ))
+                    .group_by(sql::<Integer>("y"))
+                    .filter(
+                        sql("extract(month from date)=")
+                            .bind::<Integer, _>(month as i32),
+                    )
+                    .filter(
+                        sql("extract(day from date)=")
+                            .bind::<Integer, _>(day as i32),
+                    )
+                    .order(sql::<Integer>("y").desc())
+                    .load::<(i32, i64)>(&db)
+                    .unwrap()
+                    .iter()
+                    .map(|&(year, count)| {
+                        let fromdate =
+                            NaiveDate::from_ymd(year, month as u32, day)
+                                .and_hms(0, 0, 0);
+                        let photo = Photo::query(context.is_authorized())
+                            .filter(date.ge(fromdate))
+                            .filter(date.lt(fromdate + Duration::days(1)))
+                            .order((grade.desc().nulls_last(), date.asc()))
+                            .limit(1)
+                            .first::<Photo>(&db)
+                            .unwrap();
 
-                    PhotoLink {
-                        title: Some(format!("{}", year)),
-                        href: format!("/{}/{}/{}", year, month, day),
-                        lable: Some(format!("{} pictures", count)),
-                        id: photo.id,
-                        size: photo.get_size(SizeTag::Small),
-                    }
-                })
-                .collect::<Vec<_>>(),
-            &pos,
-        )
-    })
+                        PhotoLink {
+                            title: Some(format!("{}", year)),
+                            href: format!("/{}/{}/{}", year, month, day),
+                            lable: Some(format!("{} pictures", count)),
+                            id: photo.id,
+                            size: photo.get_size(SizeTag::Small),
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+                &pos,
+            )
+        })
+        .unwrap()
 }
 
-pub fn next_image(context: Context, param: FromParam) -> impl Reply {
+pub fn next_image(context: Context, param: FromParam) -> Response {
     use crate::schema::photos::dsl::{date, id};
     let db = context.db().unwrap();
     if let Some(from_date) = date_of_img(&db, param.from) {
@@ -342,7 +354,7 @@ pub fn next_image(context: Context, param: FromParam) -> impl Reply {
     not_found(&context)
 }
 
-pub fn prev_image(context: Context, param: FromParam) -> impl Reply {
+pub fn prev_image(context: Context, param: FromParam) -> Response {
     use crate::schema::photos::dsl::{date, id};
     let db = context.db().unwrap();
     if let Some(from_date) = date_of_img(&db, param.from) {

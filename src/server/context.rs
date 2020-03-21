@@ -115,6 +115,9 @@ impl Context {
     pub fn db(&self) -> Result<PooledPg, Error> {
         self.global.db_pool.get()
     }
+    pub fn db_pool(&self) -> PgPool {
+        self.global.db_pool.clone()
+    }
     pub fn authorized_user(&self) -> Option<&str> {
         self.user.as_ref().map(AsRef::as_ref)
     }

@@ -6,7 +6,7 @@ use crate::schema::places::dsl as l;
 use crate::schema::tags::dsl as t;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use warp::filters::method::v2::get;
+use warp::filters::method::get;
 use warp::filters::BoxedFilter;
 use warp::path::{end, path};
 use warp::query::query;

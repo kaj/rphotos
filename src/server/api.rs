@@ -13,7 +13,7 @@ use warp::{Filter, Reply};
 type ApiResult<T> = Result<T, ApiError>;
 
 pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
-    use warp::filters::method::v2::{get, post};
+    use warp::filters::method::{get, post};
     use warp::path::{end, path};
     use warp::{body, query};
     let login = path("login")
@@ -27,7 +27,7 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
     let pimg = path("makepublic")
         .and(end())
         .and(post())
-        .and(s.clone())
+        .and(s)
         .and(body::json())
         .map(make_public);
 

@@ -1,15 +1,18 @@
-use super::render_ructe::RenderRucte;
-use super::Context;
+use super::{BuilderExt, Context, RenderRucte};
 use crate::templates;
 use diesel::prelude::*;
 use log::info;
 use serde::Deserialize;
-use warp::http::{header, Response};
+use warp::http::header;
+use warp::http::response::Builder;
+use warp::reply::Response;
 
-pub fn get_login(context: Context, param: NextQ) -> Response<Vec<u8>> {
+pub fn get_login(context: Context, param: NextQ) -> Response {
     info!("Got request for login form.  Param: {:?}", param);
     let next = sanitize_next(param.next.as_ref().map(AsRef::as_ref));
-    Response::builder().html(|o| templates::login(o, &context, next, None))
+    Builder::new()
+        .html(|o| templates::login(o, &context, next, None))
+        .unwrap()
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -17,11 +20,11 @@ pub struct NextQ {
     next: Option<String>,
 }
 
-pub fn post_login(context: Context, form: LoginForm) -> Response<Vec<u8>> {
+pub fn post_login(context: Context, form: LoginForm) -> Response {
     let next = sanitize_next(form.next.as_ref().map(AsRef::as_ref));
     if let Some(user) = form.validate(&*context.db().unwrap()) {
         let token = context.make_token(&user).unwrap();
-        return Response::builder()
+        return Builder::new()
             .header(
                 header::SET_COOKIE,
                 format!("EXAUTH={}; SameSite=Strict; HttpOpnly", token),
@@ -29,7 +32,9 @@ pub fn post_login(context: Context, form: LoginForm) -> Response<Vec<u8>> {
             .redirect(next.unwrap_or("/"));
     }
     let message = Some("Login failed, please try again");
-    Response::builder().html(|o| templates::login(o, &context, next, message))
+    Builder::new()
+        .html(|o| templates::login(o, &context, next, message))
+        .unwrap()
 }
 
 /// The data submitted by the login form.
@@ -103,8 +108,8 @@ fn test_sanitize_good_2() {
     assert_eq!(Some("/2017/7/15"), sanitize_next(Some("/2017/7/15")))
 }
 
-pub fn logout(_context: Context) -> Response<Vec<u8>> {
-    Response::builder()
+pub fn logout(_context: Context) -> Response {
+    Builder::new()
         .header(
             header::SET_COOKIE,
             "EXAUTH=; Max-Age=0; SameSite=Strict; HttpOpnly",

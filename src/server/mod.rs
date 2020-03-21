@@ -14,7 +14,7 @@ mod views_by_date;
 use self::context::create_session_filter;
 pub use self::context::{Context, ContextFilter};
 pub use self::photolink::PhotoLink;
-use self::render_ructe::RenderRucte;
+use self::render_ructe::BuilderExt;
 use self::search::*;
 use self::splitlist::*;
 use self::views_by_category::*;
@@ -24,7 +24,7 @@ use crate::adm::result::Error;
 use crate::fetch_places::OverpassOpt;
 use crate::models::Photo;
 use crate::pidfiles::handle_pid_file;
-use crate::templates::{self, Html};
+use crate::templates::{self, Html, RenderRucte};
 use chrono::Datelike;
 use diesel::prelude::*;
 use log::info;
@@ -32,7 +32,8 @@ use serde::Deserialize;
 use std::net::SocketAddr;
 use structopt::StructOpt;
 use warp::filters::path::Tail;
-use warp::http::{header, Response, StatusCode};
+use warp::http::{header, response::Builder, StatusCode};
+use warp::reply::Response;
 use warp::{self, Filter, Rejection, Reply};
 
 #[derive(StructOpt)]
@@ -66,7 +67,7 @@ pub struct Args {
     jwt_key: String,
 }
 
-pub fn run(args: &Args) -> Result<(), Error> {
+pub async fn run(args: &Args) -> Result<(), Error> {
     if let Some(pidfile) = &args.pidfile {
         handle_pid_file(&pidfile, args.replace).unwrap()
     }
@@ -74,7 +75,7 @@ pub fn run(args: &Args) -> Result<(), Error> {
     let s = move || session_filter.clone();
     use warp::filters::query::query;
     use warp::path::{end, param};
-    use warp::{body, get2 as get, path, post2 as post};
+    use warp::{body, get, path, post};
     let static_routes = path("static")
         .and(get())
         .and(path::tail())
@@ -103,57 +104,60 @@ pub fn run(args: &Args) -> Result<(), Error> {
         .or(path("search").and(end()).and(get()).and(s()).and(query()).map(search))
         .or(path("api").and(api::routes(s())))
         .or(path("adm").and(admin::routes(s())));
-    warp::serve(routes.recover(customize_error)).run(args.listen);
+    warp::serve(routes.recover(customize_error))
+        .run(args.listen)
+        .await;
     Ok(())
 }
 
 /// Create custom error pages.
-fn customize_error(err: Rejection) -> Result<impl Reply, Rejection> {
-    match err.status() {
-        StatusCode::NOT_FOUND => {
-            eprintln!("Got a 404: {:?}", err);
-            Ok(Response::builder().status(StatusCode::NOT_FOUND).html(|o| {
-                templates::error(
-                    o,
-                    StatusCode::NOT_FOUND,
-                    "The resource you requested could not be located.",
-                )
-            }))
-        }
-        code => {
-            eprintln!("Got a {}: {:?}", code.as_u16(), err);
-            Ok(Response::builder()
-                .status(code)
-                .html(|o| templates::error(o, code, "Something went wrong.")))
-        }
+async fn customize_error(err: Rejection) -> Result<Response, Rejection> {
+    if err.is_not_found() {
+        eprintln!("Got a 404: {:?}", err);
+        Builder::new().status(StatusCode::NOT_FOUND).html(|o| {
+            templates::error(
+                o,
+                StatusCode::NOT_FOUND,
+                "The resource you requested could not be located.",
+            )
+        })
+    } else {
+        let code = StatusCode::INTERNAL_SERVER_ERROR; // FIXME
+        eprintln!("Got a {}: {:?}", code.as_u16(), err);
+        Builder::new()
+            .status(code)
+            .html(|o| templates::error(o, code, "Something went wrong."))
     }
 }
 
-fn not_found(context: &Context) -> Response<Vec<u8>> {
-    Response::builder().status(StatusCode::NOT_FOUND).html(|o| {
-        templates::not_found(
-            o,
-            context,
-            StatusCode::NOT_FOUND,
-            "The resource you requested could not be located.",
-        )
-    })
+fn not_found(context: &Context) -> Response {
+    Builder::new()
+        .status(StatusCode::NOT_FOUND)
+        .html(|o| {
+            templates::not_found(
+                o,
+                context,
+                StatusCode::NOT_FOUND,
+                "The resource you requested could not be located.",
+            )
+        })
+        .unwrap()
 }
 
-fn redirect_to_img(image: i32) -> Response<Vec<u8>> {
+fn redirect_to_img(image: i32) -> Response {
     redirect(&format!("/img/{}", image))
 }
 
-fn redirect(url: &str) -> Response<Vec<u8>> {
-    Response::builder().redirect(url)
+fn redirect(url: &str) -> Response {
+    Builder::new().redirect(url)
 }
 
-fn permission_denied() -> Response<Vec<u8>> {
+fn permission_denied() -> Result<Response, Rejection> {
     error_response(StatusCode::UNAUTHORIZED)
 }
 
-fn error_response(err: StatusCode) -> Response<Vec<u8>> {
-    Response::builder()
+fn error_response(err: StatusCode) -> Result<Response, Rejection> {
+    Builder::new()
         .status(err)
         .html(|o| templates::error(o, err, "Sorry about this."))
 }
@@ -161,10 +165,10 @@ fn error_response(err: StatusCode) -> Response<Vec<u8>> {
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
-fn static_file(name: Tail) -> Result<impl Reply, Rejection> {
+async fn static_file(name: Tail) -> Result<impl Reply, Rejection> {
     use templates::statics::StaticFile;
     if let Some(data) = StaticFile::get(name.as_str()) {
-        Ok(Response::builder()
+        Ok(Builder::new()
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, data.mime.as_ref())
             .far_expires()
@@ -175,7 +179,7 @@ fn static_file(name: Tail) -> Result<impl Reply, Rejection> {
     }
 }
 
-fn random_image(context: Context) -> Response<Vec<u8>> {
+fn random_image(context: Context) -> Response {
     use crate::schema::photos::dsl::id;
     use diesel::expression::dsl::sql;
     use diesel::sql_types::Integer;
@@ -192,36 +196,38 @@ fn random_image(context: Context) -> Response<Vec<u8>> {
     }
 }
 
-fn photo_details(id: i32, context: Context) -> Response<Vec<u8>> {
+fn photo_details(id: i32, context: Context) -> Response {
     use crate::schema::photos::dsl::photos;
     let c = context.db().unwrap();
     if let Ok(tphoto) = photos.find(id).first::<Photo>(&c) {
         if context.is_authorized() || tphoto.is_public() {
-            return Response::builder().html(|o| {
-                templates::details(
-                    o,
-                    &context,
-                    &tphoto
-                        .date
-                        .map(|d| {
-                            vec![
-                                Link::year(d.year()),
-                                Link::month(d.year(), d.month()),
-                                Link::day(d.year(), d.month(), d.day()),
-                                Link::prev(tphoto.id),
-                                Link::next(tphoto.id),
-                            ]
-                        })
-                        .unwrap_or_default(),
-                    &tphoto.load_people(&c).unwrap(),
-                    &tphoto.load_places(&c).unwrap(),
-                    &tphoto.load_tags(&c).unwrap(),
-                    &tphoto.load_position(&c),
-                    &tphoto.load_attribution(&c),
-                    &tphoto.load_camera(&c),
-                    &tphoto,
-                )
-            });
+            return Builder::new()
+                .html(|o| {
+                    templates::details(
+                        o,
+                        &context,
+                        &tphoto
+                            .date
+                            .map(|d| {
+                                vec![
+                                    Link::year(d.year()),
+                                    Link::month(d.year(), d.month()),
+                                    Link::day(d.year(), d.month(), d.day()),
+                                    Link::prev(tphoto.id),
+                                    Link::next(tphoto.id),
+                                ]
+                            })
+                            .unwrap_or_default(),
+                        &tphoto.load_people(&c).unwrap(),
+                        &tphoto.load_places(&c).unwrap(),
+                        &tphoto.load_tags(&c).unwrap(),
+                        &tphoto.load_position(&c),
+                        &tphoto.load_attribution(&c),
+                        &tphoto.load_camera(&c),
+                        &tphoto,
+                    )
+                })
+                .unwrap();
         }
     }
     not_found(&context)

@@ -1,3 +1,4 @@
+use crate::dbopt::PgPool;
 use crate::models::{Coord, Place};
 use crate::DbOpt;
 use diesel;
@@ -28,8 +29,8 @@ pub struct Fetchplaces {
 }
 
 impl Fetchplaces {
-    pub fn run(&self) -> Result<(), super::adm::result::Error> {
-        let db = self.db.connect()?;
+    pub async fn run(&self) -> Result<(), super::adm::result::Error> {
+        let db = self.db.create_pool()?;
         if self.auto {
             println!("Should find {} photos to fetch places for", self.limit);
             use crate::schema::photo_places::dsl as place;
@@ -41,14 +42,14 @@ impl Fetchplaces {
                 ))
                 .order(pos::photo_id.desc())
                 .limit(self.limit)
-                .load::<(i32, Coord)>(&db)?;
+                .load::<(i32, Coord)>(&db.get()?)?;
             for (photo_id, coord) in result {
                 println!("Find places for #{}, {:?}", photo_id, coord);
-                self.overpass.update_image_places(&db, photo_id)?;
+                self.overpass.update_image_places(&db, photo_id).await?;
             }
         } else {
             for photo in &self.photos {
-                self.overpass.update_image_places(&db, *photo)?;
+                self.overpass.update_image_places(&db, *photo).await?;
             }
         }
         Ok(())
@@ -67,16 +68,18 @@ pub struct OverpassOpt {
 }
 
 impl OverpassOpt {
-    pub fn update_image_places(
+    pub async fn update_image_places(
         &self,
-        c: &PgConnection,
+        db: &PgPool,
         image: i32,
     ) -> Result<(), Error> {
         use crate::schema::positions::dsl::*;
         let coord = positions
             .filter(photo_id.eq(image))
             .select((latitude, longitude))
-            .first::<Coord>(c)
+            .first::<Coord>(
+                &db.get().map_err(|e| Error::Pool(image, e.to_string()))?,
+            )
             .optional()
             .map_err(|e| Error::Db(image, e))?
             .ok_or_else(|| Error::NoPosition(image))?;
@@ -85,8 +88,11 @@ impl OverpassOpt {
             .post(&self.overpass_url)
             .body(format!("[out:json];is_in({},{});out;", coord.x, coord.y))
             .send()
+            .await
             .and_then(Response::error_for_status)
-            .and_then(|mut r| r.json::<Value>())
+            .map_err(|e| Error::Server(image, e))?
+            .json::<Value>()
+            .await
             .map_err(|e| Error::Server(image, e))?;
 
         if let Some(elements) = data
@@ -94,12 +100,13 @@ impl OverpassOpt {
             .and_then(|o| o.get("elements"))
             .and_then(Value::as_array)
         {
+            let c = db.get().map_err(|e| Error::Pool(image, e.to_string()))?;
             for obj in elements {
                 if let (Some(t_osm_id), Some((name, level))) =
                     (osm_id(obj), name_and_level(obj))
                 {
                     debug!("{}: {} (level {})", t_osm_id, name, level);
-                    let place = get_or_create_place(c, t_osm_id, name, level)
+                    let place = get_or_create_place(&c, t_osm_id, name, level)
                         .map_err(|e| Error::Db(image, e))?;
                     if place.osm_id.is_none() {
                         debug!("Matched {:?} by name, update osm info", place);
@@ -110,7 +117,7 @@ impl OverpassOpt {
                                 osm_id.eq(Some(t_osm_id)),
                                 osm_level.eq(level),
                             ))
-                            .execute(c)
+                            .execute(&c)
                             .map_err(|e| Error::Db(image, e))?;
                     }
                     use crate::models::PhotoPlace;
@@ -118,7 +125,7 @@ impl OverpassOpt {
                     let q = photo_places
                         .filter(photo_id.eq(image))
                         .filter(place_id.eq(place.id));
-                    if q.first::<PhotoPlace>(c).is_ok() {
+                    if q.first::<PhotoPlace>(&c).is_ok() {
                         debug!(
                             "Photo #{} already has {} ({})",
                             image, place.id, place.place_name
@@ -129,7 +136,7 @@ impl OverpassOpt {
                                 photo_id.eq(image),
                                 place_id.eq(place.id),
                             ))
-                            .execute(c)
+                            .execute(&c)
                             .map_err(|e| Error::Db(image, e))?;
                     }
                 } else {
@@ -314,5 +321,6 @@ fn is_duplicate<T>(r: &Result<T, DieselError>) -> bool {
 pub enum Error {
     NoPosition(i32),
     Db(i32, diesel::result::Error),
+    Pool(i32, String),
     Server(i32, reqwest::Error),
 }

@@ -1,11 +1,13 @@
-use super::render_ructe::RenderRucte;
+use super::BuilderExt;
 use super::{error_response, not_found, Context};
 use crate::models::{Photo, SizeTag};
 use diesel::prelude::*;
 use std::str::FromStr;
-use warp::http::{header, Response, StatusCode};
+use warp::http::response::Builder;
+use warp::http::{header, StatusCode};
+use warp::reply::Response;
 
-pub fn show_image(img: ImgName, context: Context) -> Response<Vec<u8>> {
+pub fn show_image(img: ImgName, context: Context) -> Response {
     use crate::schema::photos::dsl::photos;
     if let Ok(tphoto) =
         photos.find(img.id).first::<Photo>(&context.db().unwrap())
@@ -22,29 +24,30 @@ pub fn show_image(img: ImgName, context: Context) -> Response<Vec<u8>> {
                         .map(|mut f| f.read_to_end(&mut buf))
                         .is_ok()
                     {
-                        return Response::builder()
+                        return Builder::new()
                             .status(StatusCode::OK)
                             .header(
                                 header::CONTENT_TYPE,
                                 mime::IMAGE_JPEG.as_ref(),
                             )
                             .far_expires()
-                            .body(buf)
+                            .body(buf.into())
                             .unwrap();
                     } else {
                         return error_response(
                             StatusCode::INTERNAL_SERVER_ERROR,
-                        );
+                        )
+                        .unwrap();
                     }
                 }
             } else {
                 let data = get_image_data(&context, &tphoto, img.size)
                     .expect("Get image data");
-                return Response::builder()
+                return Builder::new()
                     .status(StatusCode::OK)
                     .header(header::CONTENT_TYPE, mime::IMAGE_JPEG.as_ref())
                     .far_expires()
-                    .body(data)
+                    .body(data.into())
                     .unwrap();
             }
         }

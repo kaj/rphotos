@@ -1,4 +1,4 @@
-use super::render_ructe::RenderRucte;
+use super::RenderRucte;
 use super::{links_by_time, Context, ImgRange};
 use crate::adm::result::Error;
 use crate::models::{Facet, Person, Photo, Place, Tag};
@@ -11,10 +11,10 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use log::warn;
-use warp::http::Response;
-use warp::Reply;
+use warp::http::response::Builder;
+use warp::reply::Response;
 
-pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
+pub fn search(context: Context, query: Vec<(String, String)>) -> Response {
     let query = SearchQuery::load(query, &context.db().unwrap()).unwrap();
     let range = ImgRange::default();
 
@@ -72,8 +72,9 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> impl Reply {
             link.href += &addendum;
         }
     }
-    Response::builder()
+    Builder::new()
         .html(|o| templates::search(o, &context, &query, &links, &coords))
+        .unwrap()
 }
 
 #[derive(Debug, Default)]
