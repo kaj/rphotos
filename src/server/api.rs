@@ -37,9 +37,10 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
 }
 
 fn w<T: Serialize>(result: ApiResult<T>) -> Response {
-    result
-        .map(|result| warp::reply::json(&result).into_response())
-        .unwrap_or_else(|err| err.into_response())
+    match result {
+        Ok(result) => warp::reply::json(&result).into_response(),
+        Err(err) => err.into_response(),
+    }
 }
 
 fn login(context: Context, form: LoginForm) -> ApiResult<LoginOk> {
