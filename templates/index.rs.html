@@ -8,8 +8,6 @@
   <meta property='og:title' content='@title'>
   @for img in photos {
   <meta property='og:image' content='/img/@img.id-m.jpg' />}
-  <meta property='og:description' content='@photos.len() images'>
-  <meta name="twitter:card" content="gallery">
 }, {
   <div class="group"@:data_positions(coords)>
     @for p in photos {@:photo_link(p)}
