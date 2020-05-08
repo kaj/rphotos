@@ -11,7 +11,6 @@ use crate::schema::places::dsl as l;
 use crate::schema::positions::dsl as pos;
 use crate::schema::tags::dsl as t;
 use chrono::naive::NaiveDateTime;
-use diesel;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
 use diesel::result::Error;

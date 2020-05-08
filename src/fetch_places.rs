@@ -1,7 +1,6 @@
 use crate::dbopt::PgPool;
 use crate::models::{Coord, Place};
 use crate::DbOpt;
-use diesel;
 use diesel::prelude::*;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use log::{debug, info, warn};
