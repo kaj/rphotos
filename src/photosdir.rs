@@ -73,14 +73,8 @@ impl PhotosDir {
                 let path = entry?.path();
                 if fs::metadata(&path)?.is_dir() {
                     self.find_files(&path, cb)?;
-                } else if let Ok(exif) = ExifData::read_from(&path) {
+                } else if let Some(exif) = load_meta(&path) {
                     cb(self.subpath(&path)?, &exif);
-                } else if let Ok(image) = image::open(&path) {
-                    let mut meta = ExifData::default();
-                    meta.width = Some(image.width());
-                    meta.height = Some(image.height());
-                    info!("{:?} seems like a pic with no exif.", path);
-                    cb(self.subpath(&path)?, &meta);
                 } else {
                     debug!("{:?} is no pic.", path)
                 }
@@ -100,4 +94,28 @@ impl PhotosDir {
             )
         })
     }
+}
+
+fn load_meta(path: &Path) -> Option<ExifData> {
+    if let Ok(mut exif) = ExifData::read_from(&path) {
+        if exif.width.is_none() || exif.height.is_none() {
+            if let Ok((width, height)) = actual_image_size(&path) {
+                exif.width = Some(width);
+                exif.height = Some(height);
+            }
+        }
+        Some(exif)
+    } else if let Ok((width, height)) = actual_image_size(&path) {
+        let mut meta = ExifData::default();
+        meta.width = Some(width);
+        meta.height = Some(height);
+        Some(meta)
+    } else {
+        None
+    }
+}
+
+fn actual_image_size(path: &Path) -> Result<(u32, u32), ImageError> {
+    let image = image::open(&path)?;
+    return Ok((image.width(), image.height()));
 }
