@@ -38,6 +38,14 @@ table! {
 }
 
 table! {
+    photo_tags (id) {
+        id -> Int4,
+        photo_id -> Int4,
+        tag_id -> Int4,
+    }
+}
+
+table! {
     photos (id) {
         id -> Int4,
         path -> Varchar,
@@ -49,14 +57,6 @@ table! {
         attribution_id -> Nullable<Int4>,
         width -> Int4,
         height -> Int4,
-    }
-}
-
-table! {
-    photo_tags (id) {
-        id -> Int4,
-        photo_id -> Int4,
-        tag_id -> Int4,
     }
 }
 
@@ -111,8 +111,8 @@ allow_tables_to_appear_in_same_query!(
     people,
     photo_people,
     photo_places,
-    photos,
     photo_tags,
+    photos,
     places,
     positions,
     tags,
