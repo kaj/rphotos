@@ -117,5 +117,5 @@ fn load_meta(path: &Path) -> Option<ExifData> {
 
 fn actual_image_size(path: &Path) -> Result<(u32, u32), ImageError> {
     let image = image::open(&path)?;
-    return Ok((image.width(), image.height()));
+    Ok((image.width(), image.height()))
 }

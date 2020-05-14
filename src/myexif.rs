@@ -222,7 +222,7 @@ fn is_time(f: &Field, tag: Tag) -> Option<(u8, u8, u8)> {
     }
 }
 
-fn is_string<'a>(f: &'a Field, tag: Tag) -> Option<&'a str> {
+fn is_string(f: &Field, tag: Tag) -> Option<&str> {
     if f.tag == tag {
         match single_ascii(&f.value) {
             Ok(s) => Some(s),
@@ -251,7 +251,7 @@ fn is_u32(f: &Field, tag: Tag) -> Option<u32> {
     }
 }
 
-fn single_ascii<'a>(value: &'a Value) -> Result<&'a str, Error> {
+fn single_ascii(value: &Value) -> Result<&str, Error> {
     match value {
         &Value::Ascii(ref v) if v.len() == 1 => Ok(from_utf8(&v[0])?),
         &Value::Ascii(ref v) if v.len() > 1 => {
