@@ -2,7 +2,8 @@ use crate::Error;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ConnectionError};
-use std::time::Duration;
+use log::debug;
+use std::time::{Duration, Instant};
 use structopt::StructOpt;
 
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -18,12 +19,19 @@ pub struct DbOpt {
 
 impl DbOpt {
     pub fn connect(&self) -> Result<PgConnection, ConnectionError> {
-        PgConnection::establish(&self.db_url)
+        let time = Instant::now();
+        let db = PgConnection::establish(&self.db_url)?;
+        debug!("Got db connection in {:?}", time.elapsed());
+        Ok(db)
     }
     pub fn create_pool(&self) -> Result<PgPool, Error> {
-        let db_manager = ConnectionManager::<PgConnection>::new(&self.db_url);
-        Ok(Pool::builder()
-            .connection_timeout(Duration::from_secs(1))
-            .build(db_manager)?)
+        let time = Instant::now();
+        let pool = Pool::builder()
+            .min_idle(Some(2))
+            .test_on_check_out(false)
+            .connection_timeout(Duration::from_millis(500))
+            .build(ConnectionManager::new(&self.db_url))?;
+        debug!("Created pool in {:?}", time.elapsed());
+        Ok(pool)
     }
 }
