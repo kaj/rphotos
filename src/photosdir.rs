@@ -128,7 +128,17 @@ pub async fn get_scaled_jpeg(
 ) -> Result<Vec<u8>, ImageLoadFailed> {
     spawn_blocking(move || {
         info!("Should open {:?}", path);
-        let img = image::open(path)?;
+
+        let img = if is_jpeg(&path) {
+            use std::fs::File;
+            use std::io::BufReader;
+            let file = BufReader::new(File::open(path)?);
+            let mut decoder = image::jpeg::JpegDecoder::new(file)?;
+            decoder.scale(size as u16, size as u16)?;
+            image::DynamicImage::from_decoder(decoder)?
+        } else {
+            image::open(path)?
+        };
 
         let img = if 3 * size <= img.width() || 3 * size <= img.height() {
             info!("T-nail from {}x{} to {}", img.width(), img.height(), size);
@@ -154,4 +164,13 @@ pub async fn get_scaled_jpeg(
         Ok(buf)
     })
     .await?
+}
+
+fn is_jpeg(path: &Path) -> bool {
+    if let Some(suffix) = path.extension().and_then(|s| s.to_str()) {
+        suffix.eq_ignore_ascii_case("jpg")
+            || suffix.eq_ignore_ascii_case("jpeg")
+    } else {
+        false
+    }
 }
