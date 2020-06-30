@@ -88,7 +88,7 @@ pub async fn run(args: &Args) -> Result<(), Error> {
         .or(path("logout").and(end()).and(s()).map(login::logout))
         .or(get().and(end()).and(s()).map(all_years))
         .or(get().and(path("img")).and(param()).and(end()).and(s()).map(photo_details))
-        .or(get().and(path("img")).and(param()).and(end()).and(s()).map(image::show_image))
+        .or(get().and(path("img")).and(param()).and(end()).and(s()).and_then(image::show_image))
         .or(get().and(path("0")).and(end()).and(s()).map(all_null_date))
         .or(get().and(param()).and(end()).and(s()).map(months_in_year))
         .or(get().and(param()).and(param()).and(end()).and(s()).map(days_in_month))

@@ -7,6 +7,7 @@ use log::{debug, warn};
 use medallion::{Header, Payload, Token};
 use r2d2_memcache::r2d2::Error;
 use r2d2_memcache::MemcacheConnectionManager;
+use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 use warp::filters::{cookie, header, BoxedFilter};
@@ -127,13 +128,14 @@ impl Context {
     pub fn path_without_query(&self) -> &str {
         self.path.as_str()
     }
-    pub fn cached_or<F, E>(
+    pub async fn cached_or<F, R, E>(
         &self,
         key: &str,
         calculate: F,
     ) -> Result<Vec<u8>, E>
     where
-        F: FnOnce() -> Result<Vec<u8>, E>,
+        F: FnOnce() -> R,
+        R: Future<Output = Result<Vec<u8>, E>>,
     {
         match self.global.cache() {
             Ok(mut client) => {
@@ -149,7 +151,7 @@ impl Context {
                         warn!("Cache: get {} failed: {:?}", key, err);
                     }
                 }
-                let data = calculate()?;
+                let data = calculate().await?;
                 match client.set(key, &data[..], 7 * 24 * 60 * 60) {
                     Ok(()) => debug!("Cache: stored {}", key),
                     Err(err) => warn!("Cache: Error storing {}: {}", key, err),
@@ -158,7 +160,7 @@ impl Context {
             }
             Err(err) => {
                 warn!("Error connecting to memcache: {}", err);
-                calculate()
+                calculate().await
             }
         }
     }

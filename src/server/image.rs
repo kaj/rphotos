@@ -1,17 +1,21 @@
 use super::BuilderExt;
 use super::{error_response, not_found, Context};
 use crate::models::{Photo, SizeTag};
+use crate::photosdir::{get_scaled_jpeg, ImageLoadFailed};
 use diesel::prelude::*;
 use std::str::FromStr;
 use warp::http::response::Builder;
 use warp::http::{header, StatusCode};
 use warp::reply::Response;
+use warp::Rejection;
 
-pub fn show_image(img: ImgName, context: Context) -> Response {
+pub async fn show_image(
+    img: ImgName,
+    context: Context,
+) -> Result<Response, Rejection> {
     use crate::schema::photos::dsl::photos;
-    if let Ok(tphoto) =
-        photos.find(img.id).first::<Photo>(&context.db().unwrap())
-    {
+    let tphoto = photos.find(img.id).first::<Photo>(&context.db().unwrap());
+    if let Ok(tphoto) = tphoto {
         if context.is_authorized() || tphoto.is_public() {
             if img.size == SizeTag::Large {
                 if context.is_authorized() {
@@ -24,7 +28,7 @@ pub fn show_image(img: ImgName, context: Context) -> Response {
                         .map(|mut f| f.read_to_end(&mut buf))
                         .is_ok()
                     {
-                        return Builder::new()
+                        return Ok(Builder::new()
                             .status(StatusCode::OK)
                             .header(
                                 header::CONTENT_TYPE,
@@ -32,27 +36,28 @@ pub fn show_image(img: ImgName, context: Context) -> Response {
                             )
                             .far_expires()
                             .body(buf.into())
-                            .unwrap();
+                            .unwrap());
                     } else {
-                        return error_response(
+                        return Ok(error_response(
                             StatusCode::INTERNAL_SERVER_ERROR,
                         )
-                        .unwrap();
+                        .unwrap());
                     }
                 }
             } else {
                 let data = get_image_data(&context, &tphoto, img.size)
+                    .await
                     .expect("Get image data");
-                return Builder::new()
+                return Ok(Builder::new()
                     .status(StatusCode::OK)
                     .header(header::CONTENT_TYPE, mime::IMAGE_JPEG.as_ref())
                     .far_expires()
                     .body(data.into())
-                    .unwrap();
+                    .unwrap());
             }
         }
     }
-    not_found(&context)
+    Ok(not_found(&context))
 }
 
 /// A client-side / url file name for a file.
@@ -104,13 +109,14 @@ fn parse_bad_imgname_2() {
     assert_eq!("blurgel".parse::<ImgName>(), Err(BadImgName {}))
 }
 
-fn get_image_data(
+async fn get_image_data(
     context: &Context,
     photo: &Photo,
     size: SizeTag,
-) -> Result<Vec<u8>, image::ImageError> {
-    context.cached_or(&photo.cache_key(size), || {
-        let size = size.px();
-        context.photos().scale_image(photo, size, size)
-    })
+) -> Result<Vec<u8>, ImageLoadFailed> {
+    let p = context.photos().get_raw_path(photo);
+    let r = photo.rotation;
+    context
+        .cached_or(&photo.cache_key(size), || get_scaled_jpeg(p, r, size.px()))
+        .await
 }

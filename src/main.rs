@@ -105,7 +105,7 @@ async fn run(args: &RPhotos) -> Result<(), Error> {
         RPhotos::Userlist { db } => users::list(&db.connect()?),
         RPhotos::Userpass { db, user } => users::passwd(&db.connect()?, user),
         RPhotos::Fetchplaces(cmd) => cmd.run().await,
-        RPhotos::Precache(cmd) => cmd.run(),
+        RPhotos::Precache(cmd) => cmd.run().await,
         RPhotos::Storestatics { dir } => storestatics::to_dir(dir),
         RPhotos::Runserver(ra) => server::run(ra).await,
     }

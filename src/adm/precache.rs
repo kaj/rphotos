@@ -1,6 +1,6 @@
 use super::result::Error;
 use crate::models::{Photo, SizeTag};
-use crate::photosdir::PhotosDir;
+use crate::photosdir::{get_scaled_jpeg, PhotosDir};
 use crate::schema::photos::dsl::{date, is_public};
 use crate::{CacheOpt, DbOpt, DirOpt};
 use diesel::prelude::*;
@@ -31,7 +31,7 @@ impl Args {
     /// overwhelm the host while precaching.
     /// The images are handled in public first, new first order, to have
     /// the probably most requested images precached as soon as possible.
-    pub fn run(&self) -> Result<(), Error> {
+    pub async fn run(&self) -> Result<(), Error> {
         let max_time = Duration::from_secs(self.max_time);
         let timer = Instant::now();
         let mut cache = Client::connect(self.cache.memcached_url.as_ref())?;
@@ -46,14 +46,16 @@ impl Args {
             n += 1;
             let key = &photo.cache_key(size);
             if cache.get::<Vec<u8>>(key)?.is_none() {
+                let path = pd.get_raw_path(&photo);
                 let size = size.px();
-                let data =
-                    pd.scale_image(&photo, size, size).map_err(|e| {
-                        Error::Other(format!(
-                            "Failed to scale #{} ({}): {}",
-                            photo.id, photo.path, e,
-                        ))
-                    })?;
+                let data = get_scaled_jpeg(path, photo.rotation, size)
+                    .await
+                    .map_err(|e| {
+                    Error::Other(format!(
+                        "Failed to scale #{} ({}): {:?}",
+                        photo.id, photo.path, e,
+                    ))
+                })?;
                 cache.set(key, &data[..], no_expire)?;
                 debug!("Cache: stored {} for {}", key, photo.path);
                 n_stored += 1;

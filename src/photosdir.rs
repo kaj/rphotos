@@ -6,6 +6,7 @@ use log::{debug, info, warn};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
+use tokio::task::{spawn_blocking, JoinError};
 
 pub struct PhotosDir {
     basedir: PathBuf,
@@ -18,49 +19,14 @@ impl PhotosDir {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn scale_image(
-        &self,
-        photo: &Photo,
-        width: u32,
-        height: u32,
-    ) -> Result<Vec<u8>, ImageError> {
-        let path = self.basedir.join(&photo.path);
-        info!("Should open {:?}", path);
-        let img = image::open(path)?;
-        let img = if 3 * width <= img.width() || 3 * height <= img.height() {
-            img.thumbnail(width, height)
-        } else if width < img.width() || height < img.height() {
-            img.resize(width, height, FilterType::CatmullRom)
-        } else {
-            img
-        };
-        let img = match photo.rotation {
-            _x @ 0..=44 | _x @ 315..=360 => img,
-            _x @ 45..=134 => img.rotate90(),
-            _x @ 135..=224 => img.rotate180(),
-            _x @ 225..=314 => img.rotate270(),
-            x => {
-                warn!("Should rotate photo {} deg, which is unsupported", x);
-                img
-            }
-        };
-        let mut buf = Vec::new();
-        img.write_to(&mut buf, ImageFormat::Jpeg)?;
-        Ok(buf)
-    }
-
-    #[allow(dead_code)]
     pub fn get_raw_path(&self, photo: &Photo) -> PathBuf {
         self.basedir.join(&photo.path)
     }
 
-    #[allow(dead_code)]
     pub fn has_file<S: AsRef<OsStr> + ?Sized>(&self, path: &S) -> bool {
         self.basedir.join(Path::new(path)).is_file()
     }
 
-    #[allow(dead_code)]
     pub fn find_files(
         &self,
         dir: &Path,
@@ -118,4 +84,74 @@ fn load_meta(path: &Path) -> Option<ExifData> {
 fn actual_image_size(path: &Path) -> Result<(u32, u32), ImageError> {
     let image = image::open(&path)?;
     Ok((image.width(), image.height()))
+}
+
+#[derive(Debug)]
+pub enum ImageLoadFailed {
+    File(io::Error),
+    Image(image::ImageError),
+    Join(JoinError),
+}
+
+impl std::error::Error for ImageLoadFailed {}
+
+impl std::fmt::Display for ImageLoadFailed {
+    fn fmt(&self, out: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self {
+            ImageLoadFailed::File(e) => e.fmt(out),
+            ImageLoadFailed::Image(e) => e.fmt(out),
+            ImageLoadFailed::Join(e) => e.fmt(out),
+        }
+    }
+}
+
+impl From<io::Error> for ImageLoadFailed {
+    fn from(e: io::Error) -> ImageLoadFailed {
+        ImageLoadFailed::File(e)
+    }
+}
+impl From<image::ImageError> for ImageLoadFailed {
+    fn from(e: image::ImageError) -> ImageLoadFailed {
+        ImageLoadFailed::Image(e)
+    }
+}
+impl From<JoinError> for ImageLoadFailed {
+    fn from(e: JoinError) -> ImageLoadFailed {
+        ImageLoadFailed::Join(e)
+    }
+}
+
+pub async fn get_scaled_jpeg(
+    path: PathBuf,
+    rotation: i16,
+    size: u32,
+) -> Result<Vec<u8>, ImageLoadFailed> {
+    spawn_blocking(move || {
+        info!("Should open {:?}", path);
+        let img = image::open(path)?;
+
+        let img = if 3 * size <= img.width() || 3 * size <= img.height() {
+            info!("T-nail from {}x{} to {}", img.width(), img.height(), size);
+            img.thumbnail(size, size)
+        } else if size < img.width() || size < img.height() {
+            info!("Scaling from {}x{} to {}", img.width(), img.height(), size);
+            img.resize(size, size, FilterType::CatmullRom)
+        } else {
+            img
+        };
+        let img = match rotation {
+            _x @ 0..=44 | _x @ 315..=360 => img,
+            _x @ 45..=134 => img.rotate90(),
+            _x @ 135..=224 => img.rotate180(),
+            _x @ 225..=314 => img.rotate270(),
+            x => {
+                warn!("Should rotate photo {} deg, which is unsupported", x);
+                img
+            }
+        };
+        let mut buf = Vec::new();
+        img.write_to(&mut buf, ImageFormat::Jpeg)?;
+        Ok(buf)
+    })
+    .await?
 }
