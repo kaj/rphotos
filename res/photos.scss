@@ -329,6 +329,14 @@ form {
         display: block;
     }
     h2 { margin: 0; }
+    a.close {
+        line-height: .8em;
+        padding: .1em;
+        position: absolute;
+        right: 0;
+        text-decoration: none;
+        top: 0;
+    }
 }
 
 // Relevant for admin forms only.  Move to separate file?

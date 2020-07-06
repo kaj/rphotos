@@ -11,7 +11,7 @@
     if (d.getElementById('help') == null) {
       f.insertAdjacentHTML(
         'beforebegin',
-        '<div id="help"><h2>Key bindings</h2>' +
+        '<div id="help"><h2>Key bindings</h2><a href="#" class="close" title="close help">🗙</a>' +
         [].map.call(
           d.querySelectorAll('[accesskey]'),
           e => e.accessKeyLabel + ": " + (e.title || e.innerText)).join('<br/>') +
