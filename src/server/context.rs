@@ -72,10 +72,8 @@ impl GlobalContext {
         let token = Token::<Header, ()>::parse(&jwtstr)
             .map_err(|e| format!("Bad jwt token: {:?}", e))?;
 
-        if !token.verify(self.jwt_secret.as_ref()).map_err(|e| {
-            format!("Failed to verify token {:?}: {}", token, e)
-        })? {
-            Err(format!("Invalid token {:?}", token))?
+        if !verify_token(&token, self.jwt_secret.as_ref())? {
+            return Err(format!("Invalid token {:?}", token))?;
         }
         let claims = token.payload;
         debug!("Verified token for: {:?}", claims);
@@ -103,6 +101,15 @@ impl GlobalContext {
     fn cache(&self) -> Result<PooledMemcache, Error> {
         Ok(self.memcache_pool.get()?)
     }
+}
+
+fn verify_token(
+    token: &Token<Header>,
+    jwt_secret: &[u8],
+) -> Result<bool, String> {
+    token
+        .verify(jwt_secret)
+        .map_err(|e| format!("Failed to verify token {:?}: {}", token, e))
 }
 
 /// The request context, providing database, memcache and authorized user.
