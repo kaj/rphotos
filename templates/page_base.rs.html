@@ -1,34 +1,10 @@
-@use super::statics::{photos_css, admin_js, ux_js};
+@use super::base;
 @use crate::server::{Context, Link};
-@use crate::templates::head;
 
 @(context: &Context, title: &str, lpath: &[Link], meta: Content, content: Content)
-
-<!doctype html>
-<html>
-  <head>
-    <title>@title</title>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <link rel="stylesheet" href="/static/@photos_css.name" type="text/css"/>
-    @if context.is_authorized() {
-        <script src="/static/@admin_js.name" type="text/javascript" defer>
-	</script>
-    }
-    <script src="/static/@ux_js.name" type="text/javascript" defer>
-    </script>
-    @:meta()
-  </head>
-  <body>
-    @:head(context, lpath)
+@:base(context, title, lpath, meta, {
     <main>
       <h1>@title</h1>
       @:content()
     </main>
-    <footer>
-      <p>Managed by
-	<a href="https://github.com/kaj/rphotos">rphotos
-	@env!("CARGO_PKG_VERSION")</a>.</p>
-    </footer>
-  </body>
-</html>
+})

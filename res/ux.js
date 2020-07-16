@@ -43,7 +43,7 @@
     csslink.rel = 'stylesheet';
     csslink.href = '/static/l140/leaflet.css';
     h.append(csslink);
-    let m = d.querySelector('.meta') || d.querySelector('main');
+    let m = d.querySelector('main');
     m.insertAdjacentHTML('beforeend', '<div id="map"></div>');
     var slink = d.createElement('script');
     slink.type = 'text/javascript';

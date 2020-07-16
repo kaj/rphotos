@@ -1,8 +1,8 @@
 // Admin functionality for rphotos
 (function (d) {
-    var details = d.querySelector('.details');
+    var details = d.querySelector('main.details'), p;
     if (!details) {
-        return;
+        return; // Admin is for single image only
     }
 
     function rotate(event) {
@@ -32,22 +32,29 @@
         r.send("angle=" + angle + "&image=" + imgid)
     }
 
-    function tag_form(event, category) {
-        event.target.disabled = true;
-        var imgid = details.dataset.imgid;
+    function makeform(category) {
+        let oldform = p.querySelector('form');
+        if (oldform) {
+            oldform.remove();
+        }
         var f = d.createElement("form");
         f.className = "admin " + category;
         f.action = "/adm/" + category;
         f.method = "post";
+        var i = d.createElement("input");
+        i.type="hidden";
+        i.name="image";
+        i.value = details.dataset.imgid;
+        f.appendChild(i);
+        return f;
+    }
+    function tag_form(event, category) {
+        //event.target.disabled = true; - FIXME?
+        var f = makeform(category);
         var l = d.createElement("label");
         l.innerHTML = event.target.title;
         f.appendChild(l);
         var i = d.createElement("input");
-        i.type="hidden";
-        i.name="image";
-        i.value = imgid;
-        f.appendChild(i);
-        i = d.createElement("input");
         i.type = "text";
         i.autocomplete="off";
         i.tabindex="1";
@@ -139,27 +146,18 @@
             event.target.focus();
         };
         f.appendChild(c);
-        meta.insertBefore(f, meta.querySelector('#map'));
+        p.append(f);
         i.focus();
     }
 
     function grade_form(event) {
-        event.target.disabled = true;
-        var imgid = details.dataset.imgid;
+        //event.target.disabled = true; - FIXME?
         var grade = details.dataset.grade;
-        var f = d.createElement("form");
-        f.className = "admin grade";
-        f.action = "/adm/grade";
-        f.method = "post";
+        var f = makeform("grade");
         var l = d.createElement("label");
         l.innerHTML = event.target.title;
         f.appendChild(l);
         var i = d.createElement("input");
-        i.type="hidden";
-        i.name="image";
-        i.value = imgid;
-        f.appendChild(i);
-        i = d.createElement("input");
         i.type="range";
         i.name="grade";
         if (grade) {
@@ -199,23 +197,14 @@
             e.stopPropagation();
             return false;
         });
-        meta.insertBefore(f, meta.querySelector('#map'));
+        p.append(f);
         i.focus();
     }
 
     function location_form(event) {
-        event.target.disabled = true;
-        var imgid = details.dataset.imgid;
+        //event.target.disabled = true; - FIXME?
         var position = details.dataset.position || localStorage.getItem('lastpos');
-        var f = d.createElement("form");
-        f.className = "admin location";
-        f.action = "/adm/locate";
-        f.method = "post";
-        var i = d.createElement("input");
-        i.type="hidden";
-        i.name="image";
-        i.value = imgid;
-        f.appendChild(i);
+        var f = makeform("locate");
 
         var lat = d.createElement("input");
         lat.type="hidden";
@@ -303,58 +292,55 @@
         };
         f.appendChild(c);
         f.addEventListener('keydown', keyHandler);
-        meta.insertBefore(f, meta.querySelector('#map'));
+        p.append(f);
     }
 
-    var meta = details.querySelector('.meta');
-    if (meta) {
-        p = d.createElement("p");
-        p.className = 'admbuttons';
-        r = d.createElement("button");
-        r.onclick = rotate;
-        r.innerHTML = "\u27f2";
-        r.dataset.angle = "-90";
-        r.title = "Rotate left";
-        p.appendChild(r);
-        p.appendChild(d.createTextNode(" "));
-        r = d.createElement("button");
-        r.onclick = rotate;
-        r.innerHTML = "\u27f3";
-        r.dataset.angle = "90";
-        r.title = "Rotate right";
-        p.appendChild(r);
+    p = d.createElement("div");
+    p.className = 'admbuttons';
+    r = d.createElement("button");
+    r.onclick = rotate;
+    r.innerHTML = "\u27f2";
+    r.dataset.angle = "-90";
+    r.title = "Rotate left";
+    p.appendChild(r);
+    p.appendChild(d.createTextNode(" "));
+    r = d.createElement("button");
+    r.onclick = rotate;
+    r.innerHTML = "\u27f3";
+    r.dataset.angle = "90";
+    r.title = "Rotate right";
+    p.appendChild(r);
 
-        p.appendChild(d.createTextNode(" "));
-        r = d.createElement("button");
-        r.onclick = e => tag_form(e, 'tag');
-        r.innerHTML = "&#x1f3f7;";
-        r.title = "Tag";
-        r.accessKey = "t";
-        p.appendChild(r);
+    p.appendChild(d.createTextNode(" "));
+    r = d.createElement("button");
+    r.onclick = e => tag_form(e, 'tag');
+    r.innerHTML = "&#x1f3f7;";
+    r.title = "Tag";
+    r.accessKey = "t";
+    p.appendChild(r);
 
-        p.appendChild(d.createTextNode(" "));
-        r = d.createElement("button");
-        r.onclick = e => tag_form(e, 'person');
-        r.innerHTML = "\u263a";
-        r.title = "Person";
-        r.accessKey = "p";
-        p.appendChild(r);
+    p.appendChild(d.createTextNode(" "));
+    r = d.createElement("button");
+    r.onclick = e => tag_form(e, 'person');
+    r.innerHTML = "\u263a";
+    r.title = "Person";
+    r.accessKey = "p";
+    p.appendChild(r);
 
-        p.appendChild(d.createTextNode(" "));
-        r = d.createElement("button");
-        r.onclick = e => location_form(e);
-        r.innerHTML = "\u{1f5fa}";
-        r.title = "Location";
-        r.accessKey = "l";
-        p.appendChild(r);
+    p.appendChild(d.createTextNode(" "));
+    r = d.createElement("button");
+    r.onclick = e => location_form(e);
+    r.innerHTML = "\u{1f5fa}";
+    r.title = "Location";
+    r.accessKey = "l";
+    p.appendChild(r);
 
-        p.appendChild(d.createTextNode(" "));
-        r = d.createElement("button");
-        r.onclick = e => grade_form(e);
-        r.innerHTML = "\u2606";
-        r.title = "Grade";
-        r.accessKey = "g";
-        p.appendChild(r);
-        meta.appendChild(p);
-    }
+    p.appendChild(d.createTextNode(" "));
+    r = d.createElement("button");
+    r.onclick = e => grade_form(e);
+    r.innerHTML = "\u2606";
+    r.title = "Grade";
+    r.accessKey = "g";
+    p.appendChild(r);
+    details.appendChild(p);
 })(document)

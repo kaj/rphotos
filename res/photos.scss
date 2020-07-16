@@ -15,6 +15,9 @@ body {
     flex-direction: column;
     justify-content: space-between;
     min-height: 100%;
+
+    // FIXME? Only on details?
+    max-height: 100vh;
 }
 
 h1 {
@@ -237,39 +240,79 @@ div.group {
       justify-content: space-around;
   }
 }
-div.details {
-    display: flex;
-    flex-flow: row wrap;
-    margin: -1ex;
 
-    .item, .meta {
-        margin: 1ex;
-    }
-    .item {
-        align-self: flex-start;
-        flex-grow: 4;
-        text-align: center;
-        width: 30em;
+main.details {
+    margin: 0;
+    padding: 1ex;
+
+    img.item {
+        height: auto;
+        width: -moz-available;
+        width: -webkit-fill-available;
+        width: available;
         &.zoom {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: -moz-available;
-            width: -webkit-fill-available;
-            width: available;
+            height: -moz-available;
+            z-index: 10000;
+            object-fit: contain;
         }
-        img {
-            width: -moz-available;
-            width: -webkit-fill-available;
-            width: available;
-            height: auto;
+    }
+}
+
+@media screen and (min-width: 50em) {
+    main.details {
+        align-items: start;
+        display: grid;
+        flex: content 1 1;
+        grid-gap: 1ex;
+        grid-template-columns: 1fr fit-content(29%);
+        grid-template-rows: min-content 1fr min-content 1fr;
+        max-height: -moz-available;
+        overflow: hidden;
+
+        h1 {
+            grid-column: 2;
+            margin: 0;
+        }
+        img.item {
             display: block;
+            grid-row: 1 / -1;
+            margin: 0 auto auto;
+            max-width: -moz-available;
+            max-height: -moz-available;
+            max-height: calc(100% - 2px);
+            max-width: calc(100% - 2px);
+            object-fit: scale-down;
+            width: auto;
+            height: auto;
+
+            .zoom {
+                grid-column: 1 / 3;
+            }
         }
-    }
-    .meta {
-        flex-grow: 1;
-        flex-basis: 20em;
-        padding-top: 0;
-    }
-    .places a:nth-child(n+2) {
-        font-size: 80%;
+        .places a:nth-child(n+2) {
+            font-size: 80%;
+        }
+        .meta {
+            overflow: auto;
+            height: -moz-available;
+            height: 100%;
+        }
+        #map {
+            margin: 0;
+            height: calc(100% - 2px) !important;
+            width: -moz-available;
+        }
+        .admbuttons {
+            flex-flow: row wrap;
+            margin: 0;
+            button {
+                margin: 0;
+            }
+        }
     }
 }
 
@@ -285,13 +328,13 @@ ul.alltags, ul.allpeople, ul.allplaces {
     max-height: 60vh;
 }
 
-p.admbuttons {
+div.admbuttons {
     display: flex;
     flex-flow: row wrap;
     justify-content: space-between;
     margin: 1ex -.1em 0;
     button {
-        flex-grow: .1;
+        flex: min-content .1 1;
         margin: .1em;
         padding: 0;
     }
@@ -310,7 +353,7 @@ form {
         justify-content: space-between;
     }
     label {
-        padding: .2em 1em .2em 0;
+        padding: .2em .6em .2em 0;
     }
 }
 
@@ -341,15 +384,16 @@ form {
 
 // Relevant for admin forms only.  Move to separate file?
 form.admin {
-    position: relative;
-    padding: 1.8em 1ex;
     display: flex;
+    margin: .3em .1em 0;
+    padding: 1.6em 1ex 1.2em;
+    position: relative;
     width: -moz-available;
     width: -webkit-fill-available;
     width: available;
 
     input[type="text"], input[type="range"] {
-        flex-grow: 1;
+        flex: min-content 1 1;
         margin-right: 1ex;
     }
     button.close {
@@ -360,7 +404,7 @@ form.admin {
         right: -1ex;
         top: -1ex;
     }
-    &.location {
+    &.locate {
         background: #eee;
         box-shadow: .2em .4em 1em rgba(0,0,0,.7);
         display: flex;
