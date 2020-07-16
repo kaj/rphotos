@@ -185,12 +185,15 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 Some("commercial") => Some(12),
                 Some("grass") => Some(13),
                 Some("industrial") => Some(11),
+                Some("meadow") => Some(16),
+                Some("railway") => Some(13),
                 Some("residential") => Some(11),
                 Some("retail") => Some(13),
                 _ => None,
             })
             .or_else(|| match tag_str(tags, "highway") {
-                Some("pedestrian") => Some(15), // torg
+                Some("pedestrian") => Some(15),  // torg
+                Some("residential") => Some(15), // torg?
                 Some("rest_area") => Some(16),
                 _ => None,
             })
