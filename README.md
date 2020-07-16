@@ -1,8 +1,23 @@
 # rphotos
-Toy web app in Rust language: manage my photos
 
-[![Build Status](https://travis-ci.org/kaj/rphotos.svg?branch=master)](https://travis-ci.org/kaj/rphotos)
+Semi-experimental web app in Rust language: manage my photos.
 
-Some day it might be a usefull tool to manage a photo collection,
-but at this moment, it is mainly a test of developing a web application in rust,
-using the nickel framework.
+[![Build Status](https://travis-ci.com/kaj/rphotos.svg?branch=master)](https://travis-ci.com/kaj/rphotos)
+
+Tag photos with places, people and other tags, while keeping some
+private and making others public.
+It uses a postgresql database for the metadata, and works with
+read-only access to the actual image files.
+Downscaled images are stored in memcache.
+
+My images are on [img.krats.se](https://img.krats.se/) where you can
+see those that are public though rphotos.
+
+Not in any way feature-complete, but useful.  At least to me.
+
+There is not (yet) much documentation, but there is command line help
+(the single binary has subcommands for running the server and some
+administrative task, such a finding new photos or making photos
+public).
+The database is described in the migrations.
+Everything else is in the code.
