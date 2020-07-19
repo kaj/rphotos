@@ -65,10 +65,10 @@ pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
 
 pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
     let wanted_groups = match photos.len() {
-        l if l <= 16 => return None,
-        l if l < 81 => 8,
-        l if l >= 225 => 15,
-        l => (l as f64).sqrt() as usize,
+        l if l <= 18 => return None,
+        l if l < 120 => 10,
+        l if l < 256 => (l as f64).sqrt() as usize,
+        _ => 16,
     };
     let mut groups = vec![photos];
     while groups.len() < wanted_groups {
