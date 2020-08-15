@@ -73,7 +73,7 @@ impl GlobalContext {
             .map_err(|e| format!("Bad jwt token: {:?}", e))?;
 
         if !verify_token(&token, self.jwt_secret.as_ref())? {
-            return Err(format!("Invalid token {:?}", token))?;
+            return Err(format!("Invalid token {:?}", token));
         }
         let claims = token.payload;
         debug!("Verified token for: {:?}", claims);
