@@ -7,7 +7,7 @@ edition = "2018"
 build = "src/build.rs"
 
 [build-dependencies]
-ructe = { version = "0.11.4", features = ["sass", "warp02"] }
+ructe = { version = "0.12.0", features = ["sass", "warp02"] }
 
 [dependencies]
 brotli = "3.3.0"
