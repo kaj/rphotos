@@ -238,8 +238,9 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
             })
             .or_else(|| match tag_str(tags, "natural") {
                 Some("bay") => Some(14),
-                Some("wood") => Some(14),
+                Some("beach") => Some(15),
                 Some("scrub") => Some(18),
+                Some("wood") => Some(14),
                 _ => None,
             })
             .or_else(|| match tag_str(tags, "building") {
