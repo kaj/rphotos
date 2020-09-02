@@ -302,8 +302,9 @@ main.details {
             height: 100%;
         }
         #map {
-            margin: 0;
+            grid-row: -2;
             height: calc(100% - 2px) !important;
+            margin: 0;
             width: -moz-available;
         }
         .admbuttons {
