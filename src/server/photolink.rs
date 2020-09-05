@@ -64,8 +64,14 @@ impl PhotoLink {
                             )
                         }
                     } else {
+                        let (from_year, to_year) = (from.year(), to.year());
+                        let to_year = if from_year / 100 == to_year / 100 {
+                            to_year % 100
+                        } else {
+                            to_year
+                        };
                         (
-                            None,
+                            Some(format!("{} - {}", from_year, to_year)),
                             format!(
                                 "{} - {} ({})",
                                 from.format("%F"),
