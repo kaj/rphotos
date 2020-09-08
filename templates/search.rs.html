@@ -25,9 +25,11 @@
       <input id="s_q" name="q" type="search"/>
     </div>
     <div class="time">
-      <span><input type="date" name="since_date" value='@query.since.map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default()'><input type="time" name="since_time" value='@query.since.map(|d| d.format("%H:%M:%S").to_string()).unwrap_or_default()'></span>
+      <span><input type="date" name="since_date" value="@query.since.date_val()">
+        <input type="time" name="since_time" value="@query.since.time_val()" step="1"></span>
       -
-      <span><input type="date" name="until_date" value='@query.until.map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default()'><input type="time" name="until_time" value='@query.until.map(|d| d.format("%H:%M:%S").to_string()).unwrap_or_default()'></span>
+      <span><input type="date" name="until_date" value="@query.until.date_val()">
+        <input type="time" name="until_time" value="@query.until.time_val()" step="1"></span>
     </div>
   </form>
   @if !query.q.is_empty() {

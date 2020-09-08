@@ -19,10 +19,10 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> Response {
     let range = ImgRange::default();
 
     let mut photos = Photo::query(context.is_authorized());
-    if let Some(since) = query.since {
+    if let Some(since) = query.since.as_ref() {
         photos = photos.filter(p::date.ge(since));
     }
-    if let Some(until) = query.until {
+    if let Some(until) = query.until.as_ref() {
         photos = photos.filter(p::date.le(until));
     }
     for tag in &query.t {
@@ -85,8 +85,8 @@ pub struct SearchQuery {
     pub p: Vec<Filter<Person>>,
     /// Places (locations)
     pub l: Vec<Filter<Place>>,
-    pub since: Option<NaiveDateTime>,
-    pub until: Option<NaiveDateTime>,
+    pub since: QueryDateTime,
+    pub until: QueryDateTime,
     pub pos: Option<bool>,
     /// Query (free-text, don't know what to do)
     pub q: String,
@@ -131,10 +131,8 @@ impl SearchQuery {
                 _ => (),
             }
         }
-        let since_midnight = NaiveTime::from_hms_milli(0, 0, 0, 0);
-        result.since = datetime_from_parts(s_d, s_t, since_midnight);
-        let until_midnight = NaiveTime::from_hms_milli(23, 59, 59, 999);
-        result.until = datetime_from_parts(u_d, u_t, until_midnight);
+        result.since = QueryDateTime::since_from_parts(s_d, s_t);
+        result.until = QueryDateTime::until_from_parts(u_d, u_t);
         for (key, val) in query {
             match key.as_ref() {
                 "q" => {
@@ -172,16 +170,20 @@ impl SearchQuery {
                     }
                 }
                 "from" => {
-                    result.since = p::photos
-                        .select(p::date)
-                        .filter(p::id.eq(val.parse::<i32>()?))
-                        .first(db)?
+                    result.since = QueryDateTime::new(
+                        p::photos
+                            .select(p::date)
+                            .filter(p::id.eq(val.parse::<i32>()?))
+                            .first(db)?,
+                    )
                 }
                 "to" => {
-                    result.until = p::photos
-                        .select(p::date)
-                        .filter(p::id.eq(val.parse::<i32>()?))
-                        .first(db)?
+                    result.until = QueryDateTime::new(
+                        p::photos
+                            .select(p::date)
+                            .filter(p::id.eq(val.parse::<i32>()?))
+                            .first(db)?,
+                    )
                 }
                 _ => (), // ignore unknown query parameters
             }
@@ -211,6 +213,57 @@ impl SearchQuery {
             )
             .chain(self.pos.map(|v| format!("&pos={}t", or_bang(v))))
             .collect()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct QueryDateTime {
+    val: Option<NaiveDateTime>,
+}
+
+impl QueryDateTime {
+    fn new(val: Option<NaiveDateTime>) -> Self {
+        QueryDateTime { val }
+    }
+    fn since_from_parts(date: Option<&str>, time: Option<&str>) -> Self {
+        let since_midnight = NaiveTime::from_hms_milli(0, 0, 0, 0);
+        QueryDateTime::new(datetime_from_parts(date, time, since_midnight))
+    }
+    fn until_from_parts(date: Option<&str>, time: Option<&str>) -> Self {
+        let until_midnight = NaiveTime::from_hms_milli(23, 59, 59, 999);
+        QueryDateTime::new(datetime_from_parts(date, time, until_midnight))
+    }
+    fn as_ref(&self) -> Option<&NaiveDateTime> {
+        self.val.as_ref()
+    }
+    pub fn date_val(&self) -> QueryDateFmt {
+        QueryDateFmt(self.as_ref())
+    }
+    pub fn time_val(&self) -> QueryTimeFmt {
+        QueryTimeFmt(self.as_ref())
+    }
+}
+
+pub struct QueryDateFmt<'a>(Option<&'a NaiveDateTime>);
+impl<'a> templates::ToHtml for QueryDateFmt<'a> {
+    fn to_html(&self, out: &mut dyn std::io::Write) -> std::io::Result<()> {
+        if let Some(date) = self.0 {
+            // Note: Only digits and dashes, nothing that needs escaping
+            write!(out, "{}", date.format("%Y-%m-%d"))
+        } else {
+            Ok(())
+        }
+    }
+}
+pub struct QueryTimeFmt<'a>(Option<&'a NaiveDateTime>);
+impl<'a> templates::ToHtml for QueryTimeFmt<'a> {
+    fn to_html(&self, out: &mut dyn std::io::Write) -> std::io::Result<()> {
+        if let Some(time) = self.0 {
+            // Note: Only digits and colons, nothing that needs escaping
+            write!(out, "{}", time.format("%H:%M:%S"))
+        } else {
+            Ok(())
+        }
     }
 }
 
