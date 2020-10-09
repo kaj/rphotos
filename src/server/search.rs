@@ -170,20 +170,10 @@ impl SearchQuery {
                     }
                 }
                 "from" => {
-                    result.since = QueryDateTime::new(
-                        p::photos
-                            .select(p::date)
-                            .filter(p::id.eq(val.parse::<i32>()?))
-                            .first(db)?,
-                    )
+                    result.since = QueryDateTime::from_img(val.parse()?, db)?;
                 }
                 "to" => {
-                    result.until = QueryDateTime::new(
-                        p::photos
-                            .select(p::date)
-                            .filter(p::id.eq(val.parse::<i32>()?))
-                            .first(db)?,
-                    )
+                    result.until = QueryDateTime::from_img(val.parse()?, db)?;
                 }
                 _ => (), // ignore unknown query parameters
             }
@@ -232,6 +222,14 @@ impl QueryDateTime {
     fn until_from_parts(date: Option<&str>, time: Option<&str>) -> Self {
         let until_midnight = NaiveTime::from_hms_milli(23, 59, 59, 999);
         QueryDateTime::new(datetime_from_parts(date, time, until_midnight))
+    }
+    fn from_img(photo_id: i32, db: &PgConnection) -> Result<Self, Error> {
+        Ok(QueryDateTime::new(
+            p::photos
+                .select(p::date)
+                .filter(p::id.eq(photo_id))
+                .first(db)?,
+        ))
     }
     fn as_ref(&self) -> Option<&NaiveDateTime> {
         self.val.as_ref()
