@@ -1,6 +1,6 @@
 [package]
 name = "rphotos"
-version = "0.8.9-PRE"
+version = "0.8.10"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 edition = "2018"
 
