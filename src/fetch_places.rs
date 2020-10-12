@@ -182,7 +182,8 @@ static KNOWN: [(&str, &[(&str, i16)]); 15] = [
     ("highway", &[
         ("pedestrian", 15),  // torg
         ("residential", 15), // torg?
-        ("rest_area", 16),
+        ("rest_area", 16), // rastplats
+        ("services", 16), // rastplats / vägkrog
     ]),
     ("public_transport", &[
         ("station", 18),
