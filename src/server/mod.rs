@@ -16,7 +16,6 @@ pub use self::context::{Context, ContextFilter};
 pub use self::photolink::PhotoLink;
 use self::render_ructe::BuilderExt;
 use self::search::*;
-use self::splitlist::*;
 use self::views_by_category::*;
 use self::views_by_date::*;
 use super::{CacheOpt, DbOpt, DirOpt};

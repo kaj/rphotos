@@ -30,27 +30,32 @@ pub fn links_by_time<'a>(
         .load(&c)
         .unwrap();
     (
-        if let Some(groups) = split_to_groups(&photos) {
-            let path = context.path_without_query();
-            groups
-                .iter()
-                .map(|g| PhotoLink::for_group(g, path, with_date))
-                .collect()
-        } else {
-            photos
-                .iter()
-                .map(if with_date {
-                    PhotoLink::date_title
-                } else {
-                    PhotoLink::no_title
-                })
-                .collect()
-        },
+        split_to_group_links(&photos, context.path_without_query(), with_date),
         get_positions(&photos, &c),
     )
 }
 
-pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
+fn split_to_group_links(
+    photos: &[Photo],
+    path: &str,
+    with_date: bool,
+) -> Vec<PhotoLink> {
+    if let Some(groups) = split_to_groups(&photos) {
+        groups
+            .iter()
+            .map(|g| PhotoLink::for_group(g, path, with_date))
+            .collect()
+    } else {
+        let make_link = if with_date {
+            PhotoLink::date_title
+        } else {
+            PhotoLink::no_title
+        };
+        photos.iter().map(make_link).collect()
+    }
+}
+
+fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
     use crate::schema::positions::dsl::*;
     positions
         .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))
@@ -63,7 +68,7 @@ pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
         .collect()
 }
 
-pub fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
+fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
     let wanted_groups = match photos.len() {
         l if l <= 18 => return None,
         l if l < 120 => 10,

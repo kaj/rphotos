@@ -1,6 +1,6 @@
 //! Handle photos by tag, person, or place.
-use super::RenderRucte;
-use super::{links_by_time, not_found, Context, ContextFilter, ImgRange};
+use super::splitlist::links_by_time;
+use super::{not_found, Context, ContextFilter, ImgRange, RenderRucte};
 use crate::models::{Person, Photo, Place, Tag};
 use crate::templates;
 use diesel::prelude::*;

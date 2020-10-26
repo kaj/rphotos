@@ -1,5 +1,5 @@
-use super::RenderRucte;
-use super::{links_by_time, Context, ImgRange};
+use super::splitlist::links_by_time;
+use super::{Context, ImgRange, RenderRucte};
 use crate::adm::result::Error;
 use crate::models::{Facet, Person, Photo, Place, Tag};
 use crate::schema::photo_people::dsl as pp;
