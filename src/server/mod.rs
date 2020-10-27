@@ -8,6 +8,7 @@ mod photolink;
 mod render_ructe;
 pub mod search;
 mod splitlist;
+mod urlstring;
 mod views_by_category;
 mod views_by_date;
 

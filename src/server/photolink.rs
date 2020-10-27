@@ -1,3 +1,4 @@
+use super::urlstring::UrlString;
 use crate::models::{Photo, SizeTag};
 use chrono::Datelike;
 
@@ -12,7 +13,7 @@ pub struct PhotoLink {
 impl PhotoLink {
     pub fn for_group(
         g: &[Photo],
-        base_url: &str,
+        url: UrlString,
         with_date: bool,
     ) -> PhotoLink {
         if g.len() == 1 {
@@ -95,14 +96,16 @@ impl PhotoLink {
                 }
             };
             let title = if with_date { title } else { None };
+            let mut url = url;
+            if let Some(last) = g.last() {
+                url.query("from", &last.id);
+            }
+            if let Some(first) = g.first() {
+                url.query("to", &first.id);
+            }
             PhotoLink {
                 title,
-                href: format!(
-                    "{}?from={}&to={}",
-                    base_url,
-                    g.last().map(|p| p.id).unwrap_or(0),
-                    g.first().map(|p| p.id).unwrap_or(0),
-                ),
+                href: url.into(),
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small),
                 lable: Some(lable),

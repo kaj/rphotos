@@ -1,3 +1,4 @@
+use super::urlstring::UrlString;
 use super::views_by_date::date_of_img;
 use super::{Context, ImgRange, PhotoLink};
 use crate::models::{Coord, Photo};
@@ -29,21 +30,22 @@ pub fn links_by_time<'a>(
         .order((date.desc().nulls_last(), id.desc()))
         .load(&c)
         .unwrap();
+    let baseurl = UrlString::new(context.path_without_query());
     (
-        split_to_group_links(&photos, context.path_without_query(), with_date),
+        split_to_group_links(&photos, &baseurl, with_date),
         get_positions(&photos, &c),
     )
 }
 
-fn split_to_group_links(
+pub fn split_to_group_links(
     photos: &[Photo],
-    path: &str,
+    path: &UrlString,
     with_date: bool,
 ) -> Vec<PhotoLink> {
     if let Some(groups) = split_to_groups(&photos) {
         groups
             .iter()
-            .map(|g| PhotoLink::for_group(g, path, with_date))
+            .map(|g| PhotoLink::for_group(g, path.clone(), with_date))
             .collect()
     } else {
         let make_link = if with_date {
@@ -55,7 +57,7 @@ fn split_to_group_links(
     }
 }
 
-fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
+pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
     use crate::schema::positions::dsl::*;
     positions
         .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))

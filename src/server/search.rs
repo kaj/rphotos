@@ -1,5 +1,6 @@
-use super::splitlist::links_by_time;
-use super::{Context, ImgRange, RenderRucte};
+use super::splitlist::{get_positions, split_to_group_links};
+use super::urlstring::UrlString;
+use super::{Context, RenderRucte};
 use crate::adm::result::Error;
 use crate::models::{Facet, Person, Photo, Place, Tag};
 use crate::schema::photo_people::dsl as pp;
@@ -16,7 +17,6 @@ use warp::reply::Response;
 
 pub fn search(context: Context, query: Vec<(String, String)>) -> Response {
     let query = SearchQuery::load(query, &context.db().unwrap()).unwrap();
-    let range = ImgRange::default();
 
     let mut photos = Photo::query(context.is_authorized());
     if let Some(since) = query.since.as_ref() {
@@ -65,13 +65,15 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> Response {
         }
     }
 
-    let (mut links, coords) = links_by_time(&context, photos, range, true);
-    let addendum = query.to_query_string();
-    for link in &mut links {
-        if link.href.starts_with("/search/?") {
-            link.href += &addendum;
-        }
-    }
+    let c = context.db().unwrap();
+    let photos = photos
+        .order((p::date.desc().nulls_last(), p::id.desc()))
+        .load(&c)
+        .unwrap();
+
+    let coords = get_positions(&photos, &c);
+    let links = split_to_group_links(&photos, &query.to_base_url(), true);
+
     Builder::new()
         .html(|o| templates::search(o, &context, &query, &links, &coords))
         .unwrap()
@@ -180,29 +182,21 @@ impl SearchQuery {
         }
         Ok(result)
     }
-    fn to_query_string(&self) -> String {
-        fn or_bang(cond: bool) -> &'static str {
-            if cond {
-                ""
-            } else {
-                "!"
-            }
+    fn to_base_url(&self) -> UrlString {
+        let mut result = UrlString::new("/search/");
+        for i in &self.t {
+            result.cond_query("t", i.inc, &i.item.slug);
         }
-        self.t
-            .iter()
-            .map(|v| format!("&t={}{}", or_bang(v.inc), v.item.slug))
-            .chain(
-                self.l
-                    .iter()
-                    .map(|v| format!("&l={}{}", or_bang(v.inc), v.item.slug)),
-            )
-            .chain(
-                self.p
-                    .iter()
-                    .map(|v| format!("&p={}{}", or_bang(v.inc), v.item.slug)),
-            )
-            .chain(self.pos.map(|v| format!("&pos={}t", or_bang(v))))
-            .collect()
+        for i in &self.l {
+            result.cond_query("l", i.inc, &i.item.slug);
+        }
+        for i in &self.p {
+            result.cond_query("p", i.inc, &i.item.slug);
+        }
+        for i in &self.pos {
+            result.cond_query("pos", *i, "t");
+        }
+        result
     }
 }
 
