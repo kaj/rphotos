@@ -310,13 +310,10 @@ fn get_or_create_place(
 }
 
 fn is_duplicate<T>(r: &Result<T, DieselError>) -> bool {
-    match r {
-        Err(DieselError::DatabaseError(
-            DatabaseErrorKind::UniqueViolation,
-            _,
-        )) => true,
-        _ => false,
-    }
+    matches!(
+        r,
+        Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _))
+    )
 }
 
 #[derive(Debug)]
