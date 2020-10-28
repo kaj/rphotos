@@ -71,11 +71,12 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> Response {
         .load(&c)
         .unwrap();
 
+    let n = photos.len();
     let coords = get_positions(&photos, &c);
     let links = split_to_group_links(&photos, &query.to_base_url(), true);
 
     Builder::new()
-        .html(|o| templates::search(o, &context, &query, &links, &coords))
+        .html(|o| templates::search(o, &context, &query, n, &links, &coords))
         .unwrap()
 }
 

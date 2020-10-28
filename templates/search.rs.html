@@ -1,12 +1,12 @@
-@use super::{data_positions, page_base, photo_link};
+@use super::{base, data_positions, photo_link};
 @use crate::models::Coord;
 @use crate::server::{Context, PhotoLink};
 @use crate::server::search::SearchQuery;
 
-@(context: &Context, query: &SearchQuery, photos: &[PhotoLink], coords: &[(Coord, i32)])
-
-@:page_base(context, "Search", &[], {}, {
-
+@(context: &Context, query: &SearchQuery, n: usize, photos: &[PhotoLink], coords: &[(Coord, i32)])
+@:base(context, "Search", &[], {}, {
+<main>
+  <h1>Search@if n > 0 { <small class="n_hits">(@n hits)</small>}</h1>
   <form class="search" action="/search/" method="get">
     <label for="s_q" accesskey="s" title="Search">🔍</label>
     <div class="refs">
@@ -40,4 +40,5 @@
   <div class="group"@:data_positions(coords)>
     @for p in photos {@:photo_link(p)}
   </div>
+</main>
 })
