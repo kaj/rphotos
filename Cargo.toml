@@ -13,7 +13,7 @@ ructe = { version = "0.12.0", features = ["sass", "warp02"] }
 brotli = "3.3.0"
 chrono = "0.4.0" # Must match version used by diesel
 dotenv = "0.15"
-env_logger = "0.7.1"
+env_logger = "0.8.1"
 flate2 = "1.0.14"
 image = "0.23.11"
 medallion = "2.3.1"
