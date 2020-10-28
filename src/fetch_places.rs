@@ -178,6 +178,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 15] = [
         ("railway", 13),
         ("residential", 11),
         ("retail", 13),
+        ("cemetery", 14),
     ]),
     ("highway", &[
         ("pedestrian", 15),  // torg
@@ -195,6 +196,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 15] = [
         ("place_of_worship", 15),
         ("school", 14),
         ("university", 12),
+        ("hospital", 14),
     ]),
     ("aeroway", &[
         ("aerodrome", 14),
@@ -215,13 +217,15 @@ static KNOWN: [(&str, &[(&str, i16)]); 15] = [
         ("penisula", 13),
         ("region", 8),
         ("square", 18),
-        ("suburb", 11),
+        ("suburb", 12),
+        ("town", 11),
     ]),
     ("natural", &[
         ("bay", 14),
         ("beach", 15),
         ("scrub", 18),
         ("wood", 14),
+        ("peninsula", 11),
     ]),
     ("building", &[
         ("exhibition_center", 19),
