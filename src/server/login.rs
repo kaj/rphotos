@@ -27,7 +27,7 @@ pub fn post_login(context: Context, form: LoginForm) -> Response {
         return Builder::new()
             .header(
                 header::SET_COOKIE,
-                format!("EXAUTH={}; SameSite=Strict; HttpOpnly", token),
+                format!("EXAUTH={}; SameSite=Strict; HttpOnly", token),
             )
             .redirect(next.unwrap_or("/"));
     }
@@ -112,7 +112,7 @@ pub fn logout(_context: Context) -> Response {
     Builder::new()
         .header(
             header::SET_COOKIE,
-            "EXAUTH=; Max-Age=0; SameSite=Strict; HttpOpnly",
+            "EXAUTH=; Max-Age=0; SameSite=Strict; HttpOnly",
         )
         .redirect("/")
 }
