@@ -34,7 +34,7 @@ impl Args {
     pub async fn run(&self) -> Result<(), Error> {
         let max_time = Duration::from_secs(self.max_time);
         let timer = Instant::now();
-        let mut cache = Client::connect(self.cache.memcached_url.as_ref())?;
+        let cache = Client::connect(self.cache.memcached_url.as_ref())?;
         let size = SizeTag::Small;
         let (mut n, mut n_stored) = (0, 0);
         let photos = Photo::query(true)

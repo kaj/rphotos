@@ -145,7 +145,7 @@ impl Context {
         R: Future<Output = Result<Vec<u8>, E>>,
     {
         match self.global.cache() {
-            Ok(mut client) => {
+            Ok(client) => {
                 match client.get(key) {
                     Ok(Some(data)) => {
                         debug!("Cache: {} found", key);
@@ -172,7 +172,7 @@ impl Context {
         }
     }
     pub fn clear_cache(&self, key: &str) {
-        if let Ok(mut client) = self.global.cache() {
+        if let Ok(client) = self.global.cache() {
             match client.delete(key) {
                 Ok(flag) => debug!("Cache: deleted {}: {:?}", key, flag),
                 Err(e) => warn!("Cache: Failed to delete {}: {}", key, e),
