@@ -2,7 +2,7 @@
 
 Semi-experimental web app in Rust language: manage my photos.
 
-[![Build Status](https://travis-ci.com/kaj/rphotos.svg?branch=master)](https://travis-ci.com/kaj/rphotos)
+[![CI](https://github.com/kaj/rphotos/workflows/CI/badge.svg)](https://github.com/kaj/rphotos/actions)
 
 Tag photos with places, people and other tags, while keeping some
 private and making others public.
