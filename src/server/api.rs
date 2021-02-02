@@ -7,8 +7,9 @@ use log::warn;
 use serde::{Deserialize, Serialize};
 use warp::filters::BoxedFilter;
 use warp::http::StatusCode;
+use warp::reject::MethodNotAllowed;
 use warp::reply::Response;
-use warp::{Filter, Reply};
+use warp::{Filter, Rejection, Reply};
 
 type ApiResult<T> = Result<T, ApiError>;
 
@@ -33,7 +34,21 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
 
     login
         .or(path("image").and(gimg.or(pimg).unify().map(w)))
+        .recover(api_recover)
         .boxed()
+}
+
+async fn api_recover(err: Rejection) -> Result<Response, Rejection> {
+    let code = if err.is_not_found() {
+        StatusCode::NOT_FOUND
+    } else if err.find::<MethodNotAllowed>().is_some() {
+        StatusCode::METHOD_NOT_ALLOWED
+    } else {
+        log::error!("Internal server error in api from {:?}", err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    };
+    let msg = code.canonical_reason().unwrap_or("error");
+    Ok(ApiError { code, msg }.into_response())
 }
 
 fn w<T: Serialize>(result: ApiResult<T>) -> Response {
