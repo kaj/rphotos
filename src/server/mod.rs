@@ -113,7 +113,7 @@ pub async fn run(args: &Args) -> Result<(), Error> {
 /// Create custom error pages.
 async fn customize_error(err: Rejection) -> Result<Response, Rejection> {
     if err.is_not_found() {
-        eprintln!("Got a 404: {:?}", err);
+        log::info!("Got a 404: {:?}", err);
         Builder::new().status(StatusCode::NOT_FOUND).html(|o| {
             templates::error(
                 o,
@@ -123,7 +123,7 @@ async fn customize_error(err: Rejection) -> Result<Response, Rejection> {
         })
     } else {
         let code = StatusCode::INTERNAL_SERVER_ERROR; // FIXME
-        eprintln!("Got a {}: {:?}", code.as_u16(), err);
+        log::error!("Got a {}: {:?}", code.as_u16(), err);
         Builder::new()
             .status(code)
             .html(|o| templates::error(o, code, "Something went wrong."))
