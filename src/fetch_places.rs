@@ -2,7 +2,6 @@ use crate::dbopt::PgPool;
 use crate::models::{Coord, Place};
 use crate::DbOpt;
 use diesel::prelude::*;
-use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use log::{debug, info};
 use reqwest::{self, Client, Response};
 use serde_json::Value;
@@ -313,11 +312,10 @@ fn get_or_create_place(
         })
 }
 
-fn is_duplicate<T>(r: &Result<T, DieselError>) -> bool {
-    matches!(
-        r,
-        Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _))
-    )
+fn is_duplicate<T>(r: &Result<T, diesel::result::Error>) -> bool {
+    use diesel::result::DatabaseErrorKind::UniqueViolation;
+    use diesel::result::Error::DatabaseError;
+    matches!(r, Err(DatabaseError(UniqueViolation, _)))
 }
 
 #[derive(Debug)]
