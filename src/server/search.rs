@@ -103,10 +103,9 @@ pub struct Filter<T> {
 
 impl<T: Facet> Filter<T> {
     fn load(val: &str, db: &PgConnection) -> Option<Filter<T>> {
-        let (inc, slug) = if val.starts_with('!') {
-            (false, &val[1..])
-        } else {
-            (true, val)
+        let (inc, slug) = match val.strip_prefix('!') {
+            Some(val) => (false, val),
+            None => (true, val),
         };
         match T::by_slug(slug, db) {
             Ok(item) => Some(Filter { inc, item }),
