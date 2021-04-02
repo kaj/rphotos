@@ -36,9 +36,9 @@ impl UrlString {
     }
 }
 
-impl Into<String> for UrlString {
-    fn into(self) -> String {
-        self.value
+impl From<UrlString> for String {
+    fn from(url: UrlString) -> String {
+        url.value
     }
 }
 

@@ -99,7 +99,7 @@ impl GlobalContext {
             .ok_or_else(|| "User missing in jwt claims".to_string())
     }
     fn cache(&self) -> Result<PooledMemcache, Error> {
-        Ok(self.memcache_pool.get()?)
+        self.memcache_pool.get()
     }
 }
 
