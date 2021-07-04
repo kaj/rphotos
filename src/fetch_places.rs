@@ -151,13 +151,15 @@ fn osm_id(obj: &Value) -> Option<i64> {
 }
 
 #[rustfmt::skip] // This data is written in a more compact style
-static KNOWN: [(&str, &[(&str, i16)]); 15] = [
+static KNOWN: [(&str, &[(&str, i16)]); 16] = [
     ("leisure", &[
         ("garden", 18),
         ("nature_reserve", 12),
         ("park", 14),
         ("pitch", 15),
         ("playground", 16),
+        ("water_park", 14),
+        ("fitness_station", 17),
     ]),
     ("tourism", &[
         ("attraction", 16),
@@ -202,6 +204,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 15] = [
     ]),
     ("water", &[
         ("lake", 15),
+        ("river", 16),
     ]),
     ("waterway", &[
         ("riverbank", 16),
@@ -230,6 +233,9 @@ static KNOWN: [(&str, &[(&str, i16)]); 15] = [
         ("exhibition_center", 19),
         ("sports_hall", 19),
         ("", 20), // MAGIC: Empty value means default
+    ]),
+    ("designation", &[
+        ("historic_county", 9),
     ]),
     ("political_division", &[
         ("canton", 9),
