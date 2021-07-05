@@ -228,6 +228,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 16] = [
         ("scrub", 18),
         ("wood", 14),
         ("peninsula", 11),
+        ("wetland", 15),
     ]),
     ("building", &[
         ("exhibition_center", 19),
