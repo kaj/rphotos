@@ -80,7 +80,7 @@ impl OverpassOpt {
             )
             .optional()
             .map_err(|e| Error::Db(image, e))?
-            .ok_or_else(|| Error::NoPosition(image))?;
+            .ok_or(Error::NoPosition(image))?;
         debug!("Should get places for #{} at {:?}", image, coord);
         let data = Client::new()
             .post(&self.overpass_url)

@@ -7,9 +7,9 @@ use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
 use log::{debug, info, warn};
 
-pub fn links_by_time<'a>(
+pub fn links_by_time(
     context: &Context,
-    photos: photos::BoxedQuery<'a, Pg>,
+    photos: photos::BoxedQuery<'_, Pg>,
     range: ImgRange,
     with_date: bool,
 ) -> (Vec<PhotoLink>, Vec<(Coord, i32)>) {
@@ -42,7 +42,7 @@ pub fn split_to_group_links(
     path: &UrlString,
     with_date: bool,
 ) -> Vec<PhotoLink> {
-    if let Some(groups) = split_to_groups(&photos) {
+    if let Some(groups) = split_to_groups(photos) {
         groups
             .iter()
             .map(|g| PhotoLink::for_group(g, path.clone(), with_date))
@@ -91,8 +91,8 @@ fn find_largest(groups: &[&[Photo]]) -> usize {
     let mut found = 0;
     let mut largest = 0.0;
     for (i, g) in groups.iter().enumerate() {
-        let time = 1 + g.first().map(|p| timestamp(p)).unwrap_or(0)
-            - g.last().map(|p| timestamp(p)).unwrap_or(0);
+        let time = 1 + g.first().map(timestamp).unwrap_or(0)
+            - g.last().map(timestamp).unwrap_or(0);
         let score = (g.len() as f64).powi(3) * (time as f64);
         if score > largest {
             largest = score;

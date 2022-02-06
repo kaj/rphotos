@@ -122,7 +122,7 @@ fn find_camera(
     exif: &ExifData,
 ) -> Result<Option<Camera>, Error> {
     if let Some((make, model)) = exif.camera() {
-        let cam = Camera::get_or_create(db, &make, &model)?;
+        let cam = Camera::get_or_create(db, make, model)?;
         return Ok(Some(cam));
     }
     Ok(None)

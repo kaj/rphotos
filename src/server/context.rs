@@ -69,7 +69,7 @@ impl GlobalContext {
     }
 
     fn verify_key(&self, jwtstr: &str) -> Result<String, String> {
-        let token = Token::<Header, ()>::parse(&jwtstr)
+        let token = Token::<Header, ()>::parse(jwtstr)
             .map_err(|e| format!("Bad jwt token: {:?}", e))?;
 
         if !verify_token(&token, self.jwt_secret.as_ref())? {

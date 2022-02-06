@@ -69,7 +69,7 @@ pub struct Args {
 
 pub async fn run(args: &Args) -> Result<(), Error> {
     if let Some(pidfile) = &args.pidfile {
-        handle_pid_file(&pidfile, args.replace).unwrap()
+        handle_pid_file(pidfile, args.replace).unwrap()
     }
     let session_filter = create_session_filter(args);
     let s = move || session_filter.clone();
