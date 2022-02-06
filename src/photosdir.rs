@@ -1,7 +1,7 @@
 use crate::models::Photo;
 use crate::myexif::ExifData;
 use image::imageops::FilterType;
-use image::{self, GenericImageView, ImageError, ImageFormat};
+use image::{self, ImageError, ImageFormat};
 use log::{debug, info, warn};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -133,7 +133,7 @@ pub async fn get_scaled_jpeg(
             use std::fs::File;
             use std::io::BufReader;
             let file = BufReader::new(File::open(path)?);
-            let mut decoder = image::jpeg::JpegDecoder::new(file)?;
+            let mut decoder = image::codecs::jpeg::JpegDecoder::new(file)?;
             decoder.scale(size as u16, size as u16)?;
             image::DynamicImage::from_decoder(decoder)?
         } else {
@@ -160,7 +160,8 @@ pub async fn get_scaled_jpeg(
             }
         };
         let mut buf = Vec::new();
-        img.write_to(&mut buf, ImageFormat::Jpeg)?;
+        use std::io::Cursor;
+        img.write_to(&mut Cursor::new(&mut buf), ImageFormat::Jpeg)?;
         Ok(buf)
     })
     .await?
