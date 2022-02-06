@@ -114,19 +114,19 @@ pub async fn run(args: &Args) -> Result<(), Error> {
 async fn customize_error(err: Rejection) -> Result<Response, Rejection> {
     if err.is_not_found() {
         log::info!("Got a 404: {:?}", err);
-        Builder::new().status(StatusCode::NOT_FOUND).html(|o| {
+        Ok(Builder::new().status(StatusCode::NOT_FOUND).html(|o| {
             templates::error(
                 o,
                 StatusCode::NOT_FOUND,
                 "The resource you requested could not be located.",
             )
-        })
+        })?)
     } else {
         let code = StatusCode::INTERNAL_SERVER_ERROR; // FIXME
         log::error!("Got a {}: {:?}", code.as_u16(), err);
-        Builder::new()
+        Ok(Builder::new()
             .status(code)
-            .html(|o| templates::error(o, code, "Something went wrong."))
+            .html(|o| templates::error(o, code, "Something went wrong."))?)
     }
 }
 
@@ -157,9 +157,9 @@ fn permission_denied() -> Result<Response, Rejection> {
 }
 
 fn error_response(err: StatusCode) -> Result<Response, Rejection> {
-    Builder::new()
+    Ok(Builder::new()
         .status(err)
-        .html(|o| templates::error(o, err, "Sorry about this."))
+        .html(|o| templates::error(o, err, "Sorry about this."))?)
 }
 
 /// Handler for static files.
