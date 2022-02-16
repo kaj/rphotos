@@ -1,9 +1,8 @@
 //! API views
 use super::login::LoginForm;
-use super::Context;
+use super::{Context, ViewError};
 use crate::models::{Photo, SizeTag};
 use diesel::{self, prelude::*, result::Error as DbError, update};
-use log::warn;
 use serde::{Deserialize, Serialize};
 use warp::filters::BoxedFilter;
 use warp::http::StatusCode;
@@ -44,7 +43,7 @@ async fn api_recover(err: Rejection) -> Result<Response, Rejection> {
     } else if err.find::<MethodNotAllowed>().is_some() {
         StatusCode::METHOD_NOT_ALLOWED
     } else {
-        log::error!("Internal server error in api from {:?}", err);
+        log::error!("Internal server error in api from {err:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     };
     let msg = code.canonical_reason().unwrap_or("error");
@@ -63,10 +62,9 @@ fn login(context: Context, form: LoginForm) -> ApiResult<LoginOk> {
     let user = form
         .validate(&db)
         .ok_or_else(|| ApiError::bad_request("login failed"))?;
+    log::info!("Api login {user:?} ok");
     Ok(LoginOk {
-        token: context
-            .make_token(&user)
-            .ok_or_else(|| ApiError::bad_request("failed to make token"))?,
+        token: context.make_token(&user)?,
     })
 }
 
@@ -162,21 +160,29 @@ impl ApiError {
     }
 }
 
-impl From<diesel::result::Error> for ApiError {
-    fn from(err: diesel::result::Error) -> ApiError {
-        warn!("Diesel error in api: {}", err);
-        ApiError {
-            code: StatusCode::INTERNAL_SERVER_ERROR,
-            msg: "database error",
-        }
-    }
-}
-impl From<r2d2_memcache::r2d2::Error> for ApiError {
-    fn from(err: r2d2_memcache::r2d2::Error) -> ApiError {
-        warn!("R2D2 error in api: {}", err);
-        ApiError {
-            code: StatusCode::INTERNAL_SERVER_ERROR,
-            msg: "pool error",
+impl<T> From<T> for ApiError
+where
+    ViewError: From<T>,
+{
+    fn from(err: T) -> ApiError {
+        match ViewError::from(err) {
+            ViewError::NotFound(_) => ApiError {
+                code: StatusCode::NOT_FOUND,
+                msg: "Not found",
+            },
+            ViewError::BadRequest(msg) => ApiError::bad_request(msg),
+            ViewError::PermissionDenied => ApiError {
+                code: StatusCode::UNAUTHORIZED,
+                msg: "Permission denied",
+            },
+            ViewError::ServiceUnavailable => ApiError {
+                code: StatusCode::SERVICE_UNAVAILABLE,
+                msg: "Server exhausted",
+            },
+            ViewError::Err(msg) => ApiError {
+                code: StatusCode::INTERNAL_SERVER_ERROR,
+                msg,
+            },
         }
     }
 }

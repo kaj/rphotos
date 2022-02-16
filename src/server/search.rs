@@ -1,7 +1,7 @@
+use super::error::ViewResult;
 use super::splitlist::{get_positions, split_to_group_links};
 use super::urlstring::UrlString;
-use super::{Context, RenderRucte};
-use crate::adm::result::Error;
+use super::{Context, RenderRucte, Result};
 use crate::models::{Facet, Person, Photo, Place, Tag};
 use crate::schema::photo_people::dsl as pp;
 use crate::schema::photo_places::dsl as pl;
@@ -15,8 +15,12 @@ use log::warn;
 use warp::http::response::Builder;
 use warp::reply::Response;
 
-pub fn search(context: Context, query: Vec<(String, String)>) -> Response {
-    let query = SearchQuery::load(query, &context.db().unwrap()).unwrap();
+pub fn search(
+    context: Context,
+    query: Vec<(String, String)>,
+) -> Result<Response> {
+    let db = context.db()?;
+    let query = SearchQuery::load(query, &db)?;
 
     let mut photos = Photo::query(context.is_authorized());
     if let Some(since) = query.since.as_ref() {
@@ -65,19 +69,17 @@ pub fn search(context: Context, query: Vec<(String, String)>) -> Response {
         }
     }
 
-    let c = context.db().unwrap();
     let photos = photos
         .order((p::date.desc().nulls_last(), p::id.desc()))
-        .load(&c)
-        .unwrap();
+        .load(&db)?;
 
     let n = photos.len();
-    let coords = get_positions(&photos, &c);
+    let coords = get_positions(&photos, &db)?;
     let links = split_to_group_links(&photos, &query.to_base_url(), true);
 
-    Builder::new()
-        .html(|o| templates::search(o, &context, &query, n, &links, &coords))
-        .unwrap()
+    Ok(Builder::new().html(|o| {
+        templates::search(o, &context, &query, n, &links, &coords)
+    })?)
 }
 
 #[derive(Debug, Default)]
@@ -118,10 +120,7 @@ impl<T: Facet> Filter<T> {
 }
 
 impl SearchQuery {
-    fn load(
-        query: Vec<(String, String)>,
-        db: &PgConnection,
-    ) -> Result<Self, Error> {
+    fn load(query: Vec<(String, String)>, db: &PgConnection) -> Result<Self> {
         let mut result = SearchQuery::default();
         let (mut s_d, mut s_t, mut u_d, mut u_t) = (None, None, None, None);
         for (key, val) in &query {
@@ -172,10 +171,12 @@ impl SearchQuery {
                     }
                 }
                 "from" => {
-                    result.since = QueryDateTime::from_img(val.parse()?, db)?;
+                    result.since =
+                        QueryDateTime::from_img(val.parse().req("from")?, db)?;
                 }
                 "to" => {
-                    result.until = QueryDateTime::from_img(val.parse()?, db)?;
+                    result.until =
+                        QueryDateTime::from_img(val.parse().req("to")?, db)?;
                 }
                 _ => (), // ignore unknown query parameters
             }
@@ -217,7 +218,7 @@ impl QueryDateTime {
         let until_midnight = NaiveTime::from_hms_milli(23, 59, 59, 999);
         QueryDateTime::new(datetime_from_parts(date, time, until_midnight))
     }
-    fn from_img(photo_id: i32, db: &PgConnection) -> Result<Self, Error> {
+    fn from_img(photo_id: i32, db: &PgConnection) -> Result<Self> {
         Ok(QueryDateTime::new(
             p::photos
                 .select(p::date)

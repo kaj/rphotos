@@ -1,4 +1,4 @@
-use super::{BuilderExt, Context, RenderRucte};
+use super::{BuilderExt, Context, RenderRucte, Result};
 use crate::templates;
 use diesel::prelude::*;
 use log::info;
@@ -7,12 +7,10 @@ use warp::http::header;
 use warp::http::response::Builder;
 use warp::reply::Response;
 
-pub fn get_login(context: Context, param: NextQ) -> Response {
+pub fn get_login(context: Context, param: NextQ) -> Result<Response> {
     info!("Got request for login form.  Param: {:?}", param);
     let next = sanitize_next(param.next.as_ref().map(AsRef::as_ref));
-    Builder::new()
-        .html(|o| templates::login(o, &context, next, None))
-        .unwrap()
+    Ok(Builder::new().html(|o| templates::login(o, &context, next, None))?)
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -20,21 +18,20 @@ pub struct NextQ {
     next: Option<String>,
 }
 
-pub fn post_login(context: Context, form: LoginForm) -> Response {
+pub fn post_login(context: Context, form: LoginForm) -> Result<Response> {
     let next = sanitize_next(form.next.as_ref().map(AsRef::as_ref));
-    if let Some(user) = form.validate(&*context.db().unwrap()) {
-        let token = context.make_token(&user).unwrap();
-        return Builder::new()
+    if let Some(user) = form.validate(&*context.db()?) {
+        let token = context.make_token(&user)?;
+        return Ok(Builder::new()
             .header(
                 header::SET_COOKIE,
                 format!("EXAUTH={}; SameSite=Strict; HttpOnly", token),
             )
-            .redirect(next.unwrap_or("/"));
+            .redirect(next.unwrap_or("/")));
     }
     let message = Some("Login failed, please try again");
-    Builder::new()
-        .html(|o| templates::login(o, &context, next, message))
-        .unwrap()
+    Ok(Builder::new()
+        .html(|o| templates::login(o, &context, next, message))?)
 }
 
 /// The data submitted by the login form.
