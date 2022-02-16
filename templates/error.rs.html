@@ -1,7 +1,7 @@
 @use super::statics::{photos_css, ux_js};
 @use warp::http::StatusCode;
 
-@(code: StatusCode, message: &str)
+@(code: StatusCode, message: &str, detail: &str)
 
 <!doctype html>
 <html>
@@ -27,6 +27,7 @@
     <main>
       <h1>@code.canonical_reason().unwrap_or("error")</h1>
       <p>@message (@code.as_u16())</p>
+      <p>@detail</p>
     </main>
     <footer>
       <p>Managed by

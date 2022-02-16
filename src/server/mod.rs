@@ -1,3 +1,5 @@
+#[macro_use]
+mod error;
 mod admin;
 mod api;
 mod autocomplete;
@@ -14,6 +16,7 @@ mod views_by_date;
 
 use self::context::create_session_filter;
 pub use self::context::{Context, ContextFilter};
+use self::error::{for_rejection, ViewError};
 pub use self::photolink::PhotoLink;
 use self::render_ructe::BuilderExt;
 use self::search::*;
@@ -34,7 +37,7 @@ use structopt::StructOpt;
 use warp::filters::path::Tail;
 use warp::http::{header, response::Builder, StatusCode};
 use warp::reply::Response;
-use warp::{self, Filter, Rejection, Reply};
+use warp::{self, Filter, Reply};
 
 #[derive(StructOpt)]
 #[structopt(rename_all = "kebab-case")]
@@ -79,69 +82,45 @@ pub async fn run(args: &Args) -> Result<(), Error> {
     let static_routes = path("static")
         .and(get())
         .and(path::tail())
-        .and_then(static_file);
+        .then(static_file)
+        .map(wrap);
     #[rustfmt::skip]
     let routes = warp::any()
         .and(static_routes)
-        .or(get().and(path("login")).and(end()).and(s()).and(query()).map(login::get_login))
-        .or(post().and(path("login")).and(end()).and(s()).and(body::form()).map(login::post_login))
+        .or(get().and(path("login")).and(end()).and(s()).and(query()).map(login::get_login).map(wrap))
+        .or(post().and(path("login")).and(end()).and(s()).and(body::form()).map(login::post_login).map(wrap))
         .or(path("logout").and(end()).and(s()).map(login::logout))
-        .or(get().and(end()).and(s()).map(all_years))
-        .or(get().and(path("img")).and(param()).and(end()).and(s()).map(photo_details))
-        .or(get().and(path("img")).and(param()).and(end()).and(s()).and_then(image::show_image))
-        .or(get().and(path("0")).and(end()).and(s()).map(all_null_date))
-        .or(get().and(param()).and(end()).and(s()).map(months_in_year))
-        .or(get().and(param()).and(param()).and(end()).and(s()).map(days_in_month))
-        .or(get().and(param()).and(param()).and(param()).and(end()).and(query()).and(s()).map(all_for_day))
+        .or(get().and(end()).and(s()).map(all_years).map(wrap))
+        .or(get().and(path("img")).and(param()).and(end()).and(s()).map(photo_details).map(wrap))
+        .or(get().and(path("img")).and(param()).and(end()).and(s()).then(image::show_image).map(wrap))
+        .or(get().and(path("0")).and(end()).and(s()).map(all_null_date).map(wrap))
+        .or(get().and(param()).and(end()).and(s()).map(months_in_year).map(wrap))
+        .or(get().and(param()).and(param()).and(end()).and(s()).map(days_in_month).map(wrap))
+        .or(get().and(param()).and(param()).and(param()).and(end()).and(query()).and(s()).map(all_for_day).map(wrap))
         .or(path("person").and(person_routes(s())))
         .or(path("place").and(place_routes(s())))
         .or(path("tag").and(tag_routes(s())))
-        .or(get().and(path("random")).and(end()).and(s()).map(random_image))
-        .or(get().and(path("thisday")).and(end()).and(s()).map(on_this_day))
-        .or(get().and(path("next")).and(end()).and(s()).and(query()).map(next_image))
-        .or(get().and(path("prev")).and(end()).and(s()).and(query()).map(prev_image))
+        .or(get().and(path("random")).and(end()).and(s()).map(random_image).map(wrap))
+        .or(get().and(path("thisday")).and(end()).and(s()).map(on_this_day).map(wrap))
+        .or(get().and(path("next")).and(end()).and(s()).and(query()).map(next_image).map(wrap))
+        .or(get().and(path("prev")).and(end()).and(s()).and(query()).map(prev_image).map(wrap))
         .or(path("ac").and(autocomplete::routes(s())))
-        .or(path("search").and(end()).and(get()).and(s()).and(query()).map(search))
+        .or(path("search").and(end()).and(get()).and(s()).and(query()).map(search).map(wrap))
         .or(path("api").and(api::routes(s())))
         .or(path("adm").and(admin::routes(s())));
-    warp::serve(routes.recover(customize_error))
+    warp::serve(routes.recover(for_rejection))
         .run(args.listen)
         .await;
     Ok(())
 }
 
-/// Create custom error pages.
-async fn customize_error(err: Rejection) -> Result<Response, Rejection> {
-    if err.is_not_found() {
-        log::info!("Got a 404: {:?}", err);
-        Ok(Builder::new().status(StatusCode::NOT_FOUND).html(|o| {
-            templates::error(
-                o,
-                StatusCode::NOT_FOUND,
-                "The resource you requested could not be located.",
-            )
-        })?)
-    } else {
-        let code = StatusCode::INTERNAL_SERVER_ERROR; // FIXME
-        log::error!("Got a {}: {:?}", code.as_u16(), err);
-        Ok(Builder::new()
-            .status(code)
-            .html(|o| templates::error(o, code, "Something went wrong."))?)
-    }
-}
+type Result<T, E = ViewError> = std::result::Result<T, E>;
 
-fn not_found(context: &Context) -> Response {
-    Builder::new()
-        .status(StatusCode::NOT_FOUND)
-        .html(|o| {
-            templates::not_found(
-                o,
-                context,
-                StatusCode::NOT_FOUND,
-                "The resource you requested could not be located.",
-            )
-        })
-        .unwrap()
+fn wrap(result: Result<impl Reply>) -> Response {
+    match result {
+        Ok(reply) => reply.into_response(),
+        Err(err) => err.into_response(),
+    }
 }
 
 fn redirect_to_img(image: i32) -> Response {
@@ -152,85 +131,67 @@ fn redirect(url: &str) -> Response {
     Builder::new().redirect(url)
 }
 
-fn permission_denied() -> Result<Response, Rejection> {
-    error_response(StatusCode::UNAUTHORIZED)
-}
-
-fn error_response(err: StatusCode) -> Result<Response, Rejection> {
-    Ok(Builder::new()
-        .status(err)
-        .html(|o| templates::error(o, err, "Sorry about this."))?)
-}
-
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
-async fn static_file(name: Tail) -> Result<impl Reply, Rejection> {
+async fn static_file(name: Tail) -> Result<impl Reply> {
     use templates::statics::StaticFile;
-    if let Some(data) = StaticFile::get(name.as_str()) {
-        Ok(Builder::new()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, data.mime.as_ref())
-            .far_expires()
-            .body(data.content))
-    } else {
-        println!("Static file {:?} not found", name);
-        Err(warp::reject::not_found())
-    }
+    let data = or_404!(StaticFile::get(name.as_str()));
+    Ok(Builder::new()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, data.mime.as_ref())
+        .far_expires()
+        .body(data.content))
 }
 
-fn random_image(context: Context) -> Response {
+fn random_image(context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::id;
     use diesel::expression::dsl::sql;
     use diesel::sql_types::Integer;
-    if let Ok(photo) = Photo::query(context.is_authorized())
+    let photo = Photo::query(context.is_authorized())
         .select(id)
         .limit(1)
         .order(sql::<Integer>("random()"))
-        .first(&context.db().unwrap())
-    {
-        info!("Random: {:?}", photo);
-        redirect_to_img(photo)
-    } else {
-        not_found(&context)
-    }
+        .first(&context.db()?)?;
+
+    info!("Random: {:?}", photo);
+    Ok(redirect_to_img(photo))
 }
 
-fn photo_details(id: i32, context: Context) -> Response {
+fn photo_details(id: i32, context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::photos;
-    let c = context.db().unwrap();
-    if let Ok(tphoto) = photos.find(id).first::<Photo>(&c) {
-        if context.is_authorized() || tphoto.is_public() {
-            return Builder::new()
-                .html(|o| {
-                    templates::details(
-                        o,
-                        &context,
-                        &tphoto
-                            .date
-                            .map(|d| {
-                                vec![
-                                    Link::year(d.year()),
-                                    Link::month(d.year(), d.month()),
-                                    Link::day(d.year(), d.month(), d.day()),
-                                    Link::prev(tphoto.id),
-                                    Link::next(tphoto.id),
-                                ]
-                            })
-                            .unwrap_or_default(),
-                        &tphoto.load_people(&c).unwrap(),
-                        &tphoto.load_places(&c).unwrap(),
-                        &tphoto.load_tags(&c).unwrap(),
-                        &tphoto.load_position(&c),
-                        &tphoto.load_attribution(&c),
-                        &tphoto.load_camera(&c),
-                        &tphoto,
-                    )
-                })
-                .unwrap();
-        }
+    let c = context.db()?;
+    let tphoto = or_404q!(photos.find(id).first::<Photo>(&c), context);
+
+    if context.is_authorized() || tphoto.is_public() {
+        Ok(Builder::new().html(|o| {
+            templates::details(
+                o,
+                &context,
+                &tphoto
+                    .date
+                    .map(|d| {
+                        vec![
+                            Link::year(d.year()),
+                            Link::month(d.year(), d.month()),
+                            Link::day(d.year(), d.month(), d.day()),
+                            Link::prev(tphoto.id),
+                            Link::next(tphoto.id),
+                        ]
+                    })
+                    .unwrap_or_default(),
+                &tphoto.load_people(&c).unwrap(),
+                &tphoto.load_places(&c).unwrap(),
+                &tphoto.load_tags(&c).unwrap(),
+                &tphoto.load_position(&c),
+                &tphoto.load_attribution(&c),
+                &tphoto.load_camera(&c),
+                &tphoto,
+            )
+        })?)
+    } else {
+        Err(ViewError::NotFound(Some(context)))
     }
-    not_found(&context)
 }
 
 pub type Link = Html<String>;

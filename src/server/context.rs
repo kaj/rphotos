@@ -1,11 +1,10 @@
-use super::Args;
+use super::{error::ViewResult, Args, Result};
 use crate::dbopt::{PgPool, PooledPg};
 use crate::fetch_places::OverpassOpt;
 use crate::photosdir::PhotosDir;
 use diesel::r2d2::{Pool, PooledConnection};
 use log::{debug, warn};
 use medallion::{Header, Payload, Token};
-use r2d2_memcache::r2d2::Error;
 use r2d2_memcache::MemcacheConnectionManager;
 use std::future::Future;
 use std::sync::Arc;
@@ -98,8 +97,8 @@ impl GlobalContext {
             .sub
             .ok_or_else(|| "User missing in jwt claims".to_string())
     }
-    fn cache(&self) -> Result<PooledMemcache, Error> {
-        self.memcache_pool.get()
+    fn cache(&self) -> Result<PooledMemcache> {
+        Ok(self.memcache_pool.get()?)
     }
 }
 
@@ -120,8 +119,8 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn db(&self) -> Result<PooledPg, Error> {
-        self.global.db_pool.get()
+    pub fn db(&self) -> Result<PooledPg> {
+        Ok(self.global.db_pool.get()?)
     }
     pub fn db_pool(&self) -> PgPool {
         self.global.db_pool.clone()
@@ -144,7 +143,7 @@ impl Context {
         F: FnOnce() -> R,
         R: Future<Output = Result<Vec<u8>, E>>,
     {
-        match self.global.cache() {
+        match self.global.memcache_pool.get() {
             Ok(client) => {
                 match client.get(key) {
                     Ok(Some(data)) => {
@@ -166,7 +165,7 @@ impl Context {
                 Ok(data)
             }
             Err(err) => {
-                warn!("Error connecting to memcache: {}", err);
+                warn!("Error connecting to memcache: {:?}", err);
                 calculate().await
             }
         }
@@ -186,7 +185,7 @@ impl Context {
         &self.global.overpass
     }
 
-    pub fn make_token(&self, user: &str) -> Option<String> {
+    pub fn make_token(&self, user: &str) -> Result<String> {
         let header: Header = Default::default();
         let now = current_numeric_date();
         let expiration_time = Duration::from_secs(14 * 24 * 60 * 60);
@@ -198,7 +197,7 @@ impl Context {
             ..Default::default()
         };
         let token = Token::new(header, claims);
-        token.sign(self.global.jwt_secret.as_ref()).ok()
+        token.sign(self.global.jwt_secret.as_ref()).ise()
     }
 }
 

@@ -1,4 +1,4 @@
-use super::Context;
+use super::{wrap, Context, Result};
 use crate::schema::people::dsl as h; // h as in human
 use crate::schema::photo_people::dsl as pp;
 use crate::schema::photos::dsl as p;
@@ -20,23 +20,26 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
         .and(s.clone())
         .and(query())
         .map(auto_complete_any)
+        .map(wrap)
         .or(path("tag")
             .and(get())
             .and(s.clone())
             .and(query())
-            .map(auto_complete_tag))
+            .map(auto_complete_tag)
+            .map(wrap))
         .or(path("person")
             .and(get())
             .and(s)
             .and(query())
-            .map(auto_complete_person))
+            .map(auto_complete_person)
+            .map(wrap))
         .boxed()
 }
 
 sql_function!(fn lower(string: Text) -> Text);
 sql_function!(fn strpos(string: Text, substring: Text) -> Integer);
 
-pub fn auto_complete_any(context: Context, query: AcQ) -> impl Reply {
+pub fn auto_complete_any(context: Context, query: AcQ) -> Result<impl Reply> {
     let qq = query.q.to_lowercase();
 
     let tpos = strpos(lower(t::tag_name), &qq);
@@ -52,12 +55,11 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> impl Reply {
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let db = context.db().unwrap();
+    let db = context.db()?;
     let mut tags = query
         .order((tpos, t::tag_name))
         .limit(10)
-        .load::<(String, String, i32)>(&db)
-        .unwrap()
+        .load::<(String, String, i32)>(&db)?
         .into_iter()
         .map(|(t, s, p)| (SearchTag { k: 't', t, s }, p))
         .collect::<Vec<_>>();
@@ -82,8 +84,7 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> impl Reply {
         query
             .order((ppos, h::person_name))
             .limit(10)
-            .load::<(String, String, i32)>(&db)
-            .unwrap()
+            .load::<(String, String, i32)>(&db)?
             .into_iter()
             .map(|(t, s, p)| (SearchTag { k: 'p', t, s }, p))
     });
@@ -109,16 +110,17 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> impl Reply {
         query
             .order((lpos, l::place_name))
             .limit(10)
-            .load::<(String, String, i32)>(&db)
-            .unwrap()
+            .load::<(String, String, i32)>(&db)?
             .into_iter()
             .map(|(t, s, p)| (SearchTag { k: 'l', t, s }, p))
     });
     tags.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
-    reply::json(&tags.iter().map(|(t, _)| t).collect::<Vec<_>>())
+    Ok(reply::json(
+        &tags.iter().map(|(t, _)| t).collect::<Vec<_>>(),
+    ))
 }
 
-pub fn auto_complete_tag(context: Context, query: AcQ) -> impl Reply {
+pub fn auto_complete_tag(context: Context, query: AcQ) -> Result<impl Reply> {
     use crate::schema::tags::dsl::{tag_name, tags};
     let tpos = strpos(lower(tag_name), query.q.to_lowercase());
     let q = tags
@@ -126,10 +128,13 @@ pub fn auto_complete_tag(context: Context, query: AcQ) -> impl Reply {
         .filter((&tpos).gt(0))
         .order((&tpos, tag_name))
         .limit(10);
-    reply::json(&q.load::<String>(&context.db().unwrap()).unwrap())
+    Ok(reply::json(&q.load::<String>(&context.db()?)?))
 }
 
-pub fn auto_complete_person(context: Context, query: AcQ) -> impl Reply {
+pub fn auto_complete_person(
+    context: Context,
+    query: AcQ,
+) -> Result<impl Reply> {
     use crate::schema::people::dsl::{people, person_name};
     let mpos = strpos(lower(person_name), query.q.to_lowercase());
     let q = people
@@ -137,7 +142,7 @@ pub fn auto_complete_person(context: Context, query: AcQ) -> impl Reply {
         .filter((&mpos).gt(0))
         .order((&mpos, person_name))
         .limit(10);
-    reply::json(&q.load::<String>(&context.db().unwrap()).unwrap())
+    Ok(reply::json(&q.load::<String>(&context.db()?)?))
 }
 
 #[derive(Deserialize)]

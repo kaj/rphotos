@@ -1,19 +1,19 @@
 use super::urlstring::UrlString;
 use super::views_by_date::date_of_img;
-use super::{Context, ImgRange, PhotoLink};
+use super::{Context, ImgRange, PhotoLink, Result};
 use crate::models::{Coord, Photo};
 use crate::schema::photos;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
-use log::{debug, info, warn};
+use log::{debug, info};
 
 pub fn links_by_time(
     context: &Context,
     photos: photos::BoxedQuery<'_, Pg>,
     range: ImgRange,
     with_date: bool,
-) -> (Vec<PhotoLink>, Vec<(Coord, i32)>) {
-    let c = context.db().unwrap();
+) -> Result<(Vec<PhotoLink>, Vec<(Coord, i32)>)> {
+    let c = context.db()?;
     use crate::schema::photos::dsl::{date, id};
     let photos =
         if let Some(from_date) = range.from.map(|i| date_of_img(&c, i)) {
@@ -28,13 +28,12 @@ pub fn links_by_time(
     };
     let photos = photos
         .order((date.desc().nulls_last(), id.desc()))
-        .load(&c)
-        .unwrap();
+        .load(&c)?;
     let baseurl = UrlString::new(context.path_without_query());
-    (
+    Ok((
         split_to_group_links(&photos, &baseurl, with_date),
-        get_positions(&photos, &c),
-    )
+        get_positions(&photos, &c)?,
+    ))
 }
 
 pub fn split_to_group_links(
@@ -57,17 +56,18 @@ pub fn split_to_group_links(
     }
 }
 
-pub fn get_positions(photos: &[Photo], c: &PgConnection) -> Vec<(Coord, i32)> {
+pub fn get_positions(
+    photos: &[Photo],
+    c: &PgConnection,
+) -> Result<Vec<(Coord, i32)>> {
     use crate::schema::positions::dsl::*;
-    positions
+    Ok(positions
         .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))
         .select((photo_id, latitude, longitude))
-        .load(c)
-        .map_err(|e| warn!("Failed to load positions: {}", e))
-        .unwrap_or_default()
+        .load(c)?
         .into_iter()
         .map(|(p_id, lat, long): (i32, i32, i32)| ((lat, long).into(), p_id))
-        .collect()
+        .collect())
 }
 
 fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {
