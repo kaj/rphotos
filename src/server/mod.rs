@@ -33,6 +33,7 @@ use diesel::prelude::*;
 use log::info;
 use serde::Deserialize;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use structopt::StructOpt;
 use warp::filters::path::Tail;
 use warp::http::{header, response::Builder, StatusCode};
@@ -54,7 +55,7 @@ pub struct Args {
     /// Write (and read, if --replace) a pid file with the name
     /// given as <PIDFILE>.
     #[structopt(long)]
-    pidfile: Option<String>,
+    pidfile: Option<PathBuf>,
     /// Kill old server (identified by pid file) before running.
     #[structopt(long, short)]
     replace: bool,
@@ -72,7 +73,7 @@ pub struct Args {
 
 pub async fn run(args: &Args) -> Result<(), Error> {
     if let Some(pidfile) = &args.pidfile {
-        handle_pid_file(pidfile, args.replace).unwrap()
+        handle_pid_file(pidfile, args.replace)?;
     }
     let session_filter = create_session_filter(args);
     let s = move || session_filter.clone();

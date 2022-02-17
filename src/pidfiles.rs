@@ -1,10 +1,12 @@
-use libc::{getpid, kill, pid_t, SIGHUP};
+use crate::adm::result::Error;
+use libc::{kill, pid_t, SIGHUP};
 use log::{debug, info};
-use std::fs::File;
-use std::io::{ErrorKind, Read, Write};
+use std::fs::{read_to_string, write};
+use std::io::ErrorKind;
 use std::path::Path;
+use std::process;
 
-pub fn handle_pid_file(pidfile: &str, replace: bool) -> Result<(), String> {
+pub fn handle_pid_file(pidfile: &Path, replace: bool) -> Result<(), Error> {
     if replace {
         if let Some(oldpid) = read_pid_file(pidfile)? {
             info!("Killing old pid {}.", oldpid);
@@ -12,27 +14,22 @@ pub fn handle_pid_file(pidfile: &str, replace: bool) -> Result<(), String> {
                 kill(oldpid, SIGHUP);
             }
         }
-    } else if Path::new(pidfile).exists() {
-        return Err(format!("Pid file {:?} exists.", pidfile));
+    } else if pidfile.exists() {
+        return Err(Error::Other(format!("Pid file {:?} exists.", pidfile)));
     }
-    let pid = unsafe { getpid() };
-    debug!("Should write pid {} to {}", pid, pidfile);
-    File::create(pidfile)
-        .and_then(|mut f| writeln!(f, "{}", pid))
-        .map_err(|e| format!("Failed to write {}: {}", pidfile, e))
+    let pid = process::id();
+    debug!("Should write pid {} to {:?}", pid, pidfile);
+    write(pidfile, pid.to_string()).map_err(|e| Error::in_file(&e, pidfile))
 }
 
-fn read_pid_file(pidfile: &str) -> Result<Option<pid_t>, String> {
-    match File::open(pidfile) {
-        Ok(mut f) => {
-            let mut buf = String::new();
-            f.read_to_string(&mut buf)
-                .map_err(|e| format!("Could not read {}: {}", pidfile, e))?;
-            Ok(Some(buf.trim().parse().map_err(|e| {
-                format!("Bad content in {}: {}", pidfile, e)
-            })?))
-        }
+fn read_pid_file(pidfile: &Path) -> Result<Option<pid_t>, Error> {
+    match read_to_string(pidfile) {
+        Ok(pid) => pid
+            .trim()
+            .parse()
+            .map(Some)
+            .map_err(|e| Error::in_file(&e, pidfile)),
         Err(ref e) if e.kind() == ErrorKind::NotFound => Ok(None),
-        Err(ref e) => Err(format!("Could not open {}: {}", pidfile, e)),
+        Err(ref e) => Err(Error::in_file(&e, pidfile)),
     }
 }
