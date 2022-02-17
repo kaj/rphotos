@@ -1,6 +1,7 @@
 use super::{wrap, BuilderExt, Context, ContextFilter, RenderRucte, Result};
 use crate::templates;
 use diesel::prelude::*;
+use lazy_regex::regex_is_match;
 use log::info;
 use serde::Deserialize;
 use warp::filters::BoxedFilter;
@@ -84,9 +85,7 @@ impl LoginForm {
 
 fn sanitize_next(next: Option<&str>) -> Option<&str> {
     if let Some(next) = next {
-        use regex::Regex;
-        let re = Regex::new(r"^/([a-z0-9._-]+/?)*$").unwrap();
-        if re.is_match(next) {
+        if regex_is_match!(r"^/([a-z0-9._-]+/?)*$", next) {
             return Some(next);
         }
     }
