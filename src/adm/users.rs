@@ -46,6 +46,8 @@ fn random_password(len: usize) -> String {
     let rng = thread_rng();
     // Note; I would like to have lowercase letters more probable
     use rand::distributions::Alphanumeric;
-    String::from_utf8(rng.sample_iter(&Alphanumeric).take(len).collect())
-        .unwrap()
+    rng.sample_iter(&Alphanumeric)
+        .map(char::from)
+        .take(len)
+        .collect()
 }
