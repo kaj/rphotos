@@ -21,7 +21,7 @@ pub use self::photolink::PhotoLink;
 use self::render_ructe::BuilderExt;
 use self::search::*;
 use self::views_by_category::*;
-use self::views_by_date::*;
+use self::views_by_date::monthname;
 use super::{CacheOpt, DbOpt, DirOpt};
 use crate::adm::result::Error;
 use crate::fetch_places::OverpassOpt;
@@ -78,7 +78,7 @@ pub async fn run(args: &Args) -> Result<(), Error> {
     let s = move || session_filter.clone();
     use warp::filters::query::query;
     use warp::path::{end, param};
-    use warp::{body, get, path, post};
+    use warp::{get, path};
     let static_routes = path("static")
         .and(path::tail())
         .and(get())
@@ -87,29 +87,17 @@ pub async fn run(args: &Args) -> Result<(), Error> {
     #[rustfmt::skip]
     let routes = warp::any()
         .and(static_routes)
-        .or(path("login").and(end()).and(
-            get().and(s()).and(query()).map(login::get_login)
-                .or(post().and(s()).and(body::form()).map(login::post_login))
-                .unify()
-                .map(wrap)))
-        .or(path("logout").and(end()).and(s()).map(login::logout))
-        .or(end().and(get()).and(s()).map(all_years).map(wrap))
+        .or(login::routes(s()))
         .or(path("img").and(
             param().and(end()).and(get()).and(s()).map(photo_details)
                 .or(param().and(end()).and(get()).and(s()).then(image::show_image))
                 .unify()
                 .map(wrap)))
-        .or(path("0").and(end()).and(get()).and(s()).map(all_null_date).map(wrap))
-        .or(param().and(end()).and(get()).and(s()).map(months_in_year).map(wrap))
-        .or(param().and(param()).and(end()).and(get()).and(s()).map(days_in_month).map(wrap))
-        .or(param().and(param()).and(param()).and(end()).and(query()).and(get()).and(s()).map(all_for_day).map(wrap))
+        .or(views_by_date::routes(s()))
         .or(path("person").and(person_routes(s())))
         .or(path("place").and(place_routes(s())))
         .or(path("tag").and(tag_routes(s())))
         .or(path("random").and(end()).and(get()).and(s()).map(random_image).map(wrap))
-        .or(path("thisday").and(end()).and(get()).and(s()).map(on_this_day).map(wrap))
-        .or(path("next").and(end()).and(get()).and(s()).and(query()).map(next_image).map(wrap))
-        .or(path("prev").and(end()).and(get()).and(s()).and(query()).map(prev_image).map(wrap))
         .or(path("ac").and(autocomplete::routes(s())))
         .or(path("search").and(end()).and(get()).and(s()).and(query()).map(search).map(wrap))
         .or(path("api").and(api::routes(s())))

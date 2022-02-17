@@ -12,7 +12,8 @@ use warp::filters::method::get;
 use warp::filters::BoxedFilter;
 use warp::path::{end, path};
 use warp::query::query;
-use warp::{reply, Filter, Reply};
+use warp::reply::{json, Json};
+use warp::{Filter, Reply};
 
 pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
     end()
@@ -20,26 +21,26 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
         .and(s.clone())
         .and(query())
         .map(auto_complete_any)
-        .map(wrap)
         .or(path("tag")
             .and(get())
             .and(s.clone())
             .and(query())
-            .map(auto_complete_tag)
-            .map(wrap))
+            .map(auto_complete_tag))
+        .unify()
         .or(path("person")
             .and(get())
             .and(s)
             .and(query())
-            .map(auto_complete_person)
-            .map(wrap))
+            .map(auto_complete_person))
+        .unify()
+        .map(wrap)
         .boxed()
 }
 
 sql_function!(fn lower(string: Text) -> Text);
 sql_function!(fn strpos(string: Text, substring: Text) -> Integer);
 
-pub fn auto_complete_any(context: Context, query: AcQ) -> Result<impl Reply> {
+pub fn auto_complete_any(context: Context, query: AcQ) -> Result<Json> {
     let qq = query.q.to_lowercase();
 
     let tpos = strpos(lower(t::tag_name), &qq);
@@ -115,12 +116,10 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> Result<impl Reply> {
             .map(|(t, s, p)| (SearchTag { k: 'l', t, s }, p))
     });
     tags.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
-    Ok(reply::json(
-        &tags.iter().map(|(t, _)| t).collect::<Vec<_>>(),
-    ))
+    Ok(json(&tags.iter().map(|(t, _)| t).collect::<Vec<_>>()))
 }
 
-pub fn auto_complete_tag(context: Context, query: AcQ) -> Result<impl Reply> {
+pub fn auto_complete_tag(context: Context, query: AcQ) -> Result<Json> {
     use crate::schema::tags::dsl::{tag_name, tags};
     let tpos = strpos(lower(tag_name), query.q.to_lowercase());
     let q = tags
@@ -128,13 +127,10 @@ pub fn auto_complete_tag(context: Context, query: AcQ) -> Result<impl Reply> {
         .filter((&tpos).gt(0))
         .order((&tpos, tag_name))
         .limit(10);
-    Ok(reply::json(&q.load::<String>(&context.db()?)?))
+    Ok(json(&q.load::<String>(&context.db()?)?))
 }
 
-pub fn auto_complete_person(
-    context: Context,
-    query: AcQ,
-) -> Result<impl Reply> {
+pub fn auto_complete_person(context: Context, query: AcQ) -> Result<Json> {
     use crate::schema::people::dsl::{people, person_name};
     let mpos = strpos(lower(person_name), query.q.to_lowercase());
     let q = people
@@ -142,7 +138,7 @@ pub fn auto_complete_person(
         .filter((&mpos).gt(0))
         .order((&mpos, person_name))
         .limit(10);
-    Ok(reply::json(&q.load::<String>(&context.db()?)?))
+    Ok(json(&q.load::<String>(&context.db()?)?))
 }
 
 #[derive(Deserialize)]

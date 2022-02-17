@@ -1,6 +1,7 @@
 use super::splitlist::links_by_time;
 use super::{
-    redirect_to_img, Context, ImgRange, Link, PhotoLink, Result, ViewError,
+    redirect_to_img, wrap, Context, ContextFilter, ImgRange, Link, PhotoLink,
+    Result, ViewError,
 };
 use crate::models::{Photo, SizeTag};
 use crate::templates::{self, RenderRucte};
@@ -10,10 +11,70 @@ use diesel::dsl::sql;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Nullable};
 use serde::Deserialize;
+use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
+use warp::path::{end, param};
+use warp::query::query;
 use warp::reply::Response;
+use warp::{get, path, Filter};
 
-pub fn all_years(context: Context) -> Result<Response> {
+pub fn routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
+    let s = move || s.clone();
+    let root = end().and(get()).and(s()).map(all_years);
+    let nodate = path("0").and(end()).and(get()).and(s()).map(all_null_date);
+    let year = param().and(end()).and(get()).and(s()).map(months_in_year);
+    let month = param()
+        .and(param())
+        .and(end())
+        .and(get())
+        .and(s())
+        .map(days_in_month);
+    let day = param()
+        .and(param())
+        .and(param())
+        .and(end())
+        .and(query())
+        .and(get())
+        .and(s())
+        .map(all_for_day);
+
+    let this = path("thisday")
+        .and(end())
+        .and(get())
+        .and(s())
+        .map(on_this_day);
+    let next = path("next")
+        .and(end())
+        .and(get())
+        .and(s())
+        .and(query())
+        .map(next_image);
+    let prev = path("prev")
+        .and(end())
+        .and(get())
+        .and(s())
+        .and(query())
+        .map(prev_image);
+
+    root.or(nodate)
+        .unify()
+        .or(year)
+        .unify()
+        .or(month)
+        .unify()
+        .or(day)
+        .unify()
+        .or(this)
+        .unify()
+        .or(next)
+        .unify()
+        .or(prev)
+        .unify()
+        .map(wrap)
+        .boxed()
+}
+
+fn all_years(context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::{date, grade};
     let db = context.db()?;
     let groups = Photo::query(context.is_authorized())
@@ -57,7 +118,7 @@ fn start_of_year(year: i32) -> NaiveDateTime {
     NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0)
 }
 
-pub fn months_in_year(year: i32, context: Context) -> Result<Response> {
+fn months_in_year(year: i32, context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::{date, grade};
 
     let title: String = format!("Photos from {}", year);
@@ -123,11 +184,7 @@ fn start_of_month(year: i32, month: u32) -> NaiveDateTime {
     date.and_hms(0, 0, 0)
 }
 
-pub fn days_in_month(
-    year: i32,
-    month: u32,
-    context: Context,
-) -> Result<Response> {
+fn days_in_month(year: i32, month: u32, context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::{date, grade};
 
     let lpath: Vec<Link> = vec![Link::year(year)];
@@ -187,7 +244,7 @@ pub fn days_in_month(
     }
 }
 
-pub fn all_null_date(context: Context) -> Result<Response> {
+fn all_null_date(context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::{date, path};
     let images = Photo::query(context.is_authorized())
         .filter(date.is_null())
@@ -209,7 +266,7 @@ pub fn all_null_date(context: Context) -> Result<Response> {
     })?)
 }
 
-pub fn all_for_day(
+fn all_for_day(
     year: i32,
     month: u32,
     day: u32,
@@ -240,7 +297,7 @@ pub fn all_for_day(
     }
 }
 
-pub fn on_this_day(context: Context) -> Result<Response> {
+fn on_this_day(context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::{date, grade};
     use crate::schema::positions::dsl::{
         latitude, longitude, photo_id, positions,
@@ -305,7 +362,7 @@ pub fn on_this_day(context: Context) -> Result<Response> {
     })?)
 }
 
-pub fn next_image(context: Context, param: FromParam) -> Result<Response> {
+fn next_image(context: Context, param: FromParam) -> Result<Response> {
     use crate::schema::photos::dsl::{date, id};
     let db = context.db()?;
     let from_date = or_404!(date_of_img(&db, param.from), context);
@@ -323,7 +380,7 @@ pub fn next_image(context: Context, param: FromParam) -> Result<Response> {
     Ok(redirect_to_img(photo))
 }
 
-pub fn prev_image(context: Context, param: FromParam) -> Result<Response> {
+fn prev_image(context: Context, param: FromParam) -> Result<Response> {
     use crate::schema::photos::dsl::{date, id};
     let db = context.db()?;
     let from_date = or_404!(date_of_img(&db, param.from), context);
@@ -342,7 +399,7 @@ pub fn prev_image(context: Context, param: FromParam) -> Result<Response> {
 }
 
 #[derive(Deserialize)]
-pub struct FromParam {
+struct FromParam {
     from: i32,
 }
 
