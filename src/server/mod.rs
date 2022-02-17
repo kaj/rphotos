@@ -16,7 +16,7 @@ mod views_by_date;
 
 use self::context::create_session_filter;
 pub use self::context::{Context, ContextFilter};
-use self::error::{for_rejection, ViewError};
+use self::error::{for_rejection, ViewError, ViewResult};
 pub use self::photolink::PhotoLink;
 use self::render_ructe::BuilderExt;
 use self::search::*;
@@ -128,14 +128,15 @@ fn redirect(url: &str) -> Response {
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
-async fn static_file(name: Tail) -> Result<impl Reply> {
+async fn static_file(name: Tail) -> Result<Response> {
     use templates::statics::StaticFile;
     let data = or_404!(StaticFile::get(name.as_str()));
-    Ok(Builder::new()
+    Builder::new()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, data.mime.as_ref())
         .far_expires()
-        .body(data.content))
+        .body(data.content.into())
+        .ise()
 }
 
 fn random_image(context: Context) -> Result<Response> {

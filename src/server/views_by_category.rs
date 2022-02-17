@@ -12,52 +12,37 @@ use warp::http::response::Builder;
 use warp::path::{end, param};
 use warp::query::query;
 use warp::reply::Response;
-use warp::{Filter, Reply};
+use warp::Filter;
 
-pub fn person_routes(s: ContextFilter) -> BoxedFilter<(impl Reply,)> {
-    end()
-        .and(s.clone())
+pub fn person_routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
+    let all = end().and(get()).and(s.clone()).map(person_all);
+    let one = param()
+        .and(end())
         .and(get())
-        .map(person_all)
-        .map(wrap)
-        .or(s
-            .and(param())
-            .and(end())
-            .and(get())
-            .and(query())
-            .map(person_one)
-            .map(wrap))
-        .boxed()
+        .and(query())
+        .and(s)
+        .map(person_one);
+    all.or(one).unify().map(wrap).boxed()
 }
-pub fn place_routes(s: ContextFilter) -> BoxedFilter<(impl Reply,)> {
-    end()
-        .and(s.clone())
+pub fn place_routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
+    let all = end().and(s.clone()).and(get()).map(place_all);
+    let one = param()
+        .and(end())
         .and(get())
-        .map(place_all)
-        .map(wrap)
-        .or(s
-            .and(param())
-            .and(end())
-            .and(get())
-            .and(query())
-            .map(place_one)
-            .map(wrap))
-        .boxed()
+        .and(query())
+        .and(s)
+        .map(place_one);
+    all.or(one).unify().map(wrap).boxed()
 }
-pub fn tag_routes(s: ContextFilter) -> BoxedFilter<(impl Reply,)> {
-    end()
-        .and(s.clone())
+pub fn tag_routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
+    let all = end().and(s.clone()).and(get()).map(tag_all);
+    let one = param()
+        .and(end())
         .and(get())
-        .map(tag_all)
-        .map(wrap)
-        .or(s
-            .and(param())
-            .and(end())
-            .and(get())
-            .and(query())
-            .map(tag_one)
-            .map(wrap))
-        .boxed()
+        .and(query())
+        .and(s)
+        .map(tag_one);
+    all.or(one).unify().map(wrap).boxed()
 }
 
 fn person_all(context: Context) -> Result<Response> {
@@ -77,9 +62,9 @@ fn person_all(context: Context) -> Result<Response> {
 }
 
 fn person_one(
-    context: Context,
     tslug: String,
     range: ImgRange,
+    context: Context,
 ) -> Result<Response> {
     use crate::schema::people::dsl::{people, slug};
     let c = context.db()?;
@@ -118,9 +103,9 @@ fn tag_all(context: Context) -> Result<Response> {
 }
 
 fn tag_one(
-    context: Context,
     tslug: String,
     range: ImgRange,
+    context: Context,
 ) -> Result<Response> {
     use crate::schema::tags::dsl::{slug, tags};
     let tag = or_404q!(
@@ -155,9 +140,9 @@ fn place_all(context: Context) -> Result<Response> {
 }
 
 fn place_one(
-    context: Context,
     tslug: String,
     range: ImgRange,
+    context: Context,
 ) -> Result<Response> {
     use crate::schema::places::dsl::{places, slug};
     let place = or_404q!(

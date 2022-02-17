@@ -12,10 +12,10 @@ use warp::filters::method::get;
 use warp::filters::BoxedFilter;
 use warp::path::{end, path};
 use warp::query::query;
-use warp::reply::{json, Json};
-use warp::{Filter, Reply};
+use warp::reply::{json, Json, Response};
+use warp::Filter;
 
-pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
+pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(Response,)> {
     end()
         .and(get())
         .and(s.clone())

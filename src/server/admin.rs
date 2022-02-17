@@ -9,9 +9,9 @@ use slug::slugify;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::reply::Response;
-use warp::{Filter, Reply};
+use warp::Filter;
 
-pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
+pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(Response,)> {
     use warp::{body::form, path, post};
     let route = path("grade")
         .and(s.clone())

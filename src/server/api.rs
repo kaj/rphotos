@@ -12,7 +12,7 @@ use warp::{Filter, Rejection, Reply};
 
 type ApiResult<T> = Result<T, ApiError>;
 
-pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
+pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(Response,)> {
     use warp::filters::method::{get, post};
     use warp::path::{end, path};
     use warp::{body, query};
@@ -33,7 +33,9 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(impl Reply,)> {
 
     login
         .or(path("image").and(gimg.or(pimg).unify().map(w)))
+        .unify()
         .recover(api_recover)
+        .unify()
         .boxed()
 }
 
