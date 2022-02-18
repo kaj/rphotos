@@ -25,7 +25,7 @@ use self::views_by_date::monthname;
 use super::{CacheOpt, DbOpt, DirOpt};
 use crate::adm::result::Error;
 use crate::fetch_places::OverpassOpt;
-use crate::models::Photo;
+use crate::models::{Photo, PhotoDetails};
 use crate::pidfiles::handle_pid_file;
 use crate::templates::{self, Html, RenderRucte};
 use chrono::Datelike;
@@ -155,34 +155,27 @@ fn random_image(context: Context) -> Result<Response> {
 }
 
 fn photo_details(id: i32, context: Context) -> Result<Response> {
-    use crate::schema::photos::dsl::photos;
     let c = context.db()?;
-    let tphoto = or_404q!(photos.find(id).first::<Photo>(&c), context);
+    let photo = or_404q!(PhotoDetails::load(id, &c), context);
 
-    if context.is_authorized() || tphoto.is_public() {
+    if context.is_authorized() || photo.is_public() {
         Ok(Builder::new().html(|o| {
             templates::details(
                 o,
                 &context,
-                &tphoto
+                &photo
                     .date
                     .map(|d| {
                         vec![
                             Link::year(d.year()),
                             Link::month(d.year(), d.month()),
                             Link::day(d.year(), d.month(), d.day()),
-                            Link::prev(tphoto.id),
-                            Link::next(tphoto.id),
+                            Link::prev(photo.id),
+                            Link::next(photo.id),
                         ]
                     })
                     .unwrap_or_default(),
-                &tphoto.load_people(&c).unwrap(),
-                &tphoto.load_places(&c).unwrap(),
-                &tphoto.load_tags(&c).unwrap(),
-                &tphoto.load_position(&c),
-                &tphoto.load_attribution(&c),
-                &tphoto.load_camera(&c),
-                &tphoto,
+                &photo,
             )
         })?)
     } else {

@@ -1,15 +1,15 @@
 @use super::base;
-@use crate::models::{Photo, Person, Place, Tag, Camera, Coord, SizeTag};
+@use crate::models::{PhotoDetails, SizeTag};
 @use crate::server::{Context, Link};
 
-@(context: &Context, lpath: &[Link], people: &[Person], places: &[Place], tags: &[Tag], position: &Option<Coord>, attribution: &Option<String>, camera: &Option<Camera>, photo: &Photo)
+@(context: &Context, lpath: &[Link], photo: &PhotoDetails)
 @:base(context, "Photo details", lpath, {
   <meta property='og:title' content='Photo @if let Some(d) = photo.date {(@d.format("%F"))}'>
   <meta property='og:type' content='image' />
   <meta property='og:image' content='/img/@photo.id-m.jpg' />
-  <meta property='og:description' content='@for p in people {@p.person_name, }@for t in tags {#@t.tag_name, }@if let Some(p) = places.first() {@p.place_name}'>
+  <meta property='og:description' content='@for p in &photo.people {@p.person_name, }@for t in &photo.tags {#@t.tag_name, }@if let Some(p) = &photo.places.first() {@p.place_name}'>
 }, {
-  <main class="details" data-imgid="@photo.id"@if let Some(g) = photo.grade { data-grade="@g"}@if let Some(ref p) = *position { data-position="[@p.x, @p.y]"}>
+  <main class="details" data-imgid="@photo.id"@if let Some(g) = photo.grade { data-grade="@g"}@if let Some(ref p) = photo.pos { data-position="[@p.x, @p.y]"}>
     <h1>Photo details</h1>
     <img class="item" src="/img/@photo.id-m.jpg" width="@photo.get_size(SizeTag::Medium).0" height="@photo.get_size(SizeTag::Medium).1">
     <div class="meta">
@@ -20,15 +20,15 @@
     }
     @if let Some(g) = photo.grade {<p>Grade: @g</p>}
     @if let Some(d) = photo.date {<p>Time: @d.format("%F %T")</p>}
-    @if !people.is_empty() {
-    <p>People: @for p in people {<a href="/person/@p.slug">@p.person_name</a>, }</p>}
-    @if !tags.is_empty() {
-    <p>Tags: @for t in tags {<a href="/tag/@t.slug">@t.tag_name</a>, }</p>}
-    @if !places.is_empty() {
-    <p class="places">Places: @for p in places {<a href="/place/@p.slug">@p.place_name</a>, }</p>}
-    @if let Some(ref pos) = *position {<p>Position: @pos.x @pos.y</p>}
-    @if let Some(ref a) = *attribution {<p>Av: @a</p>}
-    @if let Some(ref c) = *camera {<p>Camera: @c.model (@c.manufacturer)</p>}
+    @if !photo.people.is_empty() {
+    <p>People: @for p in &photo.people {<a href="/person/@p.slug">@p.person_name</a>, }</p>}
+    @if !photo.tags.is_empty() {
+    <p>Tags: @for t in &photo.tags {<a href="/tag/@t.slug">@t.tag_name</a>, }</p>}
+    @if !photo.places.is_empty() {
+    <p class="places">Places: @for p in &photo.places {<a href="/place/@p.slug">@p.place_name</a>, }</p>}
+    @if let Some(ref pos) = photo.pos {<p>Position: @pos.x @pos.y</p>}
+    @if let Some(ref a) = photo.attribution {<p>Av: @a</p>}
+    @if let Some(ref c) = photo.camera {<p>Camera: @c.model (@c.manufacturer)</p>}
     </div>
   </main>
 })

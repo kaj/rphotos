@@ -15,9 +15,78 @@ use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::sql_types::Integer;
-use log::error;
 use slug::slugify;
 use std::cmp::max;
+
+pub struct PhotoDetails {
+    photo: Photo,
+    pub people: Vec<Person>,
+    pub places: Vec<Place>,
+    pub tags: Vec<Tag>,
+    pub pos: Option<Coord>,
+    pub attribution: Option<String>,
+    pub camera: Option<Camera>,
+}
+impl PhotoDetails {
+    pub fn load(id: i32, db: &PgConnection) -> Result<Self, Error> {
+        use crate::schema::photos::dsl::photos;
+        let photo = photos.find(id).first::<Photo>(db)?;
+        let attribution = photo
+            .attribution_id
+            .map(|i| a::attributions.find(i).select(a::name).first(db))
+            .transpose()?;
+        let camera = photo
+            .camera_id
+            .map(|i| c::cameras.find(i).first(db))
+            .transpose()?;
+
+        Ok(PhotoDetails {
+            photo,
+            people: h::people
+                .filter(
+                    h::id.eq_any(
+                        ph::photo_people
+                            .select(ph::person_id)
+                            .filter(ph::photo_id.eq(id)),
+                    ),
+                )
+                .load(db)?,
+            places: l::places
+                .filter(
+                    l::id.eq_any(
+                        pl::photo_places
+                            .select(pl::place_id)
+                            .filter(pl::photo_id.eq(id)),
+                    ),
+                )
+                .order(l::osm_level.desc().nulls_first())
+                .load(db)?,
+            tags: t::tags
+                .filter(
+                    t::id.eq_any(
+                        pt::photo_tags
+                            .select(pt::tag_id)
+                            .filter(pt::photo_id.eq(id)),
+                    ),
+                )
+                .load(db)?,
+            pos: pos::positions
+                .filter(pos::photo_id.eq(id))
+                .select((pos::latitude, pos::longitude))
+                .first(db)
+                .optional()?,
+            attribution,
+            camera,
+        })
+    }
+}
+
+impl std::ops::Deref for PhotoDetails {
+    type Target = Photo;
+    fn deref(&self) -> &Photo {
+        &self.photo
+    }
+}
 
 #[derive(AsChangeset, Clone, Debug, Identifiable, Queryable)]
 pub struct Photo {
@@ -136,68 +205,6 @@ impl Photo {
         }
     }
 
-    pub fn load_people(
-        &self,
-        db: &PgConnection,
-    ) -> Result<Vec<Person>, Error> {
-        h::people
-            .filter(
-                h::id.eq_any(
-                    ph::photo_people
-                        .select(ph::person_id)
-                        .filter(ph::photo_id.eq(self.id)),
-                ),
-            )
-            .load(db)
-    }
-
-    pub fn load_places(&self, db: &PgConnection) -> Result<Vec<Place>, Error> {
-        l::places
-            .filter(
-                l::id.eq_any(
-                    pl::photo_places
-                        .select(pl::place_id)
-                        .filter(pl::photo_id.eq(self.id)),
-                ),
-            )
-            .order(l::osm_level.desc().nulls_first())
-            .load(db)
-    }
-    pub fn load_tags(&self, db: &PgConnection) -> Result<Vec<Tag>, Error> {
-        t::tags
-            .filter(
-                t::id.eq_any(
-                    pt::photo_tags
-                        .select(pt::tag_id)
-                        .filter(pt::photo_id.eq(self.id)),
-                ),
-            )
-            .load(db)
-    }
-
-    pub fn load_position(&self, db: &PgConnection) -> Option<Coord> {
-        match pos::positions
-            .filter(pos::photo_id.eq(self.id))
-            .select((pos::latitude, pos::longitude))
-            .first::<(i32, i32)>(db)
-        {
-            Ok(c) => Some(c.into()),
-            Err(diesel::NotFound) => None,
-            Err(err) => {
-                error!("Failed to read position: {}", err);
-                None
-            }
-        }
-    }
-    pub fn load_attribution(&self, db: &PgConnection) -> Option<String> {
-        self.attribution_id.and_then(|i| {
-            a::attributions.find(i).select(a::name).first(db).ok()
-        })
-    }
-    pub fn load_camera(&self, db: &PgConnection) -> Option<Camera> {
-        self.camera_id
-            .and_then(|i| c::cameras.find(i).first(db).ok())
-    }
     pub fn get_size(&self, size: SizeTag) -> (u32, u32) {
         let (width, height) = (self.width, self.height);
         let scale = f64::from(size.px()) / f64::from(max(width, height));
