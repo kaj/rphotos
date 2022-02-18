@@ -75,7 +75,7 @@ pub async fn run(args: &Args) -> Result<(), Error> {
     if let Some(pidfile) = &args.pidfile {
         handle_pid_file(pidfile, args.replace)?;
     }
-    let session_filter = create_session_filter(args);
+    let session_filter = create_session_filter(args)?;
     let s = move || session_filter.clone();
     use warp::filters::query::query;
     use warp::path::{end, param};

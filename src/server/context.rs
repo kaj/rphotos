@@ -1,4 +1,5 @@
 use super::{error::ViewResult, Args, Result};
+use crate::adm::result::Error;
 use crate::dbopt::{PgPool, PooledPg};
 use crate::fetch_places::OverpassOpt;
 use crate::photosdir::PhotosDir;
@@ -17,10 +18,10 @@ pub type ContextFilter = BoxedFilter<(Context,)>;
 type MemcachePool = Pool<MemcacheConnectionManager>;
 type PooledMemcache = PooledConnection<MemcacheConnectionManager>;
 
-pub fn create_session_filter(args: &Args) -> ContextFilter {
-    let global = Arc::new(GlobalContext::new(args));
+pub fn create_session_filter(args: &Args) -> Result<ContextFilter, Error> {
+    let global = Arc::new(GlobalContext::new(args)?);
     let g1 = global.clone();
-    warp::any()
+    Ok(warp::any()
         .and(path::full())
         .and(
             cookie::cookie("EXAUTH")
@@ -38,7 +39,7 @@ pub fn create_session_filter(args: &Args) -> ContextFilter {
             let global = global.clone();
             Context { global, path, user }
         })
-        .boxed()
+        .boxed())
 }
 
 // Does _not_ derive debug, copy or clone, since it contains the jwt
@@ -52,19 +53,18 @@ struct GlobalContext {
 }
 
 impl GlobalContext {
-    fn new(args: &Args) -> Self {
+    fn new(args: &Args) -> Result<Self, Error> {
         let mc_manager =
             MemcacheConnectionManager::new(args.cache.memcached_url.as_ref());
-        GlobalContext {
-            db_pool: args.db.create_pool().expect("Posgresql pool"),
+        Ok(GlobalContext {
+            db_pool: args.db.create_pool()?,
             photosdir: PhotosDir::new(&args.photos.photos_dir),
             memcache_pool: Pool::builder()
                 .connection_timeout(Duration::from_secs(1))
-                .build(mc_manager)
-                .expect("Memcache pool"),
+                .build(mc_manager)?,
             jwt_secret: args.jwt_key.clone(),
             overpass: args.overpass.clone(),
-        }
+        })
     }
 
     fn verify_key(&self, jwtstr: &str) -> Result<String, String> {
