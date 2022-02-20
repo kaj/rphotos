@@ -1,6 +1,6 @@
 //! Extract all the exif data I care about
 use crate::adm::result::Error;
-use chrono::{Date, Local, NaiveDate, NaiveDateTime, Utc};
+use chrono::{Date, Local, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use exif::{Field, In, Reader, Tag, Value};
 use log::{debug, error, warn};
 use std::fs::File;
@@ -12,7 +12,7 @@ use std::str::from_utf8;
 pub struct ExifData {
     dateval: Option<NaiveDateTime>,
     gpsdate: Option<Date<Utc>>,
-    gpstime: Option<(u8, u8, u8)>,
+    gpstime: Option<NaiveTime>,
     make: Option<String>,
     model: Option<String>,
     pub width: Option<u32>,
@@ -26,6 +26,7 @@ pub struct ExifData {
 
 impl ExifData {
     pub fn read_from(path: &Path) -> Result<Self, Error> {
+        println!("\nRead exif from {path:?}");
         let mut result = Self::default();
         let file = File::open(path).map_err(|e| Error::in_file(&e, path))?;
         let reader = Reader::new()
@@ -84,16 +85,23 @@ impl ExifData {
     pub fn date(&self) -> Option<NaiveDateTime> {
         // Note: I probably return and store datetime with tz,
         // possibly utc, instead.
-        if let (&Some(date), &Some((h, m, s))) = (&self.gpsdate, &self.gpstime)
+        // Also note: I used to prefer the gps date, as I belived that
+        // to be more exact if present.  But at last one phone seems
+        // to stick "the date of last time we had a gps position"
+        // there rather than none if there is no "current" gps data.
+        // So instead, use the gps date only as a fallback.
+        if let Some(date) = self.dateval {
+            Some(date)
+        } else if let (&Some(date), &Some(time)) =
+            (&self.gpsdate, &self.gpstime)
         {
             let naive = date
-                .and_hms(u32::from(h), u32::from(m), u32::from(s))
+                .and_time(time)
+                .unwrap()
                 .with_timezone(&Local)
                 .naive_local();
-            debug!("GPS Date {}, {}:{}:{} => {}", date, h, m, s, naive);
+            debug!("GPS Date {}, {} => {}", date, time, naive);
             Some(naive)
-        } else if let Some(date) = self.dateval {
-            Some(date)
         } else {
             warn!("No date found in exif");
             None
@@ -198,7 +206,7 @@ fn is_date(f: &Field, tag: Tag) -> Option<Date<Utc>> {
     }
 }
 
-fn is_time(f: &Field, tag: Tag) -> Option<(u8, u8, u8)> {
+fn is_time(f: &Field, tag: Tag) -> Option<NaiveTime> {
     if f.tag == tag {
         match &f.value {
             // Some cameras (notably iPhone) uses fractional seconds.
@@ -206,10 +214,10 @@ fn is_time(f: &Field, tag: Tag) -> Option<(u8, u8, u8)> {
             &Value::Rational(ref v)
                 if v.len() == 3 && v[0].denom == 1 && v[1].denom == 1 =>
             {
-                Some((
-                    v[0].num as u8,
-                    v[1].num as u8,
-                    v[2].to_f64().round() as u8,
+                Some(NaiveTime::from_hms(
+                    v[0].num,
+                    v[1].num,
+                    v[2].num / v[2].denom,
                 ))
             }
             err => {
