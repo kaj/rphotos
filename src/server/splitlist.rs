@@ -5,7 +5,7 @@ use crate::models::{Coord, Photo};
 use crate::schema::photos;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
-use log::{debug, info};
+use log::debug;
 
 pub fn links_by_time(
     context: &Context,
@@ -132,7 +132,7 @@ fn split(group: &[Photo]) -> (&[Photo], &[Photo]) {
             pos = i + 1;
         }
     }
-    info!("Splitting a group len {} at {}", l, pos);
+    debug!("Splitting a group len {} at {}", l, pos);
     group.split_at(pos)
 }
 
