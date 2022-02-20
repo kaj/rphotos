@@ -180,7 +180,7 @@ async fn set_location(context: Context, form: CoordForm) -> Result<Response> {
         .await
     {
         Ok(()) => (),
-        // TODO Tell the user something failed?
+        // Note: We log this error, but don't bother the user.
         Err(err) => warn!("Failed to fetch places: {:?}", err),
     }
     Ok(redirect_to_img(form.image))
