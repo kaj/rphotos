@@ -95,11 +95,11 @@ fn save_photo(
         {
             let lat = (lat * 1e6) as i32;
             let long = (long * 1e6) as i32;
-            if clat != lat || clong != long {
+            if (clat - lat).abs() > 1000 || (clong - long).abs() > 1000 {
                 warn!(
                     "Photo #{}: {}: \
                      Exif position {}, {} differs from saved {}, {}",
-                    photo.id, photo.path, clat, clong, lat, long,
+                    photo.id, photo.path, lat, long, clat, clong,
                 );
             }
         } else {

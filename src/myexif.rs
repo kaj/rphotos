@@ -26,7 +26,6 @@ pub struct ExifData {
 
 impl ExifData {
     pub fn read_from(path: &Path) -> Result<Self, Error> {
-        println!("\nRead exif from {path:?}");
         let mut result = Self::default();
         let file = File::open(path).map_err(|e| Error::in_file(&e, path))?;
         let reader = Reader::new()
