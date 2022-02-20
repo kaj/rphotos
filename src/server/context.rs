@@ -57,11 +57,18 @@ impl GlobalContext {
         let mc_manager =
             MemcacheConnectionManager::new(args.cache.memcached_url.as_ref());
         Ok(GlobalContext {
-            db_pool: args.db.create_pool()?,
+            db_pool: args.db.create_pool().map_err(|e| {
+                Error::Other(format!("Failed to create db pool: {e}"))
+            })?,
             photosdir: PhotosDir::new(&args.photos.photos_dir),
             memcache_pool: Pool::builder()
                 .connection_timeout(Duration::from_secs(1))
-                .build(mc_manager)?,
+                .build(mc_manager)
+                .map_err(|e| {
+                    Error::Other(format!(
+                        "Failed to create memcache pool: {e}"
+                    ))
+                })?,
             jwt_secret: args.jwt_key.clone(),
             overpass: args.overpass.clone(),
         })
