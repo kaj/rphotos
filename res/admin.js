@@ -48,8 +48,13 @@
         f.appendChild(i);
         return f;
     }
+    function disable_one(one) {
+        p.querySelectorAll('button').forEach(function(b) {
+            b.disabled = (b === one);
+        })
+    }
     function tag_form(event, category) {
-        //event.target.disabled = true; - FIXME?
+        disable_one(event.target);
         var f = makeform(category);
         var l = d.createElement("label");
         l.innerHTML = event.target.title;
@@ -151,7 +156,7 @@
     }
 
     function grade_form(event) {
-        //event.target.disabled = true; - FIXME?
+        disable_one(event.target);
         var grade = details.dataset.grade;
         var f = makeform("grade");
         var l = d.createElement("label");
@@ -202,7 +207,7 @@
     }
 
     function location_form(event) {
-        //event.target.disabled = true; - FIXME?
+        disable_one(event.target);
         var position = details.dataset.position || localStorage.getItem('lastpos');
         var f = makeform("locate");
 
