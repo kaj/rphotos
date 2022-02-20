@@ -151,7 +151,10 @@ fn osm_id(obj: &Value) -> Option<i64> {
 }
 
 #[rustfmt::skip] // This data is written in a more compact style
-static KNOWN: [(&str, &[(&str, i16)]); 16] = [
+static KNOWN: [(&str, &[(&str, i16)]); 18] = [
+    ("ref:KATEGORI", &[
+        ("Tätort", 11),
+    ]),
     ("leisure", &[
         ("garden", 18),
         ("nature_reserve", 12),
@@ -229,6 +232,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 16] = [
         ("wood", 14),
         ("peninsula", 11),
         ("wetland", 15),
+        ("strait", 12),
     ]),
     ("building", &[
         ("exhibition_center", 19),
@@ -240,6 +244,9 @@ static KNOWN: [(&str, &[(&str, i16)]); 16] = [
     ]),
     ("political_division", &[
         ("canton", 9),
+    ]),
+    ("seamark:type", &[
+        ("harbour_basin", 18),
     ]),
 ];
 
@@ -337,7 +344,27 @@ pub enum Error {
 mod test {
     use super::name_and_level;
     use serde_json::Value;
+    use std::collections::BTreeSet;
 
+    #[test]
+    fn check_known_data() {
+        assert_eq!(
+            super::KNOWN
+                .iter()
+                .map(|(k, _v)| k)
+                .collect::<BTreeSet<_>>()
+                .len(),
+            super::KNOWN.len(),
+            "Types of KNOWN are not distinct",
+        );
+        for (key, val) in &super::KNOWN {
+            assert_eq!(
+                val.iter().map(|(k, _v)| k).collect::<BTreeSet<_>>().len(),
+                val.len(),
+                "Subtypes of KNOWN {key:?} are not distinct",
+            );
+        }
+    }
     #[test]
     fn test_long_reply() -> Result<(), Box<dyn std::error::Error>> {
         let data: Value = TEST_DATA.parse()?;
