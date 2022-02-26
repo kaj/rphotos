@@ -102,7 +102,12 @@ pub async fn run(args: &Args) -> Result<(), Error> {
         .or(path("ac").and(autocomplete::routes(s())))
         .or(path("search").and(end()).and(get()).and(s()).and(query()).map(search).map(wrap))
         .or(path("api").and(api::routes(s())))
-        .or(path("adm").and(admin::routes(s())));
+        .or(path("adm").and(admin::routes(s())))
+        .or(path("robots.txt")
+            .and(end())
+            .and(get())
+            .map(robots_txt)
+            .map(wrap));
     warp::serve(routes.recover(for_rejection))
         .run(args.listen)
         .await;
@@ -231,4 +236,17 @@ impl Link {
 pub struct ImgRange {
     pub from: Option<i32>,
     pub to: Option<i32>,
+}
+
+fn robots_txt() -> Result<Response> {
+    Builder::new()
+        .header(header::CONTENT_TYPE, mime::TEXT_PLAIN.as_ref())
+        .body(
+            "User-agent: *\n\
+             Disallow: /login\n\
+             Disallow: /logout\n\
+             Disallow: /ac\n"
+                .into(),
+        )
+        .ise()
 }
