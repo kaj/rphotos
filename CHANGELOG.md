@@ -11,6 +11,9 @@ The format is based on
 * Improved logging by using tracing and tracing-subscriber rather than
   log and env_logger.
 * Four more kinds of OSM areas to recognize.
+* Update diesel to 2.0.0: Mainly most operations now needs a `&mut
+  PgConnection`.  Also, getting parts of dates are now done by sql
+  functions.
 * Update ructe to 0.15.0.
 * Add this changelog.
 

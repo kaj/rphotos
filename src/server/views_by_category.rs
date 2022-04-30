@@ -57,7 +57,7 @@ fn person_all(context: Context) -> Result<Response> {
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let images = query.order(person_name).load(&context.db()?)?;
+    let images = query.order(person_name).load(&mut context.db()?)?;
     Ok(Builder::new().html(|o| templates::people(o, &context, &images))?)
 }
 
@@ -67,9 +67,11 @@ fn person_one(
     context: Context,
 ) -> Result<Response> {
     use crate::schema::people::dsl::{people, slug};
-    let c = context.db()?;
-    let person =
-        or_404q!(people.filter(slug.eq(tslug)).first::<Person>(&c), context);
+    let mut c = context.db()?;
+    let person = or_404q!(
+        people.filter(slug.eq(tslug)).first::<Person>(&mut c),
+        context
+    );
     use crate::schema::photo_people::dsl::{
         person_id, photo_id, photo_people,
     };
@@ -98,7 +100,7 @@ fn tag_all(context: Context) -> Result<Response> {
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let taggs = query.load(&context.db()?)?;
+    let taggs = query.load(&mut context.db()?)?;
     Ok(Builder::new().html(|o| templates::tags(o, &context, &taggs))?)
 }
 
@@ -109,7 +111,7 @@ fn tag_one(
 ) -> Result<Response> {
     use crate::schema::tags::dsl::{slug, tags};
     let tag = or_404q!(
-        tags.filter(slug.eq(tslug)).first::<Tag>(&context.db()?),
+        tags.filter(slug.eq(tslug)).first::<Tag>(&mut context.db()?),
         context
     );
 
@@ -135,7 +137,7 @@ fn place_all(context: Context) -> Result<Response> {
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let found = query.order(place_name).load(&context.db()?)?;
+    let found = query.order(place_name).load(&mut context.db()?)?;
     Ok(Builder::new().html(|o| templates::places(o, &context, &found))?)
 }
 
@@ -146,7 +148,9 @@ fn place_one(
 ) -> Result<Response> {
     use crate::schema::places::dsl::{places, slug};
     let place = or_404q!(
-        places.filter(slug.eq(tslug)).first::<Place>(&context.db()?),
+        places
+            .filter(slug.eq(tslug))
+            .first::<Place>(&mut context.db()?),
         context
     );
 

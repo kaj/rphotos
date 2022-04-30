@@ -37,7 +37,7 @@ impl Args {
         let (mut n, mut n_stored) = (0, 0);
         let photos = Photo::query(true)
             .order((is_public.desc(), date.desc().nulls_last()))
-            .load::<Photo>(&self.db.connect()?)?;
+            .load::<Photo>(&mut self.db.connect()?)?;
         let no_expire = 0;
         let pd = PhotosDir::new(&self.photos.photos_dir);
         for photo in photos {

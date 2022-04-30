@@ -30,7 +30,7 @@ pub struct Makepublic {
 
 impl Makepublic {
     pub fn run(&self) -> Result<(), Error> {
-        let db = self.db.connect()?;
+        let mut db = self.db.connect()?;
         match (
             self.list.as_ref().map(AsRef::as_ref),
             &self.tag,
@@ -38,12 +38,12 @@ impl Makepublic {
         ) {
             (Some("-"), None, None) => {
                 let list = io::stdin();
-                by_file_list(&db, list.lock())?;
+                by_file_list(&mut db, list.lock())?;
                 Ok(())
             }
             (Some(list), None, None) => {
                 let list = BufReader::new(File::open(list)?);
-                by_file_list(&db, list)
+                by_file_list(&mut db, list)
             }
             (None, Some(tag), None) => {
                 use crate::schema::photo_tags::dsl as pt;
@@ -60,17 +60,17 @@ impl Makepublic {
                     ),
                 )
                 .set(p::is_public.eq(true))
-                .execute(&db)?;
+                .execute(&mut db)?;
                 println!("Made {} images public.", n);
                 Ok(())
             }
-            (None, None, Some(image)) => one(&db, image),
+            (None, None, Some(image)) => one(&mut db, image),
             _ => Err(Error::Other("bad command".to_string())),
         }
     }
 }
 
-pub fn one(db: &PgConnection, tpath: &str) -> Result<(), Error> {
+pub fn one(db: &mut PgConnection, tpath: &str) -> Result<(), Error> {
     use crate::schema::photos::dsl::*;
     match update(photos.filter(path.eq(&tpath)))
         .set(is_public.eq(true))
@@ -88,7 +88,7 @@ pub fn one(db: &PgConnection, tpath: &str) -> Result<(), Error> {
 }
 
 pub fn by_file_list<In: BufRead + Sized>(
-    db: &PgConnection,
+    db: &mut PgConnection,
     list: In,
 ) -> Result<(), Error> {
     for line in list.lines() {

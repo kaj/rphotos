@@ -60,9 +60,9 @@ fn w<T: Serialize>(result: ApiResult<T>) -> Response {
 }
 
 fn login(context: Context, form: LoginForm) -> ApiResult<LoginOk> {
-    let db = context.db()?;
+    let mut db = context.db()?;
     let user = form
-        .validate(&db)
+        .validate(&mut db)
         .ok_or_else(|| ApiError::bad_request("login failed"))?;
     tracing::info!("Api login {user:?} ok");
     Ok(LoginOk {
@@ -98,7 +98,7 @@ enum ImgIdentifier {
 }
 
 impl ImgIdentifier {
-    fn load(&self, db: &PgConnection) -> Result<Option<Photo>, DbError> {
+    fn load(&self, db: &mut PgConnection) -> Result<Option<Photo>, DbError> {
         use crate::schema::photos::dsl as p;
         match &self {
             ImgIdentifier::Id(ref id) => {
@@ -114,8 +114,8 @@ impl ImgIdentifier {
 
 fn get_img(context: Context, q: ImgQuery) -> ApiResult<GetImgResult> {
     let id = q.validate().map_err(ApiError::bad_request)?;
-    let db = context.db()?;
-    let img = id.load(&db)?.ok_or(NOT_FOUND)?;
+    let mut db = context.db()?;
+    let img = id.load(&mut db)?.ok_or(NOT_FOUND)?;
     if !context.is_authorized() && !img.is_public() {
         return Err(NOT_FOUND);
     }
@@ -130,12 +130,12 @@ fn make_public(context: Context, q: ImgQuery) -> ApiResult<GetImgResult> {
         });
     }
     let id = q.validate().map_err(ApiError::bad_request)?;
-    let db = context.db()?;
-    let img = id.load(&db)?.ok_or(NOT_FOUND)?;
+    let mut db = context.db()?;
+    let img = id.load(&mut db)?.ok_or(NOT_FOUND)?;
     use crate::schema::photos::dsl as p;
     let img = update(p::photos.find(img.id))
         .set(p::is_public.eq(true))
-        .get_result(&db)?;
+        .get_result(&mut db)?;
     Ok(GetImgResult::for_img(&img))
 }
 

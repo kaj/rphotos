@@ -10,7 +10,7 @@ use warp::reply::Response;
 
 pub async fn show_image(img: ImgName, context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::photos;
-    let tphoto = photos.find(img.id).first::<Photo>(&context.db()?);
+    let tphoto = photos.find(img.id).first::<Photo>(&mut context.db()?);
     if let Ok(tphoto) = tphoto {
         if context.is_authorized() || tphoto.is_public() {
             if img.size == SizeTag::Large {

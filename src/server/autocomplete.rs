@@ -7,7 +7,7 @@ use crate::schema::photos::dsl as p;
 use crate::schema::places::dsl as l;
 use crate::schema::tags::dsl as t;
 use diesel::prelude::*;
-use diesel::sql_types::{Integer, Text};
+use diesel::sql_types::Text;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
@@ -160,8 +160,8 @@ fn select_tags(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let db = context.db()?;
-    Ok(query.order((tpos, t::tag_name)).limit(10).load(&db)?)
+    let mut db = context.db()?;
+    Ok(query.order((tpos, t::tag_name)).limit(10).load(&mut db)?)
 }
 
 fn select_people(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
@@ -182,8 +182,11 @@ fn select_people(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
             ),
         )
     };
-    let db = context.db()?;
-    Ok(query.order((ppos, h::person_name)).limit(10).load(&db)?)
+    let mut db = context.db()?;
+    Ok(query
+        .order((ppos, h::person_name))
+        .limit(10)
+        .load(&mut db)?)
 }
 
 fn select_places(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
@@ -204,6 +207,6 @@ fn select_places(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
             ),
         )
     };
-    let db = context.db()?;
-    Ok(query.order((lpos, l::place_name)).limit(10).load(&db)?)
+    let mut db = context.db()?;
+    Ok(query.order((lpos, l::place_name)).limit(10).load(&mut db)?)
 }

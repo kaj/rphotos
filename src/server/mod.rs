@@ -141,21 +141,21 @@ async fn static_file(name: Tail) -> Result<Response> {
 
 fn random_image(context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::id;
-    use diesel::expression::dsl::sql;
+    use diesel::dsl::sql;
     use diesel::sql_types::Integer;
     let photo = Photo::query(context.is_authorized())
         .select(id)
         .limit(1)
         .order(sql::<Integer>("random()"))
-        .first(&context.db()?)?;
+        .first(&mut context.db()?)?;
 
     info!("Random: {:?}", photo);
     Ok(redirect_to_img(photo))
 }
 
 fn photo_details(id: i32, context: Context) -> Result<Response> {
-    let c = context.db()?;
-    let photo = or_404q!(PhotoDetails::load(id, &c), context);
+    let mut c = context.db()?;
+    let photo = or_404q!(PhotoDetails::load(id, &mut c), context);
 
     if context.is_authorized() || photo.is_public() {
         Ok(Builder::new().html(|o| {

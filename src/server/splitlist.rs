@@ -13,26 +13,27 @@ pub fn links_by_time(
     range: ImgRange,
     with_date: bool,
 ) -> Result<(Vec<PhotoLink>, Vec<(Coord, i32)>)> {
-    let c = context.db()?;
+    let mut c = context.db()?;
     use crate::schema::photos::dsl::{date, id};
     let photos =
-        if let Some(from_date) = range.from.map(|i| date_of_img(&c, i)) {
+        if let Some(from_date) = range.from.map(|i| date_of_img(&mut c, i)) {
             photos.filter(date.ge(from_date))
         } else {
             photos
         };
-    let photos = if let Some(to_date) = range.to.map(|i| date_of_img(&c, i)) {
-        photos.filter(date.le(to_date))
-    } else {
-        photos
-    };
+    let photos =
+        if let Some(to_date) = range.to.map(|i| date_of_img(&mut c, i)) {
+            photos.filter(date.le(to_date))
+        } else {
+            photos
+        };
     let photos = photos
         .order((date.desc().nulls_last(), id.desc()))
-        .load(&c)?;
+        .load(&mut c)?;
     let baseurl = UrlString::new(context.path_without_query());
     Ok((
         split_to_group_links(&photos, &baseurl, with_date),
-        get_positions(&photos, &c)?,
+        get_positions(&photos, &mut c)?,
     ))
 }
 
@@ -58,7 +59,7 @@ pub fn split_to_group_links(
 
 pub fn get_positions(
     photos: &[Photo],
-    c: &PgConnection,
+    c: &mut PgConnection,
 ) -> Result<Vec<(Coord, i32)>> {
     use crate::schema::positions::dsl::*;
     Ok(positions

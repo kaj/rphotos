@@ -35,8 +35,8 @@ fn rotate(context: Context, form: RotateForm) -> Result<Response> {
     }
     info!("Should rotate #{} by {}", form.image, form.angle);
     use crate::schema::photos::dsl::photos;
-    let c = context.db()?;
-    let c: &PgConnection = &c;
+    let mut c = context.db()?;
+    let c: &mut PgConnection = &mut c;
     let mut image =
         or_404q!(photos.find(form.image).first::<Photo>(c), context);
     let newvalue = (360 + image.rotation + form.angle) % 360;
@@ -58,19 +58,19 @@ async fn set_tag(context: Context, form: TagForm) -> Result<Response> {
     if !context.is_authorized() {
         return Err(ViewError::PermissionDenied);
     }
-    let c = context.db()?;
+    let mut c = context.db()?;
     use crate::models::Tag;
     let tag = {
         use crate::schema::tags::dsl::*;
         tags.filter(tag_name.ilike(&form.tag))
-            .first::<Tag>(&c)
+            .first::<Tag>(&mut c)
             .or_else(|_| {
                 diesel::insert_into(tags)
                     .values((
                         tag_name.eq(&form.tag),
                         slug.eq(&slugify(&form.tag)),
                     ))
-                    .get_result::<Tag>(&c)
+                    .get_result::<Tag>(&mut c)
             })?
     };
     use crate::schema::photo_tags::dsl::*;
@@ -78,13 +78,13 @@ async fn set_tag(context: Context, form: TagForm) -> Result<Response> {
         .filter(photo_id.eq(form.image))
         .filter(tag_id.eq(tag.id))
         .count();
-    if q.get_result::<i64>(&c)? > 0 {
+    if q.get_result::<i64>(&mut c)? > 0 {
         info!("Photo #{} already has {:?}", form.image, form.tag);
     } else {
         info!("Add {:?} on photo #{}!", form.tag, form.image);
         diesel::insert_into(photo_tags)
             .values((photo_id.eq(form.image), tag_id.eq(tag.id)))
-            .execute(&c)?;
+            .execute(&mut c)?;
     }
     Ok(redirect_to_img(form.image))
 }
@@ -99,20 +99,20 @@ async fn set_person(context: Context, form: PersonForm) -> Result<Response> {
     if !context.is_authorized() {
         return Err(ViewError::PermissionDenied);
     }
-    let c = context.db()?;
+    let mut c = context.db()?;
     use crate::models::{Person, PhotoPerson};
-    let person = Person::get_or_create_name(&c, &form.person)?;
+    let person = Person::get_or_create_name(&mut c, &form.person)?;
     use crate::schema::photo_people::dsl::*;
     let q = photo_people
         .filter(photo_id.eq(form.image))
         .filter(person_id.eq(person.id));
-    if q.first::<PhotoPerson>(&c).optional()?.is_some() {
+    if q.first::<PhotoPerson>(&mut c).optional()?.is_some() {
         info!("Photo #{} already has {:?}", form.image, person);
     } else {
         info!("Add {:?} on photo #{}!", person, form.image);
         diesel::insert_into(photo_people)
             .values((photo_id.eq(form.image), person_id.eq(person.id)))
-            .execute(&c)?;
+            .execute(&mut c)?;
     }
     Ok(redirect_to_img(form.image))
 }
@@ -132,7 +132,7 @@ async fn set_grade(context: Context, form: GradeForm) -> Result<Response> {
         use crate::schema::photos::dsl::{grade, photos};
         let q =
             diesel::update(photos.find(form.image)).set(grade.eq(form.grade));
-        match q.execute(&context.db()?)? {
+        match q.execute(&mut context.db()?)? {
             1 => {
                 return Ok(redirect_to_img(form.image));
             }
@@ -173,7 +173,7 @@ async fn set_location(context: Context, form: CoordForm) -> Result<Response> {
         .on_conflict(photo_id)
         .do_update()
         .set((latitude.eq(lat), longitude.eq(lng)))
-        .execute(&context.db()?)?;
+        .execute(&mut context.db()?)?;
     match context
         .overpass()
         .update_image_places(&context.db_pool(), form.image)
