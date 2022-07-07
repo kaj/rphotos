@@ -4,16 +4,14 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ConnectionError};
 use log::debug;
 use std::time::{Duration, Instant};
-use structopt::StructOpt;
 
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledPg = PooledConnection<ConnectionManager<PgConnection>>;
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(clap::Parser)]
 pub struct DbOpt {
     /// How to connect to the postgres database.
-    #[structopt(long, env = "DATABASE_URL", hide_env_values = true)]
+    #[clap(long, env = "DATABASE_URL", hide_env_values = true)]
     db_url: String,
 }
 

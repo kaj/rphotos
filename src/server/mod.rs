@@ -34,40 +34,34 @@ use log::info;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use structopt::StructOpt;
 use warp::filters::path::Tail;
 use warp::http::{header, response::Builder, StatusCode};
 use warp::reply::Response;
 use warp::{self, Filter, Reply};
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(clap::Parser)]
 pub struct Args {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     cache: CacheOpt,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     photos: DirOpt,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     overpass: OverpassOpt,
 
     /// Write (and read, if --replace) a pid file with the name
     /// given as <PIDFILE>.
-    #[structopt(long)]
+    #[clap(long)]
     pidfile: Option<PathBuf>,
     /// Kill old server (identified by pid file) before running.
-    #[structopt(long, short)]
+    #[clap(long, short)]
     replace: bool,
     /// Socket addess for rphotos to listen on.
-    #[structopt(
-        long,
-        env = "RPHOTOS_LISTEN",
-        default_value = "127.0.0.1:6767"
-    )]
+    #[clap(long, env = "RPHOTOS_LISTEN", default_value = "127.0.0.1:6767")]
     listen: SocketAddr,
     /// Signing key for jwt
-    #[structopt(long, env = "JWT_KEY", hide_env_values = true)]
+    #[clap(long, env = "JWT_KEY", hide_env_values = true)]
     jwt_key: String,
 }
 

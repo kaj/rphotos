@@ -8,14 +8,12 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use log::{debug, info, warn};
 use std::path::Path;
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(clap::Parser)]
 pub struct Findphotos {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     photos: DirOpt,
 
     /// Base directory to search in (relative to the image root).

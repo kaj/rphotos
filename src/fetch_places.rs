@@ -6,21 +6,19 @@ use log::{debug, info};
 use reqwest::{self, Client, Response};
 use serde_json::Value;
 use slug::slugify;
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(clap::Parser)]
 pub struct Fetchplaces {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     overpass: OverpassOpt,
 
     /// Max number of photos to use for --auto
-    #[structopt(long, short, default_value = "5")]
+    #[clap(long, short, default_value = "5")]
     limit: i64,
     /// Fetch data for photos with position but lacking places.
-    #[structopt(long, short)]
+    #[clap(long, short)]
     auto: bool,
     /// Image ids to fetch place data for
     photos: Vec<i32>,
@@ -54,14 +52,13 @@ impl Fetchplaces {
     }
 }
 
-#[derive(Clone, Debug, StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(Clone, Debug, clap::Parser)]
 pub struct OverpassOpt {
     /// How to connect to the overpass API.
     ///
     /// See https://wiki.openstreetmap.org/wiki/Overpass_API for
     /// available servers and policies.
-    #[structopt(long, env = "OVERPASS_URL")]
+    #[clap(long, env = "OVERPASS_URL")]
     overpass_url: String,
 }
 

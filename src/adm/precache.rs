@@ -7,20 +7,18 @@ use diesel::prelude::*;
 use log::{debug, info};
 use r2d2_memcache::memcache::Client;
 use std::time::{Duration, Instant};
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(clap::Parser)]
 pub struct Args {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     cache: CacheOpt,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     photos: DirOpt,
 
     /// Max time (in seconds) to work.
-    #[structopt(long, short = "t", default_value = "10")]
+    #[clap(long, short = 't', default_value = "10")]
     max_time: u64,
 }
 

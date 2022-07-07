@@ -17,14 +17,13 @@ use crate::adm::result::Error;
 use crate::adm::stats::show_stats;
 use crate::adm::{findphotos, makepublic, precache, storestatics, users};
 use crate::dbopt::DbOpt;
+use clap::Parser;
 use dotenv::dotenv;
 use std::path::PathBuf;
 use std::process::exit;
-use structopt::StructOpt;
 
 /// Command line interface for rphotos.
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(Parser)]
 enum RPhotos {
     /// Make specific image(s) public.
     ///
@@ -49,12 +48,12 @@ enum RPhotos {
     },
     /// List existing users
     Userlist {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         db: DbOpt,
     },
     /// Set password for a (new or existing) user
     Userpass {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         db: DbOpt,
         /// Username to set password for
         // TODO: Use a special type that only accepts nice user names.
@@ -64,11 +63,10 @@ enum RPhotos {
     Runserver(server::Args),
 }
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(clap::Parser)]
 struct CacheOpt {
     /// How to connect to memcached.
-    #[structopt(
+    #[clap(
         long,
         env = "MEMCACHED_SERVER",
         default_value = "memcache://127.0.0.1:11211"
@@ -76,11 +74,10 @@ struct CacheOpt {
     memcached_url: String,
 }
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(clap::Parser)]
 struct DirOpt {
     /// Path to the root directory storing all actual photos.
-    #[structopt(long, env = "RPHOTOS_DIR")]
+    #[clap(long, env = "RPHOTOS_DIR")]
     photos_dir: PathBuf,
 }
 

@@ -1,6 +1,7 @@
 use super::result::Error;
 use crate::models::Photo;
 use crate::DbOpt;
+use clap::ArgGroup;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
@@ -8,25 +9,22 @@ use diesel::update;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
-use structopt::clap::ArgGroup;
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
-#[structopt(group = ArgGroup::with_name("spec").required(true))]
+#[derive(clap::Parser)]
+#[clap(group = ArgGroup::with_name("spec").required(true))]
 pub struct Makepublic {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
     /// Image path to make public
-    #[structopt(group = "spec")]
+    #[clap(group = "spec")]
     image: Option<String>,
     /// File listing image paths to make public
-    #[structopt(long, short, group = "spec")]
+    #[clap(long, short, group = "spec")]
     list: Option<String>,
     /// Make all images with matching tag public.
     ///
     /// The tag is specified by its slug.
-    #[structopt(long, short, group = "spec")]
+    #[clap(long, short, group = "spec")]
     tag: Option<String>,
 }
 
