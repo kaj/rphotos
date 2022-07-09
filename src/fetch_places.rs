@@ -148,7 +148,7 @@ fn osm_id(obj: &Value) -> Option<i64> {
 }
 
 #[rustfmt::skip] // This data is written in a more compact style
-static KNOWN: [(&str, &[(&str, i16)]); 18] = [
+static KNOWN: [(&str, &[(&str, i16)]); 19] = [
     ("ref:KATEGORI", &[
         ("Tätort", 11),
     ]),
@@ -244,6 +244,10 @@ static KNOWN: [(&str, &[(&str, i16)]); 18] = [
     ]),
     ("seamark:type", &[
         ("harbour_basin", 18),
+    ]),
+    // Not sure about this, check later if someone changes Bruddesta Sjöbodar
+    ("historic", &[
+        ("heritage", 14),
     ]),
 ];
 
