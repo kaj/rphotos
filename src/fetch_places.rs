@@ -163,6 +163,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
     ]),
     ("tourism", &[
         ("attraction", 16),
+        ("camp_site", 15),
         ("theme_park", 14),
         ("zoo", 14),
     ]),
