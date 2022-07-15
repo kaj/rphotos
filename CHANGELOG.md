@@ -6,7 +6,7 @@ The format is based on
 
 ## Unreleased
 
-* Yet another kind of OSM area to recognize.
+* Two more kinds of OSM area to recognize.
 * Add this changelog.
 
 ## Release 0.11.6 (2022-07-10)
