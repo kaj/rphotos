@@ -5,9 +5,10 @@ use crate::schema::photos::dsl as p;
 use crate::schema::places::dsl as l;
 use crate::schema::tags::dsl as t;
 use diesel::prelude::*;
-use diesel::sql_types::Text;
+use diesel::sql_types::{Integer, Text};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::fmt::Display;
 use warp::filters::method::get;
 use warp::filters::BoxedFilter;
 use warp::path::{end, path};
@@ -40,10 +41,8 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(Response,)> {
 sql_function!(fn lower(string: Text) -> Text);
 sql_function!(fn strpos(string: Text, substring: Text) -> Integer);
 
-pub fn auto_complete_any(context: Context, query: AcQ) -> Result<Json> {
-    let qq = query.q.to_lowercase();
-
-    let tpos = strpos(lower(t::tag_name), &qq);
+fn auto_complete_any(context: Context, term: AcQ) -> Result<Json> {
+    let tpos = strpos(lower(t::tag_name), &term.q);
     let query = t::tags
         .select((t::tag_name, t::slug, tpos))
         .filter(tpos.gt(0))
@@ -65,7 +64,7 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> Result<Json> {
         .map(|(t, s, p)| (SearchTag { k: 't', t, s }, p))
         .collect::<Vec<_>>();
     tags.extend({
-        let ppos = strpos(lower(h::person_name), &qq);
+        let ppos = strpos(lower(h::person_name), &term.q);
         let query = h::people
             .select((h::person_name, h::slug, ppos))
             .filter(ppos.gt(0))
@@ -90,7 +89,7 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> Result<Json> {
             .map(|(t, s, p)| (SearchTag { k: 'p', t, s }, p))
     });
     tags.extend({
-        let lpos = strpos(lower(l::place_name), &qq);
+        let lpos = strpos(lower(l::place_name), &term.q);
         let query = l::places
             .select((l::place_name, l::slug, lpos))
             .filter(lpos.gt(0))
@@ -119,9 +118,9 @@ pub fn auto_complete_any(context: Context, query: AcQ) -> Result<Json> {
     Ok(json(&tags.iter().map(|(t, _)| t).collect::<Vec<_>>()))
 }
 
-pub fn auto_complete_tag(context: Context, query: AcQ) -> Result<Json> {
+fn auto_complete_tag(context: Context, query: AcQ) -> Result<Json> {
     use crate::schema::tags::dsl::{tag_name, tags};
-    let tpos = strpos(lower(tag_name), query.q.to_lowercase());
+    let tpos = strpos(lower(tag_name), query.q);
     let q = tags
         .select(tag_name)
         .filter((&tpos).gt(0))
@@ -130,9 +129,9 @@ pub fn auto_complete_tag(context: Context, query: AcQ) -> Result<Json> {
     Ok(json(&q.load::<String>(&context.db()?)?))
 }
 
-pub fn auto_complete_person(context: Context, query: AcQ) -> Result<Json> {
+fn auto_complete_person(context: Context, query: AcQ) -> Result<Json> {
     use crate::schema::people::dsl::{people, person_name};
-    let mpos = strpos(lower(person_name), query.q.to_lowercase());
+    let mpos = strpos(lower(person_name), query.q);
     let q = people
         .select(person_name)
         .filter((&mpos).gt(0))
@@ -141,9 +140,41 @@ pub fn auto_complete_person(context: Context, query: AcQ) -> Result<Json> {
     Ok(json(&q.load::<String>(&context.db()?)?))
 }
 
+/// A `q` query argument which must not contain the null character.
+///
+/// Diesel escapes quotes and other dangerous chars, but null must be
+/// avoided.
 #[derive(Deserialize)]
-pub struct AcQ {
-    pub q: String,
+#[serde(try_from = "RawAcQ")]
+struct AcQ {
+    q: String,
+}
+
+#[derive(Deserialize)]
+struct RawAcQ {
+    q: String,
+}
+
+impl TryFrom<RawAcQ> for AcQ {
+    type Error = NullInQuery;
+
+    fn try_from(q: RawAcQ) -> Result<Self, Self::Error> {
+        if q.q.as_bytes().contains(&0) {
+            Err(NullInQuery)
+        } else {
+            Ok(AcQ {
+                q: q.q.to_lowercase(),
+            })
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct NullInQuery;
+impl Display for NullInQuery {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Query must not contain null")
+    }
 }
 
 #[derive(Debug, Serialize, Eq, PartialEq)]
@@ -158,11 +189,38 @@ struct SearchTag {
 
 impl Ord for SearchTag {
     fn cmp(&self, o: &Self) -> Ordering {
-        self.t.cmp(&o.t)
+        self.t.cmp(&o.t).then_with(|| self.k.cmp(&o.k))
     }
 }
 impl PartialOrd for SearchTag {
     fn partial_cmp(&self, o: &Self) -> Option<Ordering> {
         Some(self.cmp(o))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AcQ;
+
+    fn parse(data: &[u8]) -> Result<String, String> {
+        serde_urlencoded::from_bytes::<AcQ>(data)
+            .map(|q| q.q)
+            .map_err(|e| e.to_string())
+    }
+
+    #[test]
+    fn query_good() {
+        assert_eq!(parse(b"q=FooBar").as_deref(), Ok("foobar"));
+    }
+    #[test]
+    fn query_ugly() {
+        assert_eq!(parse(b"q=%22%27%60%2C%C3%9E").as_deref(), Ok("\"'`,þ"));
+    }
+    #[test]
+    fn query_bad_contains_null() {
+        assert_eq!(
+            parse(b"q=Foo%00Bar"),
+            Err("Query must not contain null".into()),
+        );
     }
 }

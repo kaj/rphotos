@@ -44,3 +44,6 @@ version = "1.4.0"
 [dependencies.warp]
 default-features = false
 version = "0.3.0"
+
+[dev-dependencies]
+serde_urlencoded = "0.7.1" # Same as warp depends on

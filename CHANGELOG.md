@@ -6,6 +6,8 @@ The format is based on
 
 ## Unreleased
 
+* Check for null bytes in autocomplete patterns, make them an bad
+  request rather than an internal server error.
 * Two more kinds of OSM area to recognize.
 * Add this changelog.
 
