@@ -84,7 +84,11 @@ struct DirOpt {
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    env_logger::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            std::env::var("RUST_LOG").as_deref().unwrap_or("info"),
+        )
+        .init();
     match run(&RPhotos::from_args()).await {
         Ok(()) => (),
         Err(err) => {

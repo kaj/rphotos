@@ -45,7 +45,7 @@ async fn api_recover(err: Rejection) -> Result<Response, Rejection> {
     } else if err.find::<MethodNotAllowed>().is_some() {
         StatusCode::METHOD_NOT_ALLOWED
     } else {
-        log::error!("Internal server error in api from {err:?}");
+        tracing::error!("Internal server error in api from {err:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     };
     let msg = code.canonical_reason().unwrap_or("error");
@@ -64,7 +64,7 @@ fn login(context: Context, form: LoginForm) -> ApiResult<LoginOk> {
     let user = form
         .validate(&db)
         .ok_or_else(|| ApiError::bad_request("login failed"))?;
-    log::info!("Api login {user:?} ok");
+    tracing::info!("Api login {user:?} ok");
     Ok(LoginOk {
         token: context.make_token(&user)?,
     })

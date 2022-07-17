@@ -1,7 +1,7 @@
 use super::Context;
 use crate::photosdir::ImageLoadFailed;
 use crate::templates::{self, RenderError, RenderRucte};
-use log::{error, warn};
+use tracing::{error, warn};
 use warp::http::response::Builder;
 use warp::http::status::StatusCode;
 use warp::reply::Response;

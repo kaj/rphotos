@@ -6,8 +6,10 @@ The format is based on
 
 ## Unreleased
 
-* Check for null bytes in autocomplete patterns, make them an bad
-  request rather than an internal server error.
+* Check for null bytes in autocomplete patterns, make them result in a
+  400 bad request rather than a 500 internal server error.
+* Improved logging by using tracing and tracing-subscriber rather than
+  log and env_logger.
 * Two more kinds of OSM area to recognize.
 * Add this changelog.
 

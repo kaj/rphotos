@@ -6,8 +6,8 @@ use crate::{DbOpt, DirOpt};
 use diesel::insert_into;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use log::{debug, info, warn};
 use std::path::Path;
+use tracing::{debug, info, warn};
 
 #[derive(clap::Parser)]
 pub struct Findphotos {

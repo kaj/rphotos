@@ -1,10 +1,10 @@
 use crate::adm::result::Error;
 use libc::{kill, pid_t, SIGHUP};
-use log::{debug, info};
 use std::fs::{read_to_string, write};
 use std::io::ErrorKind;
 use std::path::Path;
 use std::process;
+use tracing::{debug, info};
 
 pub fn handle_pid_file(pidfile: &Path, replace: bool) -> Result<(), Error> {
     if replace {

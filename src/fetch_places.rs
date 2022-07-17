@@ -2,10 +2,10 @@ use crate::dbopt::PgPool;
 use crate::models::{Coord, Place};
 use crate::DbOpt;
 use diesel::prelude::*;
-use log::{debug, info};
 use reqwest::{self, Client, Response};
 use serde_json::Value;
 use slug::slugify;
+use tracing::{debug, info, instrument};
 
 #[derive(clap::Parser)]
 pub struct Fetchplaces {
@@ -63,6 +63,7 @@ pub struct OverpassOpt {
 }
 
 impl OverpassOpt {
+    #[instrument(skip(self, db))]
     pub async fn update_image_places(
         &self,
         db: &PgPool,
@@ -78,7 +79,7 @@ impl OverpassOpt {
             .optional()
             .map_err(|e| Error::Db(image, e))?
             .ok_or(Error::NoPosition(image))?;
-        debug!("Should get places for #{} at {:?}", image, coord);
+        debug!(?coord, "Should get places");
         let data = Client::new()
             .post(&self.overpass_url)
             .body(format!("[out:json];is_in({},{});out;", coord.x, coord.y))
@@ -270,7 +271,6 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
                 .find_map(|(name, values)| tag_level(tags, name, values))
         })?;
 
-    debug!("{} is level {}", name, level);
     Some((name, level))
 }
 

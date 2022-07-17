@@ -2,8 +2,8 @@ use crate::Error;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ConnectionError};
-use log::debug;
 use std::time::{Duration, Instant};
+use tracing::debug;
 
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledPg = PooledConnection<ConnectionManager<PgConnection>>;

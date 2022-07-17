@@ -11,7 +11,7 @@ use crate::templates;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use log::warn;
+use tracing::warn;
 use warp::http::response::Builder;
 use warp::reply::Response;
 

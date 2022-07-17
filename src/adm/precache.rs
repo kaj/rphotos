@@ -4,9 +4,9 @@ use crate::photosdir::{get_scaled_jpeg, PhotosDir};
 use crate::schema::photos::dsl::{date, is_public};
 use crate::{CacheOpt, DbOpt, DirOpt};
 use diesel::prelude::*;
-use log::{debug, info};
 use r2d2_memcache::memcache::Client;
 use std::time::{Duration, Instant};
+use tracing::{debug, info};
 
 #[derive(clap::Parser)]
 pub struct Args {

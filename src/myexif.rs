@@ -2,11 +2,11 @@
 use crate::adm::result::Error;
 use chrono::{Date, Local, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use exif::{Field, In, Reader, Tag, Value};
-use log::{debug, error, warn};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::str::from_utf8;
+use tracing::{debug, error, warn};
 
 #[derive(Debug, Default)]
 pub struct ExifData {

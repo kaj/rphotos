@@ -5,7 +5,7 @@ use crate::models::{Coord, Photo};
 use crate::schema::photos;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
-use log::debug;
+use tracing::debug;
 
 pub fn links_by_time(
     context: &Context,

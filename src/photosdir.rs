@@ -1,12 +1,13 @@
 use crate::models::Photo;
 use crate::myexif::ExifData;
 use image::imageops::FilterType;
-use image::{self, ImageError, ImageFormat};
-use log::{debug, info, warn};
+use image::{self, DynamicImage, ImageError, ImageFormat};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 use std::{fs, io};
 use tokio::task::{spawn_blocking, JoinError};
+use tracing::{debug, info, warn};
 
 pub struct PhotosDir {
     basedir: PathBuf,
@@ -126,45 +127,59 @@ pub async fn get_scaled_jpeg(
     rotation: i16,
     size: u32,
 ) -> Result<Vec<u8>, ImageLoadFailed> {
-    spawn_blocking(move || {
-        info!("Should open {:?}", path);
+    spawn_blocking(move || do_get_scaled_jpeg(path, rotation, size)).await?
+}
 
-        let img = if is_jpeg(&path) {
-            use std::fs::File;
-            use std::io::BufReader;
-            let file = BufReader::new(File::open(path)?);
-            let mut decoder = image::codecs::jpeg::JpegDecoder::new(file)?;
-            decoder.scale(size as u16, size as u16)?;
-            image::DynamicImage::from_decoder(decoder)?
-        } else {
-            image::open(path)?
-        };
+#[tracing::instrument]
+fn do_get_scaled_jpeg(
+    path: PathBuf,
+    rotation: i16,
+    size: u32,
+) -> Result<Vec<u8>, ImageLoadFailed> {
+    let start = Instant::now();
+    let img = if is_jpeg(&path) {
+        use std::fs::File;
+        use std::io::BufReader;
+        let file = BufReader::new(File::open(path)?);
+        let mut decoder = image::codecs::jpeg::JpegDecoder::new(file)?;
+        decoder.scale(size as u16, size as u16)?;
+        DynamicImage::from_decoder(decoder)?
+    } else {
+        image::open(path)?
+    };
 
-        let img = if 3 * size <= img.width() || 3 * size <= img.height() {
-            info!("T-nail from {}x{} to {}", img.width(), img.height(), size);
-            img.thumbnail(size, size)
-        } else if size < img.width() || size < img.height() {
-            info!("Scaling from {}x{} to {}", img.width(), img.height(), size);
-            img.resize(size, size, FilterType::CatmullRom)
-        } else {
+    debug!(size = %Size(&img), elapsed = ?start.elapsed(), "Loaded image.");
+    let img = if 3 * size <= img.width() || 3 * size <= img.height() {
+        img.thumbnail(size, size)
+    } else if size < img.width() || size < img.height() {
+        img.resize(size, size, FilterType::CatmullRom)
+    } else {
+        img
+    };
+    debug!(size = %Size(&img), elapsed = ?start.elapsed(), "Scaled image.");
+    let img = match rotation {
+        _x @ 0..=44 | _x @ 315..=360 => img,
+        _x @ 45..=134 => img.rotate90(),
+        _x @ 135..=224 => img.rotate180(),
+        _x @ 225..=314 => img.rotate270(),
+        x => {
+            warn!("Should rotate photo {} deg, which is unsupported.", x);
             img
-        };
-        let img = match rotation {
-            _x @ 0..=44 | _x @ 315..=360 => img,
-            _x @ 45..=134 => img.rotate90(),
-            _x @ 135..=224 => img.rotate180(),
-            _x @ 225..=314 => img.rotate270(),
-            x => {
-                warn!("Should rotate photo {} deg, which is unsupported", x);
-                img
-            }
-        };
-        let mut buf = Vec::new();
-        use std::io::Cursor;
-        img.write_to(&mut Cursor::new(&mut buf), ImageFormat::Jpeg)?;
-        Ok(buf)
-    })
-    .await?
+        }
+    };
+    debug!(elapsed = ?start.elapsed(), "Ready to save.");
+    let mut buf = Vec::new();
+    use std::io::Cursor;
+    img.write_to(&mut Cursor::new(&mut buf), ImageFormat::Jpeg)?;
+    info!(elapsed = ?start.elapsed(), "Done.");
+    Ok(buf)
+}
+
+struct Size<'a>(&'a DynamicImage);
+impl<'a> std::fmt::Display for Size<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}x{}", self.0.width(), self.0.height())
+    }
 }
 
 fn is_jpeg(path: &Path) -> bool {
