@@ -79,7 +79,7 @@ impl OverpassOpt {
             .optional()
             .map_err(|e| Error::Db(image, e))?
             .ok_or(Error::NoPosition(image))?;
-        debug!(?coord, "Should get places");
+        debug!(?coord, "Should get places.");
         let data = Client::new()
             .post(&self.overpass_url)
             .body(format!("[out:json];is_in({},{});out;", coord.x, coord.y))
@@ -183,6 +183,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
         ("residential", 11),
         ("retail", 13),
         ("cemetery", 14),
+        ("military", 13),
     ]),
     ("highway", &[
         ("pedestrian", 15),  // torg
