@@ -177,6 +177,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
         ("allotments", 14),
         ("commercial", 12),
         ("grass", 13),
+        ("farmland", 14),
         ("industrial", 11),
         ("meadow", 16),
         ("railway", 13),

@@ -10,7 +10,7 @@ The format is based on
   400 bad request rather than a 500 internal server error.
 * Improved logging by using tracing and tracing-subscriber rather than
   log and env_logger.
-* Three more kinds of OSM areas to recognize.
+* Four more kinds of OSM areas to recognize.
 * Add this changelog.
 
 ## Release 0.11.6 (2022-07-10)
