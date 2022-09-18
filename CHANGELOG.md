@@ -11,6 +11,7 @@ The format is based on
 * Improved logging by using tracing and tracing-subscriber rather than
   log and env_logger.
 * Four more kinds of OSM areas to recognize.
+* Update ructe to 0.15.0.
 * Add this changelog.
 
 ## Release 0.11.6 (2022-07-10)
