@@ -12,7 +12,7 @@ ructe = { version = "0.15.0", features = ["sass", "warp03"] }
 [dependencies]
 brotli = "3.3.0"
 chrono = "0.4.19" # Must match version used by diesel
-clap = { version = "3.2.8", features = ["derive", "terminal_size", "wrap_help", "env"] }
+clap = { version = "4.0.18", features = ["derive", "wrap_help", "env"] }
 dotenv = "0.15"
 flate2 = "1.0.14"
 image = "0.24.0"

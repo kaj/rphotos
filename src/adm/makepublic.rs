@@ -1,7 +1,6 @@
 use super::result::Error;
 use crate::models::Photo;
 use crate::DbOpt;
-use clap::ArgGroup;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
@@ -11,7 +10,6 @@ use std::io::prelude::*;
 use std::io::{self, BufReader};
 
 #[derive(clap::Parser)]
-#[clap(group = ArgGroup::with_name("spec").required(true))]
 pub struct Makepublic {
     #[clap(flatten)]
     db: DbOpt,
@@ -65,7 +63,10 @@ impl Makepublic {
                 Ok(())
             }
             (None, None, Some(image)) => one(&mut db, image),
-            _ => Err(Error::Other("bad command".to_string())),
+            (None, None, None) => Err(Error::Other(
+                "No images specified to make public".to_string(),
+            )),
+            _ => Err(Error::Other("Conflicting arguments".to_string())),
         }
     }
 }

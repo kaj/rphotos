@@ -89,7 +89,7 @@ async fn main() {
             std::env::var("RUST_LOG").as_deref().unwrap_or("info"),
         )
         .init();
-    match run(&RPhotos::from_args()).await {
+    match run(&RPhotos::parse()).await {
         Ok(()) => (),
         Err(err) => {
             println!("{}", err);

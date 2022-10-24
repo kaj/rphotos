@@ -15,6 +15,7 @@ The format is based on
   PgConnection`.  Also, getting parts of dates are now done by sql
   functions.
 * Update ructe to 0.15.0.
+* Update clap to 4.0.18.
 * Add this changelog.
 
 ## Release 0.11.6 (2022-07-10)
