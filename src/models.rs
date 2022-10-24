@@ -28,7 +28,7 @@ pub struct PhotoDetails {
     pub camera: Option<Camera>,
 }
 impl PhotoDetails {
-    pub fn load(id: i32, db: &PgConnection) -> Result<Self, Error> {
+    pub fn load(id: i32, db: &mut PgConnection) -> Result<Self, Error> {
         use crate::schema::photos::dsl::photos;
         let photo = photos.find(id).first::<Photo>(db)?;
         let attribution = photo
@@ -133,7 +133,7 @@ impl Photo {
     }
 
     pub fn update_by_path(
-        db: &PgConnection,
+        db: &mut PgConnection,
         file_path: &str,
         newwidth: i32,
         newheight: i32,
@@ -178,7 +178,7 @@ impl Photo {
     }
 
     pub fn create_or_set_basics(
-        db: &PgConnection,
+        db: &mut PgConnection,
         file_path: &str,
         newwidth: i32,
         newheight: i32,
@@ -239,7 +239,7 @@ impl Photo {
 }
 
 pub trait Facet {
-    fn by_slug(slug: &str, db: &PgConnection) -> Result<Self, Error>
+    fn by_slug(slug: &str, db: &mut PgConnection) -> Result<Self, Error>
     where
         Self: Sized;
 }
@@ -252,7 +252,7 @@ pub struct Tag {
 }
 
 impl Facet for Tag {
-    fn by_slug(slug: &str, db: &PgConnection) -> Result<Tag, Error> {
+    fn by_slug(slug: &str, db: &mut PgConnection) -> Result<Tag, Error> {
         t::tags.filter(t::slug.eq(slug)).first(db)
     }
 }
@@ -273,7 +273,7 @@ pub struct Person {
 
 impl Person {
     pub fn get_or_create_name(
-        db: &PgConnection,
+        db: &mut PgConnection,
         name: &str,
     ) -> Result<Person, Error> {
         h::people
@@ -291,7 +291,7 @@ impl Person {
 }
 
 impl Facet for Person {
-    fn by_slug(slug: &str, db: &PgConnection) -> Result<Person, Error> {
+    fn by_slug(slug: &str, db: &mut PgConnection) -> Result<Person, Error> {
         h::people.filter(h::slug.eq(slug)).first(db)
     }
 }
@@ -313,7 +313,7 @@ pub struct Place {
 }
 
 impl Facet for Place {
-    fn by_slug(slug: &str, db: &PgConnection) -> Result<Place, Error> {
+    fn by_slug(slug: &str, db: &mut PgConnection) -> Result<Place, Error> {
         l::places.filter(l::slug.eq(slug)).first(db)
     }
 }
@@ -334,7 +334,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn get_or_create(
-        db: &PgConnection,
+        db: &mut PgConnection,
         make: &str,
         modl: &str,
     ) -> Result<Camera, Error> {
@@ -362,8 +362,8 @@ pub struct Coord {
 impl Queryable<(Integer, Integer), Pg> for Coord {
     type Row = (i32, i32);
 
-    fn build(row: Self::Row) -> Self {
-        Coord::from((row.0, row.1))
+    fn build(row: Self::Row) -> diesel::deserialize::Result<Self> {
+        Ok(Coord::from((row.0, row.1)))
     }
 }
 

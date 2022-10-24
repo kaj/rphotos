@@ -19,8 +19,8 @@ pub fn search(
     context: Context,
     query: Vec<(String, String)>,
 ) -> Result<Response> {
-    let db = context.db()?;
-    let query = SearchQuery::load(query, &db)?;
+    let mut db = context.db()?;
+    let query = SearchQuery::load(query, &mut db)?;
 
     let mut photos = Photo::query(context.is_authorized());
     if let Some(since) = query.since.as_ref() {
@@ -71,10 +71,10 @@ pub fn search(
 
     let photos = photos
         .order((p::date.desc().nulls_last(), p::id.desc()))
-        .load(&db)?;
+        .load(&mut db)?;
 
     let n = photos.len();
-    let coords = get_positions(&photos, &db)?;
+    let coords = get_positions(&photos, &mut db)?;
     let links = split_to_group_links(&photos, &query.to_base_url(), true);
 
     Ok(Builder::new().html(|o| {
@@ -104,7 +104,7 @@ pub struct Filter<T> {
 }
 
 impl<T: Facet> Filter<T> {
-    fn load(val: &str, db: &PgConnection) -> Option<Filter<T>> {
+    fn load(val: &str, db: &mut PgConnection) -> Option<Filter<T>> {
         let (inc, slug) = match val.strip_prefix('!') {
             Some(val) => (false, val),
             None => (true, val),
@@ -120,7 +120,10 @@ impl<T: Facet> Filter<T> {
 }
 
 impl SearchQuery {
-    fn load(query: Vec<(String, String)>, db: &PgConnection) -> Result<Self> {
+    fn load(
+        query: Vec<(String, String)>,
+        db: &mut PgConnection,
+    ) -> Result<Self> {
         let mut result = SearchQuery::default();
         let (mut s_d, mut s_t, mut u_d, mut u_t) = (None, None, None, None);
         for (key, val) in &query {
@@ -218,7 +221,7 @@ impl QueryDateTime {
         let until_midnight = NaiveTime::from_hms_milli(23, 59, 59, 999);
         QueryDateTime::new(datetime_from_parts(date, time, until_midnight))
     }
-    fn from_img(photo_id: i32, db: &PgConnection) -> Result<Self> {
+    fn from_img(photo_id: i32, db: &mut PgConnection) -> Result<Self> {
         Ok(QueryDateTime::new(
             p::photos
                 .select(p::date)

@@ -31,7 +31,7 @@ impl PhotosDir {
     pub fn find_files(
         &self,
         dir: &Path,
-        cb: &dyn Fn(&str, &ExifData),
+        cb: &mut dyn FnMut(&str, &ExifData),
     ) -> io::Result<()> {
         let absdir = self.basedir.join(dir);
         if fs::metadata(&absdir)?.is_dir() {

@@ -1,5 +1,6 @@
 use super::{wrap, BuilderExt, Context, ContextFilter, RenderRucte, Result};
 use crate::templates;
+use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use lazy_regex::regex_is_match;
 use serde::Deserialize;
@@ -36,7 +37,8 @@ struct NextQ {
 
 fn post_login(context: Context, form: LoginForm) -> Result<Response> {
     let next = sanitize_next(form.next.as_ref().map(AsRef::as_ref));
-    if let Some(user) = form.validate(&*context.db()?) {
+    let mut db = context.db()?;
+    if let Some(user) = form.validate(&mut db) {
         let token = context.make_token(&user)?;
         return Ok(Builder::new()
             .header(
@@ -61,7 +63,7 @@ pub struct LoginForm {
 
 impl LoginForm {
     /// Retur user if and only if password is correct for user.
-    pub fn validate(&self, db: &PgConnection) -> Option<String> {
+    pub fn validate(&self, db: &mut PgConnection) -> Option<String> {
         use crate::schema::users::dsl::*;
         if let Ok(hash) = users
             .filter(username.eq(&self.user))

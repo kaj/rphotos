@@ -23,15 +23,15 @@ pub struct Findphotos {
 impl Findphotos {
     pub fn run(&self) -> Result<(), Error> {
         let pd = PhotosDir::new(&self.photos.photos_dir);
-        let db = self.db.connect()?;
+        let mut db = self.db.connect()?;
         if !self.base.is_empty() {
             for base in &self.base {
-                crawl(&db, &pd, Path::new(base)).map_err(|e| {
+                crawl(&mut db, &pd, Path::new(base)).map_err(|e| {
                     Error::Other(format!("Failed to crawl {}: {}", base, e))
                 })?;
             }
         } else {
-            crawl(&db, &pd, Path::new("")).map_err(|e| {
+            crawl(&mut db, &pd, Path::new("")).map_err(|e| {
                 Error::Other(format!("Failed to crawl: {}", e))
             })?;
         }
@@ -40,35 +40,36 @@ impl Findphotos {
 }
 
 fn crawl(
-    db: &PgConnection,
+    db: &mut PgConnection,
     photos: &PhotosDir,
     only_in: &Path,
 ) -> Result<(), Error> {
-    photos.find_files(
-        only_in,
-        &|path, exif| match save_photo(db, path, exif) {
-            Ok(()) => debug!("Saved photo {}", path),
-            Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
-        },
-    )?;
+    photos.find_files(only_in, &mut |path, exif| match save_photo(
+        db, path, exif,
+    ) {
+        Ok(()) => debug!("Saved photo {}", path),
+        Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
+    })?;
     Ok(())
 }
 
 fn save_photo(
-    db: &PgConnection,
+    db: &mut PgConnection,
     file_path: &str,
     exif: &ExifData,
 ) -> Result<(), Error> {
     let width = exif.width.ok_or(Error::MissingWidth)?;
     let height = exif.height.ok_or(Error::MissingHeight)?;
+    let rot = exif.rotation()?;
+    let cam = find_camera(db, exif)?;
     let photo = match Photo::create_or_set_basics(
         db,
         file_path,
         width as i32,
         height as i32,
         exif.date(),
-        exif.rotation()?,
-        find_camera(db, exif)?,
+        rot,
+        cam,
     )? {
         Modification::Created(photo) => {
             info!("Created #{}, {}", photo.id, photo.path);
@@ -116,7 +117,7 @@ fn save_photo(
 }
 
 fn find_camera(
-    db: &PgConnection,
+    db: &mut PgConnection,
     exif: &ExifData,
 ) -> Result<Option<Camera>, Error> {
     if let Some((make, model)) = exif.camera() {
