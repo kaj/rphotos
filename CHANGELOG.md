@@ -8,6 +8,8 @@ The format is based on
 
 * Check for null bytes in autocomplete patterns, make them result in a
   400 bad request rather than a 500 internal server error.
+* Changed zoom-on-click to use fullscreen.  I think that is an
+  improvement especially on mobile.
 * Improved logging by using tracing and tracing-subscriber rather than
   log and env_logger.
 * Four more kinds of OSM areas to recognize.

@@ -33,7 +33,15 @@
   let i = d.querySelector('.details .item');
   if (i) {
     i.addEventListener('click', e => {
-      i.classList.toggle('zoom');
+      if (!d.fullscreenElement) {
+        let full = d.querySelector('.meta a.full');
+        if (full && (i.src != full.href)) {
+          i.src = full.href;
+        }
+        i.requestFullscreen();
+      } else if (d.exitFullscreen) {
+        d.exitFullscreen();
+      }
       resize_map();
     });
   }

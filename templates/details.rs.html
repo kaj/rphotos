@@ -14,7 +14,7 @@
     <img class="item" src="/img/@photo.id-m.jpg" width="@photo.get_size(SizeTag::Medium).0" height="@photo.get_size(SizeTag::Medium).1">
     <div class="meta">
     @if context.is_authorized() {
-    <p><a href="/img/@photo.id-l.jpg">@photo.path</a></p>
+    <p><a href="/img/@photo.id-l.jpg" class="full">@photo.path</a></p>
     @if photo.is_public() {<p>This photo is public.</p>}
     else {<p>This photo is not public.</p>}
     }
