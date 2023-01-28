@@ -226,7 +226,9 @@ impl Photo {
                 "{}/{:02}/{:02}/IMG{:02}{:02}{:02}.jpg",
                 y, mo, da, h, m, s,
             ),
-            date: Some(NaiveDate::from_ymd(y, mo, da).and_hms(h, m, s)),
+            date: NaiveDate::from_ymd_opt(y, mo, da)
+                .unwrap()
+                .and_hms_opt(h, m, s),
             grade: None,
             rotation: 0,
             is_public: false,

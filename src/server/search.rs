@@ -214,11 +214,12 @@ impl QueryDateTime {
         QueryDateTime { val }
     }
     fn since_from_parts(date: Option<&str>, time: Option<&str>) -> Self {
-        let since_midnight = NaiveTime::from_hms_milli(0, 0, 0, 0);
+        let since_midnight = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
         QueryDateTime::new(datetime_from_parts(date, time, since_midnight))
     }
     fn until_from_parts(date: Option<&str>, time: Option<&str>) -> Self {
-        let until_midnight = NaiveTime::from_hms_milli(23, 59, 59, 999);
+        let until_midnight =
+            NaiveTime::from_hms_milli_opt(23, 59, 59, 999).unwrap();
         QueryDateTime::new(datetime_from_parts(date, time, until_midnight))
     }
     fn from_img(photo_id: i32, db: &mut PgConnection) -> Result<Self> {

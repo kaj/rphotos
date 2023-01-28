@@ -143,10 +143,6 @@ fn all_years(context: Context) -> Result<Response> {
     })?)
 }
 
-fn start_of_year(year: i32) -> NaiveDateTime {
-    NaiveDate::from_ymd(year, 1, 1).and_hms(0, 0, 0)
-}
-
 fn months_in_year(year: i32, context: Context) -> Result<Response> {
     use crate::schema::photos::dsl as p;
 
@@ -206,13 +202,19 @@ fn months_in_year(year: i32, context: Context) -> Result<Response> {
     }
 }
 
+fn start_of_year(year: i32) -> NaiveDateTime {
+    start_of_day(year, 1, 1)
+}
+
 fn start_of_month(year: i32, month: u32) -> NaiveDateTime {
-    let date = if month > 12 {
-        NaiveDate::from_ymd(year + 1, month - 12, 1)
-    } else {
-        NaiveDate::from_ymd(year, month, 1)
-    };
-    date.and_hms(0, 0, 0)
+    start_of_day(year + (month / 12) as i32, month % 12, 1)
+}
+
+fn start_of_day(year: i32, month: u32, day: u32) -> NaiveDateTime {
+    NaiveDate::from_ymd_opt(year, month, day)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
 }
 
 fn days_in_month(year: i32, month: u32, context: Context) -> Result<Response> {
@@ -235,8 +237,7 @@ fn days_in_month(year: i32, month: u32, context: Context) -> Result<Response> {
         .iter()
         .map(|&(day, count)| {
             let day = day.unwrap() as u32;
-            let fromdate =
-                NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
+            let fromdate = start_of_day(year, month, day);
             let photo = Photo::query(context.is_authorized())
                 .filter(p::date.ge(fromdate))
                 .filter(p::date.lt(fromdate + Duration::days(1)))
@@ -304,7 +305,7 @@ fn all_for_day(
     range: ImgRange,
     context: Context,
 ) -> Result<Response> {
-    let thedate = NaiveDate::from_ymd(year, month, day).and_hms(0, 0, 0);
+    let thedate = start_of_day(year, month, day);
     use crate::schema::photos::dsl as p;
 
     let photos = Photo::query(context.is_authorized())
@@ -361,8 +362,7 @@ fn on_this_day(context: Context) -> Result<Response> {
         .iter()
         .map(|&(year, count)| {
             let year = year.unwrap(); // matching date can't be null
-            let fromdate =
-                NaiveDate::from_ymd(year.into(), month, day).and_hms(0, 0, 0);
+            let fromdate = start_of_day(year.into(), month, day);
             let photo = Photo::query(context.is_authorized())
                 .filter(p::date.ge(fromdate))
                 .filter(p::date.lt(fromdate + Duration::days(1)))

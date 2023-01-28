@@ -1,6 +1,6 @@
 //! Extract all the exif data I care about
 use crate::adm::result::Error;
-use chrono::{Date, Local, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 use exif::{Field, In, Reader, Tag, Value};
 use std::fs::File;
 use std::io::BufReader;
@@ -11,7 +11,9 @@ use tracing::{debug, error, warn};
 #[derive(Debug, Default)]
 pub struct ExifData {
     dateval: Option<NaiveDateTime>,
-    gpsdate: Option<Date<Utc>>,
+    /// Combines with gpstime to a datetime which is Utc.
+    gpsdate: Option<NaiveDate>,
+    /// Combines with gpstime to a datetime which is Utc.
     gpstime: Option<NaiveTime>,
     make: Option<String>,
     model: Option<String>,
@@ -82,7 +84,7 @@ impl ExifData {
     }
 
     pub fn date(&self) -> Option<NaiveDateTime> {
-        // Note: I probably return and store datetime with tz,
+        // Note: I probably should return and store datetime with tz,
         // possibly utc, instead.
         // Also note: I used to prefer the gps date, as I belived that
         // to be more exact if present.  But at last one phone seems
@@ -94,13 +96,12 @@ impl ExifData {
         } else if let (&Some(date), &Some(time)) =
             (&self.gpsdate, &self.gpstime)
         {
-            let naive = date
-                .and_time(time)
-                .unwrap()
-                .with_timezone(&Local)
-                .naive_local();
-            debug!("GPS Date {}, {} => {}", date, time, naive);
-            Some(naive)
+            // The gps date and time should always be utc.
+            // But time stored is in local time.
+            // Note: Sometimes (when traveling) local time for the
+            // picture may not be the same as local time for the
+            // server.  That is not properly handled here.
+            Some(Local.from_utc_datetime(&date.and_time(time)).naive_local())
         } else {
             warn!("No date found in exif");
             None
@@ -191,11 +192,10 @@ fn is_datetime(f: &Field, tag: Tag) -> Option<NaiveDateTime> {
     }
 }
 
-fn is_date(f: &Field, tag: Tag) -> Option<Date<Utc>> {
+fn is_date(f: &Field, tag: Tag) -> Option<NaiveDate> {
     if f.tag == tag {
         single_ascii(&f.value)
             .and_then(|s| Ok(NaiveDate::parse_from_str(s, "%Y:%m:%d")?))
-            .map(|d| Date::from_utc(d, Utc))
             .map_err(|e| {
                 println!("ERROR: Expected date for {}: {:?}", tag, e);
             })
@@ -213,11 +213,11 @@ fn is_time(f: &Field, tag: Tag) -> Option<NaiveTime> {
             &Value::Rational(ref v)
                 if v.len() == 3 && v[0].denom == 1 && v[1].denom == 1 =>
             {
-                Some(NaiveTime::from_hms(
+                NaiveTime::from_hms_opt(
                     v[0].num,
                     v[1].num,
                     v[2].num / v[2].denom,
-                ))
+                )
             }
             err => {
                 error!("Expected time for {}: {:?}", tag, err);
