@@ -41,12 +41,12 @@ fn gzipped(data: &[u8]) -> Result<Vec<u8>, Error> {
     Ok(buf)
 }
 
-fn brcompressed(data: &[u8]) -> Result<Vec<u8>, Error> {
+fn brcompressed(mut data: &[u8]) -> Result<Vec<u8>, Error> {
     let mut buf = Vec::new();
     let params = BrotliEncoderParams {
         quality: 11,
         ..Default::default()
     };
-    BrotliCompress(&mut data.as_ref(), &mut buf, &params)?;
+    BrotliCompress(&mut data, &mut buf, &params)?;
     Ok(buf)
 }

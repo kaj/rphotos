@@ -311,8 +311,8 @@ fn get_or_create_place(
         .or_else(|_| {
             let mut result = diesel::insert_into(places)
                 .values((
-                    place_name.eq(&name),
-                    slug.eq(&slugify(&name)),
+                    place_name.eq(name),
+                    slug.eq(slugify(name)),
                     osm_id.eq(Some(t_osm_id)),
                     osm_level.eq(Some(level)),
                 ))

@@ -98,10 +98,10 @@ impl PhotoLink {
             let title = if with_date { title } else { None };
             let mut url = url;
             if let Some(last) = g.last() {
-                url.query("from", &last.id);
+                url.query("from", last.id);
             }
             if let Some(first) = g.first() {
-                url.query("to", &first.id);
+                url.query("to", first.id);
             }
             PhotoLink {
                 title,
