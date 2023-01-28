@@ -44,7 +44,7 @@ fn post_login(context: Context, form: LoginForm) -> Result<Response> {
         return Ok(Builder::new()
             .header(
                 header::SET_COOKIE,
-                format!("EXAUTH={}; SameSite=Strict; HttpOnly", token),
+                format!("EXAUTH={token}; SameSite=Strict; HttpOnly"),
             )
             .redirect(next.unwrap_or("/")));
     }

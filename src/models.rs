@@ -222,10 +222,7 @@ impl Photo {
         Photo {
             id: ((((((y as u32 * 12) + mo) * 30 + da) * 24) + h) * 60 + s)
                 as i32,
-            path: format!(
-                "{}/{:02}/{:02}/IMG{:02}{:02}{:02}.jpg",
-                y, mo, da, h, m, s,
-            ),
+            path: format!("{y}/{mo:02}/{da:02}/IMG{h:02}{m:02}{s:02}.jpg"),
             date: NaiveDate::from_ymd_opt(y, mo, da)
                 .unwrap()
                 .and_hms_opt(h, m, s),

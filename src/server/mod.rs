@@ -118,7 +118,7 @@ fn wrap(result: Result<impl Reply>) -> Response {
 }
 
 fn redirect_to_img(image: i32) -> Response {
-    redirect(&format!("/img/{}", image))
+    redirect(&format!("/img/{image}"))
 }
 
 fn redirect(url: &str) -> Response {
@@ -187,8 +187,7 @@ pub type Link = Html<String>;
 impl Link {
     fn year(year: i32) -> Self {
         Html(format!(
-            "<a href='/{0}/' title='Images from {0}' accessKey='y'>{0}</a>",
-            year,
+            "<a href='/{year}/' title='Images from {year}' accessKey='y'>{year}</a>",
         ))
     }
     fn month(year: i32, month: u32) -> Self {
@@ -212,16 +211,14 @@ impl Link {
     }
     fn prev(from: i32) -> Self {
         Html(format!(
-            "<a href='/prev?from={}' title='Previous image (by time)'>\
+            "<a href='/prev?from={from}' title='Previous image (by time)'>\
              \u{2190}</a>",
-            from,
         ))
     }
     fn next(from: i32) -> Self {
         Html(format!(
-            "<a href='/next?from={}' title='Next image (by time)' \
+            "<a href='/next?from={from}' title='Next image (by time)' \
              accessKey='n'>\u{2192}</a>",
-            from,
         ))
     }
 }

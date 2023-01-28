@@ -92,7 +92,7 @@ async fn main() {
     match run(&RPhotos::parse()).await {
         Ok(()) => (),
         Err(err) => {
-            println!("{}", err);
+            println!("{err}");
             exit(1);
         }
     }

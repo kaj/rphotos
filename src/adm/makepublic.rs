@@ -59,7 +59,7 @@ impl Makepublic {
                 )
                 .set(p::is_public.eq(true))
                 .execute(&mut db)?;
-                println!("Made {} images public.", n);
+                println!("Made {n} images public.");
                 Ok(())
             }
             (None, None, Some(image)) => one(&mut db, image),
@@ -78,11 +78,11 @@ pub fn one(db: &mut PgConnection, tpath: &str) -> Result<(), Error> {
         .get_result::<Photo>(db)
     {
         Ok(photo) => {
-            println!("Made {} public: {:?}", tpath, photo);
+            println!("Made {tpath} public: {photo:?}");
             Ok(())
         }
         Err(DieselError::NotFound) => {
-            Err(Error::Other(format!("File {} is not known", tpath,)))
+            Err(Error::Other(format!("File {tpath} is not known",)))
         }
         Err(error) => Err(error.into()),
     }

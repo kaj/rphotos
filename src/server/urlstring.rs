@@ -16,7 +16,7 @@ impl UrlString {
         self.separate();
         use std::fmt::Write;
         self.value
-            .write_fmt(format_args!("{}={}", name, val))
+            .write_fmt(format_args!("{name}={val}"))
             .expect("a Display implementation returned an error unexpectedly");
         self.has_query = true;
     }

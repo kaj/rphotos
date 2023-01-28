@@ -76,27 +76,22 @@ impl GlobalContext {
 
     fn verify_key(&self, jwtstr: &str) -> Result<String, String> {
         let token = Token::<Header, ()>::parse(jwtstr)
-            .map_err(|e| format!("Bad jwt token: {:?}", e))?;
+            .map_err(|e| format!("Bad jwt token: {e:?}"))?;
 
         if !verify_token(&token, self.jwt_secret.as_ref())? {
-            return Err(format!("Invalid token {:?}", token));
+            return Err(format!("Invalid token {token:?}"));
         }
         let claims = token.payload;
         debug!("Verified token for: {:?}", claims);
         let now = current_numeric_date();
         if let Some(nbf) = claims.nbf {
             if now < nbf {
-                return Err(
-                    format!("Not-yet valid token, {} < {}", now, nbf,),
-                );
+                return Err(format!("Not-yet valid token, {now} < {nbf}"));
             }
         }
         if let Some(exp) = claims.exp {
             if now > exp {
-                return Err(format!(
-                    "Got an expired token: {} > {}",
-                    now, exp,
-                ));
+                return Err(format!("Got an expired token: {now} > {exp}"));
             }
         }
         // the claimed sub is the username
@@ -115,7 +110,7 @@ fn verify_token(
 ) -> Result<bool, String> {
     token
         .verify(jwt_secret)
-        .map_err(|e| format!("Failed to verify token {:?}: {}", token, e))
+        .map_err(|e| format!("Failed to verify token {token:?}: {e}"))
 }
 
 /// The request context, providing database, memcache and authorized user.

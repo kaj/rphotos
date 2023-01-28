@@ -15,7 +15,7 @@ pub fn handle_pid_file(pidfile: &Path, replace: bool) -> Result<(), Error> {
             }
         }
     } else if pidfile.exists() {
-        return Err(Error::Other(format!("Pid file {:?} exists.", pidfile)));
+        return Err(Error::Other(format!("Pid file {pidfile:?} exists.")));
     }
     let pid = process::id();
     debug!("Should write pid {} to {:?}", pid, pidfile);

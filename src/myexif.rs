@@ -169,7 +169,7 @@ fn is_lat_long(f: &Field, tag: Tag) -> Option<f64> {
                 Some(v[0].to_f64() + d * (v[1].to_f64() + d * v[2].to_f64()))
             }
             ref v => {
-                println!("ERROR: Bad value for {}: {:?}", tag, v);
+                println!("ERROR: Bad value for {tag}: {v:?}");
                 None
             }
         }
@@ -183,7 +183,7 @@ fn is_datetime(f: &Field, tag: Tag) -> Option<NaiveDateTime> {
         single_ascii(&f.value)
             .and_then(|s| Ok(NaiveDateTime::parse_from_str(s, "%Y:%m:%d %T")?))
             .map_err(|e| {
-                println!("ERROR: Expected datetime for {}: {:?}", tag, e);
+                println!("ERROR: Expected datetime for {tag}: {e:?}");
             })
             .ok()
     } else {
@@ -196,7 +196,7 @@ fn is_date(f: &Field, tag: Tag) -> Option<NaiveDate> {
         single_ascii(&f.value)
             .and_then(|s| Ok(NaiveDate::parse_from_str(s, "%Y:%m:%d")?))
             .map_err(|e| {
-                println!("ERROR: Expected date for {}: {:?}", tag, e);
+                println!("ERROR: Expected date for {tag}: {e:?}");
             })
             .ok()
     } else {
@@ -233,7 +233,7 @@ fn is_string(f: &Field, tag: Tag) -> Option<&str> {
         match single_ascii(&f.value) {
             Ok(s) => Some(s),
             Err(err) => {
-                println!("ERROR: Expected string for {}: {:?}", tag, err);
+                println!("ERROR: Expected string for {tag}: {err:?}");
                 None
             }
         }
@@ -248,7 +248,7 @@ fn is_u32(f: &Field, tag: Tag) -> Option<u32> {
             Value::Long(ref v) if v.len() == 1 => Some(v[0]),
             Value::Short(ref v) if v.len() == 1 => Some(u32::from(v[0])),
             v => {
-                println!("ERROR: Unsuppored value for {}: {:?}", tag, v);
+                println!("ERROR: Unsuppored value for {tag}: {v:?}");
                 None
             }
         }
@@ -264,16 +264,14 @@ fn single_ascii(value: &Value) -> Result<&str, Error> {
             for t in &v[1..] {
                 if !t.is_empty() {
                     return Err(Error::Other(format!(
-                        "Got {:?}, expected single ascii value",
-                        v,
+                        "Got {v:?}, expected single ascii value",
                     )));
                 }
             }
             Ok(from_utf8(&v[0])?)
         }
         v => Err(Error::Other(format!(
-            "Got {:?}, expected single ascii value",
-            v,
+            "Got {v:?}, expected single ascii value",
         ))),
     }
 }

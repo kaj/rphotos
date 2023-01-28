@@ -57,7 +57,7 @@ impl PhotosDir {
         path.to_str().ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("Non-utf8 path {:?}", path),
+                format!("Non-utf8 path {path:?}"),
             )
         })
     }

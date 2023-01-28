@@ -27,13 +27,12 @@ impl Findphotos {
         if !self.base.is_empty() {
             for base in &self.base {
                 crawl(&mut db, &pd, Path::new(base)).map_err(|e| {
-                    Error::Other(format!("Failed to crawl {}: {}", base, e))
+                    Error::Other(format!("Failed to crawl {base}: {e}"))
                 })?;
             }
         } else {
-            crawl(&mut db, &pd, Path::new("")).map_err(|e| {
-                Error::Other(format!("Failed to crawl: {}", e))
-            })?;
+            crawl(&mut db, &pd, Path::new(""))
+                .map_err(|e| Error::Other(format!("Failed to crawl: {e}")))?;
         }
         Ok(())
     }

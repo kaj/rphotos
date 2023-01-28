@@ -13,7 +13,7 @@ impl BuilderExt for Builder {
     fn redirect(self, url: &str) -> Response {
         self.status(StatusCode::FOUND)
             .header(header::LOCATION, url)
-            .body(format!("Please refer to {}", url).into())
+            .body(format!("Please refer to {url}").into())
             .unwrap()
     }
 

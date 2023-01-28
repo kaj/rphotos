@@ -72,7 +72,7 @@ impl PhotoLink {
                             to_year
                         };
                         (
-                            Some(format!("{} - {}", from_year, to_year)),
+                            Some(format!("{from_year} - {to_year}")),
                             format!(
                                 "{} - {} ({})",
                                 from.format("%F"),

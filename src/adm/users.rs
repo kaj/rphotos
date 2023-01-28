@@ -24,18 +24,17 @@ pub fn passwd(db: &mut PgConnection, uname: &str) -> Result<(), Error> {
         .execute(db)?
     {
         1 => {
-            println!("Updated password for {:?} to {:?}", uname, pword);
+            println!("Updated password for {uname:?} to {pword:?}");
         }
         0 => {
             insert_into(users)
                 .values((username.eq(uname), password.eq(&hashword)))
                 .execute(db)?;
-            println!("Created user {:?} with password {:?}", uname, pword);
+            println!("Created user {uname:?} with password {pword:?}");
         }
         n => {
             println!(
-                "Strange, updated {} passwords for {:?} to {:?}",
-                n, uname, pword,
+                "Strange, updated {n} passwords for {uname:?} to {pword:?}",
             );
         }
     };

@@ -127,11 +127,11 @@ fn all_years(context: Context) -> Result<Response> {
             let photo = photo.first::<Photo>(&mut db)?;
             Ok(PhotoLink {
                 title: Some(
-                    year.map(|y| format!("{}", y))
+                    year.map(|y| format!("{y}"))
                         .unwrap_or_else(|| "-".to_string()),
                 ),
                 href: format!("/{}/", year.unwrap_or(0)),
-                lable: Some(format!("{} images", count)),
+                lable: Some(format!("{count} images")),
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small),
             })
@@ -146,7 +146,7 @@ fn all_years(context: Context) -> Result<Response> {
 fn months_in_year(year: i32, context: Context) -> Result<Response> {
     use crate::schema::photos::dsl as p;
 
-    let title: String = format!("Photos from {}", year);
+    let title: String = format!("Photos from {year}");
     let mut db = context.db()?;
     let m = month_of_timestamp(p::date);
     let groups = p::photos
@@ -171,8 +171,8 @@ fn months_in_year(year: i32, context: Context) -> Result<Response> {
 
             Ok(PhotoLink {
                 title: Some(monthname(month).to_string()),
-                href: format!("/{}/{}/", year, month),
-                lable: Some(format!("{} pictures", count)),
+                href: format!("/{year}/{month}/"),
+                lable: Some(format!("{count} pictures")),
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small),
             })
@@ -246,9 +246,9 @@ fn days_in_month(year: i32, month: u32, context: Context) -> Result<Response> {
                 .first::<Photo>(&mut db)?;
 
             Ok(PhotoLink {
-                title: Some(format!("{}", day)),
-                href: format!("/{}/{}/{}", year, month, day),
-                lable: Some(format!("{} pictures", count)),
+                title: Some(format!("{day}")),
+                href: format!("/{year}/{month}/{day}"),
+                lable: Some(format!("{count} pictures")),
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small),
             })
@@ -370,9 +370,9 @@ fn on_this_day(context: Context) -> Result<Response> {
                 .limit(1)
                 .first::<Photo>(&mut db)?;
             Ok(PhotoLink {
-                title: Some(format!("{}", year)),
-                href: format!("/{}/{}/{}", year, month, day),
-                lable: Some(format!("{} pictures", count)),
+                title: Some(format!("{year}")),
+                href: format!("/{year}/{month}/{day}"),
+                lable: Some(format!("{count} pictures")),
                 id: photo.id,
                 size: photo.get_size(SizeTag::Small),
             })

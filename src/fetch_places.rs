@@ -40,7 +40,7 @@ impl Fetchplaces {
                 .limit(self.limit)
                 .load::<(i32, Coord)>(&mut db.get()?)?;
             for (photo_id, coord) in result {
-                println!("Find places for #{}, {:?}", photo_id, coord);
+                println!("Find places for #{photo_id}, {coord:?}");
                 self.overpass.update_image_places(&db, photo_id).await?;
             }
         } else {
@@ -321,7 +321,7 @@ fn get_or_create_place(
             while is_duplicate(&result) && attempt < 25 {
                 info!("Attempt #{} got {:?}, trying again", attempt, result);
                 attempt += 1;
-                let name = format!("{} ({})", name, attempt);
+                let name = format!("{name} ({attempt})");
                 result = diesel::insert_into(places)
                     .values((
                         place_name.eq(&name),

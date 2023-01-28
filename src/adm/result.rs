@@ -34,21 +34,21 @@ impl Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::Connection(ref e) => write!(f, "Connection error: {}", e),
-            Error::Db(ref e) => write!(f, "Database error: {}", e),
-            Error::Io(ref e) => write!(f, "I/O error: {}", e),
+            Error::Connection(ref e) => write!(f, "Connection error: {e}"),
+            Error::Db(ref e) => write!(f, "Database error: {e}"),
+            Error::Io(ref e) => write!(f, "I/O error: {e}"),
             Error::UnknownOrientation(ref o) => {
-                write!(f, "Unknown image orientation: {:?}", o)
+                write!(f, "Unknown image orientation: {o:?}")
             }
-            Error::BadTimeFormat(ref e) => write!(f, "Bad time value: {}", e),
-            Error::BadIntFormat(ref e) => write!(f, "Bad int value: {}", e),
-            Error::Cache(ref e) => write!(f, "Memcached error: {}", e),
+            Error::BadTimeFormat(ref e) => write!(f, "Bad time value: {e}"),
+            Error::BadIntFormat(ref e) => write!(f, "Bad int value: {e}"),
+            Error::Cache(ref e) => write!(f, "Memcached error: {e}"),
             Error::MissingHeight => write!(f, "Missing height property"),
             Error::MissingWidth => write!(f, "Missing width property"),
             Error::PlacesFailed(ref e) => {
-                write!(f, "Failed to get places: {:?}", e)
+                write!(f, "Failed to get places: {e:?}")
             }
-            Error::Other(ref s) => write!(f, "Error: {}", s),
+            Error::Other(ref s) => write!(f, "Error: {s}"),
         }
     }
 }
@@ -90,7 +90,7 @@ impl From<io::Error> for Error {
 }
 impl From<Utf8Error> for Error {
     fn from(e: Utf8Error) -> Self {
-        Error::Other(format!("{}", e))
+        Error::Other(e.to_string())
     }
 }
 
@@ -102,6 +102,6 @@ impl From<fetch_places::Error> for Error {
 
 impl From<R2d2Error> for Error {
     fn from(e: R2d2Error) -> Self {
-        Error::Other(format!("{}", e))
+        Error::Other(e.to_string())
     }
 }
