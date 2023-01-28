@@ -159,7 +159,7 @@ fn photo_details(id: i32, context: Context) -> Result<Response> {
 
     if context.is_authorized() || photo.is_public() {
         Ok(Builder::new().html(|o| {
-            templates::details(
+            templates::details_html(
                 o,
                 &context,
                 &photo

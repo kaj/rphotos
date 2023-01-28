@@ -1,9 +1,9 @@
-@use super::page_base;
+@use super::page_base_html;
 @use crate::models::Person;
 @use crate::server::Context;
 
 @(context: &Context, people: &[Person])
-@:page_base(context, "Photo people", &[], {}, {
+@:page_base_html(context, "Photo people", &[], {}, {
   <ul class="allpeople">
     @for p in people {
       <li><a href="/person/@p.slug">@p.person_name</a>

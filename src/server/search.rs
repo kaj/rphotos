@@ -78,7 +78,7 @@ pub fn search(
     let links = split_to_group_links(&photos, &query.to_base_url(), true);
 
     Ok(Builder::new().html(|o| {
-        templates::search(o, &context, &query, n, &links, &coords)
+        templates::search_html(o, &context, &query, n, &links, &coords)
     })?)
 }
 

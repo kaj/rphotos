@@ -16,7 +16,7 @@ The format is based on
 * Update diesel to 2.0.0: Mainly most operations now needs a `&mut
   PgConnection`.  Also, getting parts of dates are now done by sql
   functions.
-* Update ructe to 0.15.0.
+* Update ructe to 0.16.0.
 * Update clap to 4.0.18.
 * Add this changelog.
 

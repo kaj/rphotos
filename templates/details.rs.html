@@ -1,9 +1,9 @@
-@use super::base;
+@use super::base_html;
 @use crate::models::{PhotoDetails, SizeTag};
 @use crate::server::{Context, Link};
 
 @(context: &Context, lpath: &[Link], photo: &PhotoDetails)
-@:base(context, "Photo details", lpath, {
+@:base_html(context, "Photo details", lpath, {
   <meta property='og:title' content='Photo @if let Some(d) = photo.date {(@d.format("%F"))}'>
   <meta property='og:type' content='image' />
   <meta property='og:image' content='/img/@photo.id-m.jpg' />

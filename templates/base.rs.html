@@ -1,5 +1,5 @@
 @use super::statics::{photos_css, admin_js, ux_js};
-@use super::head;
+@use super::head_html;
 @use crate::server::{Context, Link};
 
 @(context: &Context, title: &str, lpath: &[Link], meta: Content, content: Content)
@@ -20,7 +20,7 @@
     @:meta()
   </head>
   <body>
-    @:head(context, lpath)
+    @:head_html(context, lpath)
     @:content()
     <footer>
       <p>Managed by

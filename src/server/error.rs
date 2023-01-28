@@ -68,7 +68,7 @@ impl Reply for ViewError {
             ViewError::NotFound(Some(context)) => Builder::new()
                 .status(StatusCode::NOT_FOUND)
                 .html(|o| {
-                    templates::not_found(
+                    templates::not_found_html(
                         o,
                         &context,
                         StatusCode::NOT_FOUND,
@@ -108,7 +108,7 @@ impl Reply for ViewError {
 fn error_response(code: StatusCode, message: &str, detail: &str) -> Response {
     Builder::new()
         .status(code)
-        .html(|o| templates::error(o, code, message, detail))
+        .html(|o| templates::error_html(o, code, message, detail))
         .unwrap_or_else(|_| code.into_response())
 }
 

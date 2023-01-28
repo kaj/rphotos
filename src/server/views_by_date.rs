@@ -139,7 +139,7 @@ fn all_years(context: Context) -> Result<Response> {
         .collect::<Result<Vec<_>>>()?;
 
     Ok(Builder::new().html(|o| {
-        templates::index(o, &context, "All photos", &[], &groups, &[])
+        templates::index_html(o, &context, "All photos", &[], &groups, &[])
     })?)
 }
 
@@ -201,7 +201,7 @@ fn months_in_year(year: i32, context: Context) -> Result<Response> {
             })
             .collect::<Vec<_>>();
         Ok(Builder::new().html(|o| {
-            templates::index(o, &context, &title, &[], &groups, &pos)
+            templates::index_html(o, &context, &title, &[], &groups, &pos)
         })?)
     }
 }
@@ -270,7 +270,7 @@ fn days_in_month(year: i32, month: u32, context: Context) -> Result<Response> {
             })
             .collect::<Vec<_>>();
         Ok(Builder::new().html(|o| {
-            templates::index(o, &context, &title, &lpath, &groups, &pos)
+            templates::index_html(o, &context, &title, &lpath, &groups, &pos)
         })?)
     }
 }
@@ -286,7 +286,7 @@ fn all_null_date(context: Context) -> Result<Response> {
         .map(PhotoLink::no_title)
         .collect::<Vec<_>>();
     Ok(Builder::new().html(|o| {
-        templates::index(
+        templates::index_html(
             o,
             &context,
             "Photos without a date",
@@ -316,7 +316,7 @@ fn all_for_day(
         Err(ViewError::NotFound(Some(context)))
     } else {
         Ok(Builder::new().html(|o| {
-            templates::index(
+            templates::index_html(
                 o,
                 &context,
                 &format!("Photos from {} {} {}", day, monthname(month), year),
@@ -379,7 +379,7 @@ fn on_this_day(context: Context) -> Result<Response> {
         })
         .collect::<Result<Vec<_>>>()?;
     Ok(Builder::new().html(|o| {
-        templates::index(
+        templates::index_html(
             o,
             &context,
             &format!("Photos from {} {}", day, monthname(month)),

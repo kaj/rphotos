@@ -1,9 +1,9 @@
-@use super::page_base;
+@use super::page_base_html;
 @use crate::server::Context;
 
 @(context: &Context, next: Option<&str>, message: Option<&str>)
 
-@:page_base(context, "login", &[], {
+@:page_base_html(context, "login", &[], {
     <meta name="robots" content="noindex, nofollow">
 }, {
     <form action="/login" method="post">

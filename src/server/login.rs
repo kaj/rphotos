@@ -27,7 +27,8 @@ pub fn routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
 fn get_login(context: Context, param: NextQ) -> Result<Response> {
     info!("Got request for login form.  Param: {:?}", param);
     let next = sanitize_next(param.next.as_ref().map(AsRef::as_ref));
-    Ok(Builder::new().html(|o| templates::login(o, &context, next, None))?)
+    Ok(Builder::new()
+        .html(|o| templates::login_html(o, &context, next, None))?)
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -49,7 +50,7 @@ fn post_login(context: Context, form: LoginForm) -> Result<Response> {
     }
     let message = Some("Login failed, please try again");
     Ok(Builder::new()
-        .html(|o| templates::login(o, &context, next, message))?)
+        .html(|o| templates::login_html(o, &context, next, message))?)
 }
 
 /// The data submitted by the login form.

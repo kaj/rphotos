@@ -1,11 +1,11 @@
+@use super::{data_positions_html, page_base_html, photo_link_html};
 @use crate::models::{Coord, Tag};
 @use crate::server::{Context, PhotoLink};
-@use super::{data_positions, page_base, photo_link};
 
 @(context: &Context, photos: &[PhotoLink], coords: &[(Coord, i32)], tag: &Tag)
 
-@:page_base(context, &format!("Photos tagged {}", tag.tag_name), &[], {}, {
-  <div class="group"@:data_positions(coords)>
-    @for p in photos {@:photo_link(p)}
+@:page_base_html(context, &format!("Photos tagged {}", tag.tag_name), &[], {}, {
+  <div class="group"@:data_positions_html(coords)>
+    @for p in photos {@:photo_link_html(p)}
   </div>
 })

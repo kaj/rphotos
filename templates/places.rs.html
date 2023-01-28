@@ -1,10 +1,10 @@
-@use super::page_base;
+@use super::page_base_html;
 @use crate::models::Place;
 @use crate::server::Context;
 
 @(context: &Context, places: &[Place])
 
-@:page_base(context, "Photo places", &[], {}, {
+@:page_base_html(context, "Photo places", &[], {}, {
   <ul class="allplaces">
   @for p in places {
     <li><a href="/place/@p.slug">@p.place_name</a>

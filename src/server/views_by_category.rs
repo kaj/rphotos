@@ -58,7 +58,8 @@ fn person_all(context: Context) -> Result<Response> {
         )))
     };
     let images = query.order(person_name).load(&mut context.db()?)?;
-    Ok(Builder::new().html(|o| templates::people(o, &context, &images))?)
+    Ok(Builder::new()
+        .html(|o| templates::people_html(o, &context, &images))?)
 }
 
 fn person_one(
@@ -84,8 +85,9 @@ fn person_one(
         ),
     );
     let (links, coords) = links_by_time(&context, photos, range, true)?;
-    Ok(Builder::new()
-        .html(|o| templates::person(o, &context, &links, &coords, &person))?)
+    Ok(Builder::new().html(|o| {
+        templates::person_html(o, &context, &links, &coords, &person)
+    })?)
 }
 
 fn tag_all(context: Context) -> Result<Response> {
@@ -101,7 +103,7 @@ fn tag_all(context: Context) -> Result<Response> {
         )))
     };
     let taggs = query.load(&mut context.db()?)?;
-    Ok(Builder::new().html(|o| templates::tags(o, &context, &taggs))?)
+    Ok(Builder::new().html(|o| templates::tags_html(o, &context, &taggs))?)
 }
 
 fn tag_one(
@@ -122,7 +124,7 @@ fn tag_one(
     );
     let (links, coords) = links_by_time(&context, photos, range, true)?;
     Ok(Builder::new()
-        .html(|o| templates::tag(o, &context, &links, &coords, &tag))?)
+        .html(|o| templates::tag_html(o, &context, &links, &coords, &tag))?)
 }
 
 fn place_all(context: Context) -> Result<Response> {
@@ -138,7 +140,10 @@ fn place_all(context: Context) -> Result<Response> {
         )))
     };
     let found = query.order(place_name).load(&mut context.db()?)?;
-    Ok(Builder::new().html(|o| templates::places(o, &context, &found))?)
+    Ok(
+        Builder::new()
+            .html(|o| templates::places_html(o, &context, &found))?,
+    )
 }
 
 fn place_one(
@@ -160,6 +165,7 @@ fn place_one(
         id.eq_any(photo_places.select(photo_id).filter(place_id.eq(place.id))),
     );
     let (links, coord) = links_by_time(&context, photos, range, true)?;
-    Ok(Builder::new()
-        .html(|o| templates::place(o, &context, &links, &coord, &place))?)
+    Ok(Builder::new().html(|o| {
+        templates::place_html(o, &context, &links, &coord, &place)
+    })?)
 }

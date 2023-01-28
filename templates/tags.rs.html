@@ -1,9 +1,9 @@
-@use super::page_base;
+@use super::page_base_html;
 @use crate::models::Tag;
 @use crate::server::Context;
 
 @(context: &Context, tags: &[Tag])
-@:page_base(context, "Photo tags", &[], {}, {
+@:page_base_html(context, "Photo tags", &[], {}, {
   <ul class="alltags">
   @for tag in tags {
     <li><a href="/tag/@tag.slug">@tag.tag_name</a>

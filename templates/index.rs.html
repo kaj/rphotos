@@ -1,15 +1,15 @@
-@use super::{data_positions, page_base, photo_link};
+@use super::{data_positions_html, page_base_html, photo_link_html};
 @use crate::models::Coord;
 @use crate::server::{Context, Link, PhotoLink};
 
 @(context: &Context, title: &str, lpath: &[Link], photos: &[PhotoLink], coords: &[(Coord, i32)])
 
-@:page_base(context, title, lpath, {
+@:page_base_html(context, title, lpath, {
   <meta property='og:title' content='@title'>
   @for img in photos {
   <meta property='og:image' content='/img/@img.id-m.jpg' />}
 }, {
-  <div class="group"@:data_positions(coords)>
-    @for p in photos {@:photo_link(p)}
+  <div class="group"@:data_positions_html(coords)>
+    @for p in photos {@:photo_link_html(p)}
   </div>
 })
