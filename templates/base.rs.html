@@ -1,4 +1,4 @@
-@use super::statics::{photos_css, admin_js, ux_js};
+@use super::statics::{photos_css, admin_js, ux_js, rphotos_svg};
 @use super::head_html;
 @use crate::server::{Context, Link};
 
@@ -11,6 +11,7 @@
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/@photos_css.name" type="text/css"/>
+    <link rel="icon" href="/static/@rphotos_svg.name"/>
     @if context.is_authorized() {
         <script src="/static/@admin_js.name" type="text/javascript" defer>
 	</script>
