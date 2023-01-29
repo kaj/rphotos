@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## Release 0.11.8 (2023-01-29)
 
 * Check for null bytes in autocomplete patterns, make them result in a
   400 bad request rather than a 500 internal server error.
