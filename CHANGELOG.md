@@ -6,6 +6,8 @@ The format is based on
 
 ## Unreleased
 
+* Bugfix in month start calculation.
+
 
 ## Release 0.11.8 (2023-01-29)
 

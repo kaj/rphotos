@@ -207,7 +207,11 @@ fn start_of_year(year: i32) -> NaiveDateTime {
 }
 
 fn start_of_month(year: i32, month: u32) -> NaiveDateTime {
-    start_of_day(year + (month / 12) as i32, month % 12, 1)
+    if month > 12 {
+        start_of_day(year + 1, month - 12, 1)
+    } else {
+        start_of_day(year, month, 1)
+    }
 }
 
 fn start_of_day(year: i32, month: u32, day: u32) -> NaiveDateTime {
