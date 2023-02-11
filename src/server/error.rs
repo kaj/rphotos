@@ -1,6 +1,7 @@
 use super::Context;
 use crate::photosdir::ImageLoadFailed;
 use crate::templates::{self, RenderError, RenderRucte};
+use diesel_async::pooled_connection::deadpool::PoolError;
 use tracing::{error, warn};
 use warp::http::response::Builder;
 use warp::http::status::StatusCode;
@@ -128,14 +129,20 @@ impl From<diesel::result::Error> for ViewError {
 
 impl From<r2d2_memcache::memcache::Error> for ViewError {
     fn from(e: r2d2_memcache::memcache::Error) -> Self {
-        error!("Pool error: {:?}", e);
-        ViewError::Err("Pool error")
+        error!("Memcache pool error: {:?}", e);
+        ViewError::ServiceUnavailable
     }
 }
 impl From<ImageLoadFailed> for ViewError {
     fn from(e: ImageLoadFailed) -> Self {
         error!("Image load error: {:?}", e);
         ViewError::Err("Failed to load image")
+    }
+}
+impl From<PoolError> for ViewError {
+    fn from(value: PoolError) -> Self {
+        error!("Database pool error: {value}");
+        ViewError::ServiceUnavailable
     }
 }
 

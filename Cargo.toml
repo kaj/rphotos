@@ -10,16 +10,20 @@ build = "src/build.rs"
 ructe = { version = "0.16.0", features = ["sass", "warp03"] }
 
 [dependencies]
+async-trait = "0.1.64"
+async-walkdir = "0.2.0"
 brotli = "3.3.0"
 chrono = "0.4.19" # Must match version used by diesel
 clap = { version = "4.0.18", features = ["derive", "wrap_help", "env"] }
+diesel-async = { version = "0.2.0", features = ["deadpool", "postgres"] }
 dotenv = "0.15"
 flate2 = "1.0.14"
+futures-lite = "1.12.0"
 image = "0.24.0"
-medallion = "2.3.1"
 kamadak-exif = "0.5.0"
 lazy-regex = "2.2.2"
 libc = "0.2.68"
+medallion = "2.3.1"
 mime = "0.3.0"
 r2d2-memcache = "0.6"
 rand = "0.8"
@@ -38,7 +42,7 @@ version = "1.1.1"
 
 [dependencies.diesel]
 default-features = false
-features = ["r2d2", "chrono", "postgres"]
+features = ["chrono", "postgres"]
 version = "2.0.0"
 
 [dependencies.warp]

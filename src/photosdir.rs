@@ -1,11 +1,12 @@
 use crate::models::Photo;
 use crate::myexif::ExifData;
+use async_walkdir::WalkDir;
 use image::imageops::FilterType;
 use image::{self, DynamicImage, ImageError, ImageFormat};
 use std::ffi::OsStr;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use std::{fs, io};
 use tokio::task::{spawn_blocking, JoinError};
 use tracing::{debug, info, warn};
 
@@ -28,29 +29,14 @@ impl PhotosDir {
         self.basedir.join(Path::new(path)).is_file()
     }
 
-    pub fn find_files(
-        &self,
-        dir: &Path,
-        cb: &mut dyn FnMut(&str, &ExifData),
-    ) -> io::Result<()> {
-        let absdir = self.basedir.join(dir);
-        if fs::metadata(&absdir)?.is_dir() {
-            debug!("Should look in {:?}", absdir);
-            for entry in fs::read_dir(absdir)? {
-                let path = entry?.path();
-                if fs::metadata(&path)?.is_dir() {
-                    self.find_files(&path, cb)?;
-                } else if let Some(exif) = load_meta(&path) {
-                    cb(self.subpath(&path)?, &exif);
-                } else {
-                    debug!("{:?} is no pic.", path)
-                }
-            }
-        }
-        Ok(())
+    pub fn walk_dir(&self, dir: &Path) -> WalkDir {
+        WalkDir::new(self.basedir.join(dir))
     }
 
-    fn subpath<'a>(&self, fullpath: &'a Path) -> Result<&'a str, io::Error> {
+    pub fn subpath<'a>(
+        &self,
+        fullpath: &'a Path,
+    ) -> Result<&'a str, io::Error> {
         let path = fullpath
             .strip_prefix(&self.basedir)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
@@ -63,7 +49,7 @@ impl PhotosDir {
     }
 }
 
-fn load_meta(path: &Path) -> Option<ExifData> {
+pub fn load_meta(path: &Path) -> Option<ExifData> {
     if let Ok(mut exif) = ExifData::read_from(path) {
         if exif.width.is_none() || exif.height.is_none() {
             if let Ok((width, height)) = actual_image_size(path) {

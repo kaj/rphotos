@@ -3,6 +3,7 @@ use super::login::LoginForm;
 use super::{Context, ViewError};
 use crate::models::{Photo, SizeTag};
 use diesel::{self, prelude::*, result::Error as DbError, update};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use warp::filters::BoxedFilter;
 use warp::http::StatusCode;
@@ -21,15 +22,15 @@ pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(Response,)> {
         .and(post())
         .and(s.clone())
         .and(body::json())
-        .map(login)
+        .then(login)
         .map(w);
-    let gimg = end().and(get()).and(s.clone()).and(query()).map(get_img);
+    let gimg = end().and(get()).and(s.clone()).and(query()).then(get_img);
     let pimg = path("makepublic")
         .and(end())
         .and(post())
         .and(s)
         .and(body::json())
-        .map(make_public);
+        .then(make_public);
 
     login
         .or(path("image").and(gimg.or(pimg).unify().map(w)))
@@ -59,10 +60,11 @@ fn w<T: Serialize>(result: ApiResult<T>) -> Response {
     }
 }
 
-fn login(context: Context, form: LoginForm) -> ApiResult<LoginOk> {
-    let mut db = context.db()?;
+async fn login(context: Context, form: LoginForm) -> ApiResult<LoginOk> {
+    let mut db = context.db().await?;
     let user = form
         .validate(&mut db)
+        .await
         .ok_or_else(|| ApiError::bad_request("login failed"))?;
     tracing::info!("Api login {user:?} ok");
     Ok(LoginOk {
@@ -98,31 +100,37 @@ enum ImgIdentifier {
 }
 
 impl ImgIdentifier {
-    fn load(&self, db: &mut PgConnection) -> Result<Option<Photo>, DbError> {
+    async fn get(
+        &self,
+        db: &mut AsyncPgConnection,
+    ) -> Result<Option<Photo>, DbError> {
         use crate::schema::photos::dsl as p;
         match &self {
             ImgIdentifier::Id(ref id) => {
-                p::photos.filter(p::id.eq(*id as i32)).first(db)
+                p::photos.filter(p::id.eq(*id as i32)).first(db).await
             }
             ImgIdentifier::Path(path) => {
-                p::photos.filter(p::path.eq(path)).first(db)
+                p::photos.filter(p::path.eq(path)).first(db).await
             }
         }
         .optional()
     }
 }
 
-fn get_img(context: Context, q: ImgQuery) -> ApiResult<GetImgResult> {
+async fn get_img(context: Context, q: ImgQuery) -> ApiResult<GetImgResult> {
     let id = q.validate().map_err(ApiError::bad_request)?;
-    let mut db = context.db()?;
-    let img = id.load(&mut db)?.ok_or(NOT_FOUND)?;
+    let mut db = context.db().await?;
+    let img = id.get(&mut db).await?.ok_or(NOT_FOUND)?;
     if !context.is_authorized() && !img.is_public() {
         return Err(NOT_FOUND);
     }
     Ok(GetImgResult::for_img(&img))
 }
 
-fn make_public(context: Context, q: ImgQuery) -> ApiResult<GetImgResult> {
+async fn make_public(
+    context: Context,
+    q: ImgQuery,
+) -> ApiResult<GetImgResult> {
     if !context.is_authorized() {
         return Err(ApiError {
             code: StatusCode::UNAUTHORIZED,
@@ -130,12 +138,13 @@ fn make_public(context: Context, q: ImgQuery) -> ApiResult<GetImgResult> {
         });
     }
     let id = q.validate().map_err(ApiError::bad_request)?;
-    let mut db = context.db()?;
-    let img = id.load(&mut db)?.ok_or(NOT_FOUND)?;
+    let mut db = context.db().await?;
+    let img = id.get(&mut db).await?.ok_or(NOT_FOUND)?;
     use crate::schema::photos::dsl as p;
     let img = update(p::photos.find(img.id))
         .set(p::is_public.eq(true))
-        .get_result(&mut db)?;
+        .get_result(&mut db)
+        .await?;
     Ok(GetImgResult::for_img(&img))
 }
 

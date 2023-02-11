@@ -100,12 +100,14 @@ async fn main() {
 
 async fn run(args: &RPhotos) -> Result<(), Error> {
     match args {
-        RPhotos::Findphotos(cmd) => cmd.run(),
-        RPhotos::Makepublic(cmd) => cmd.run(),
-        RPhotos::Stats(db) => show_stats(&mut db.connect()?),
-        RPhotos::Userlist { db } => users::list(&mut db.connect()?),
+        RPhotos::Findphotos(cmd) => cmd.run().await,
+        RPhotos::Makepublic(cmd) => cmd.run().await,
+        RPhotos::Stats(db) => show_stats(&mut db.connect().await?).await,
+        RPhotos::Userlist { db } => {
+            users::list(&mut db.connect().await?).await
+        }
         RPhotos::Userpass { db, user } => {
-            users::passwd(&mut db.connect()?, user)
+            users::passwd(&mut db.connect().await?, user).await
         }
         RPhotos::Fetchplaces(cmd) => cmd.run().await,
         RPhotos::Precache(cmd) => cmd.run().await,

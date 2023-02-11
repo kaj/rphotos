@@ -8,6 +8,7 @@ use crate::schema::places::dsl as l;
 use crate::schema::tags::dsl as t;
 use diesel::prelude::*;
 use diesel::sql_types::Text;
+use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
@@ -20,23 +21,26 @@ use warp::Filter;
 
 pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(Response,)> {
     let egs = end().and(get()).and(s);
-    let any = egs.clone().and(query()).map(list_any);
-    let tag = path("tag").and(egs.clone()).and(query()).map(list_tags);
-    let person = path("person").and(egs).and(query()).map(list_people);
+    let any = egs.clone().and(query()).then(list_any);
+    let tag = path("tag").and(egs.clone()).and(query()).then(list_tags);
+    let person = path("person").and(egs).and(query()).then(list_people);
     any.or(tag).unify().or(person).unify().map(wrap).boxed()
 }
 
-fn list_any(context: Context, term: AcQ) -> Result<Json> {
-    let mut tags = select_tags(&context, &term)?
+async fn list_any(context: Context, term: AcQ) -> Result<Json> {
+    let mut tags = select_tags(&context, &term)
+        .await?
         .into_iter()
         .map(|(t, s, p)| (SearchTag { k: 't', t, s }, p))
         .chain({
-            select_people(&context, &term)?
+            select_people(&context, &term)
+                .await?
                 .into_iter()
                 .map(|(t, s, p)| (SearchTag { k: 'p', t, s }, p))
         })
         .chain({
-            select_places(&context, &term)?
+            select_places(&context, &term)
+                .await?
                 .into_iter()
                 .map(|(t, s, p)| (SearchTag { k: 'l', t, s }, p))
         })
@@ -45,12 +49,12 @@ fn list_any(context: Context, term: AcQ) -> Result<Json> {
     Ok(json(&tags.iter().map(|(t, _)| t).collect::<Vec<_>>()))
 }
 
-fn list_tags(context: Context, query: AcQ) -> Result<Json> {
-    Ok(json(&names(select_tags(&context, &query)?)))
+async fn list_tags(context: Context, query: AcQ) -> Result<Json> {
+    Ok(json(&names(select_tags(&context, &query).await?)))
 }
 
-fn list_people(context: Context, query: AcQ) -> Result<Json> {
-    Ok(json(&names(select_people(&context, &query)?)))
+async fn list_people(context: Context, query: AcQ) -> Result<Json> {
+    Ok(json(&names(select_people(&context, &query).await?)))
 }
 
 fn names(data: Vec<NameSlugScore>) -> Vec<String> {
@@ -147,7 +151,10 @@ sql_function!(fn strpos(string: Text, substring: Text) -> Integer);
 
 type NameSlugScore = (String, String, i32);
 
-fn select_tags(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
+async fn select_tags(
+    context: &Context,
+    term: &AcQ,
+) -> Result<Vec<NameSlugScore>> {
     let tpos = strpos(lower(t::tag_name), &term.q);
     let query = t::tags
         .select((t::tag_name, t::slug, tpos))
@@ -160,11 +167,18 @@ fn select_tags(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let mut db = context.db()?;
-    Ok(query.order((tpos, t::tag_name)).limit(10).load(&mut db)?)
+    let mut db = context.db().await?;
+    Ok(query
+        .order((tpos, t::tag_name))
+        .limit(10)
+        .load(&mut db)
+        .await?)
 }
 
-fn select_people(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
+async fn select_people(
+    context: &Context,
+    term: &AcQ,
+) -> Result<Vec<NameSlugScore>> {
     let ppos = strpos(lower(h::person_name), &term.q);
     let query = h::people
         .select((h::person_name, h::slug, ppos))
@@ -182,14 +196,18 @@ fn select_people(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
             ),
         )
     };
-    let mut db = context.db()?;
+    let mut db = context.db().await?;
     Ok(query
         .order((ppos, h::person_name))
         .limit(10)
-        .load(&mut db)?)
+        .load(&mut db)
+        .await?)
 }
 
-fn select_places(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
+async fn select_places(
+    context: &Context,
+    term: &AcQ,
+) -> Result<Vec<NameSlugScore>> {
     let lpos = strpos(lower(l::place_name), &term.q);
     let query = l::places
         .select((l::place_name, l::slug, lpos))
@@ -207,6 +225,10 @@ fn select_places(context: &Context, term: &AcQ) -> Result<Vec<NameSlugScore>> {
             ),
         )
     };
-    let mut db = context.db()?;
-    Ok(query.order((lpos, l::place_name)).limit(10).load(&mut db)?)
+    let mut db = context.db().await?;
+    Ok(query
+        .order((lpos, l::place_name))
+        .limit(10)
+        .load(&mut db)
+        .await?)
 }

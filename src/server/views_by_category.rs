@@ -6,6 +6,7 @@ use super::{
 use crate::models::{Person, Photo, Place, Tag};
 use crate::templates;
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use warp::filters::method::get;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
@@ -15,37 +16,37 @@ use warp::reply::Response;
 use warp::Filter;
 
 pub fn person_routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
-    let all = end().and(get()).and(s.clone()).map(person_all);
+    let all = end().and(get()).and(s.clone()).then(person_all);
     let one = param()
         .and(end())
         .and(get())
         .and(query())
         .and(s)
-        .map(person_one);
+        .then(person_one);
     all.or(one).unify().map(wrap).boxed()
 }
 pub fn place_routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
-    let all = end().and(s.clone()).and(get()).map(place_all);
+    let all = end().and(s.clone()).and(get()).then(place_all);
     let one = param()
         .and(end())
         .and(get())
         .and(query())
         .and(s)
-        .map(place_one);
+        .then(place_one);
     all.or(one).unify().map(wrap).boxed()
 }
 pub fn tag_routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
-    let all = end().and(s.clone()).and(get()).map(tag_all);
+    let all = end().and(s.clone()).and(get()).then(tag_all);
     let one = param()
         .and(end())
         .and(get())
         .and(query())
         .and(s)
-        .map(tag_one);
+        .then(tag_one);
     all.or(one).unify().map(wrap).boxed()
 }
 
-fn person_all(context: Context) -> Result<Response> {
+async fn person_all(context: Context) -> Result<Response> {
     use crate::schema::people::dsl::{id, people, person_name};
     let query = people.into_boxed();
     let query = if context.is_authorized() {
@@ -57,20 +58,23 @@ fn person_all(context: Context) -> Result<Response> {
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let images = query.order(person_name).load(&mut context.db()?)?;
+    let images = query
+        .order(person_name)
+        .load(&mut context.db().await?)
+        .await?;
     Ok(Builder::new()
         .html(|o| templates::people_html(o, &context, &images))?)
 }
 
-fn person_one(
+async fn person_one(
     tslug: String,
     range: ImgRange,
     context: Context,
 ) -> Result<Response> {
     use crate::schema::people::dsl::{people, slug};
-    let mut c = context.db()?;
+    let mut c = context.db().await?;
     let person = or_404q!(
-        people.filter(slug.eq(tslug)).first::<Person>(&mut c),
+        people.filter(slug.eq(tslug)).first::<Person>(&mut c).await,
         context
     );
     use crate::schema::photo_people::dsl::{
@@ -84,13 +88,13 @@ fn person_one(
                 .filter(person_id.eq(person.id)),
         ),
     );
-    let (links, coords) = links_by_time(&context, photos, range, true)?;
+    let (links, coords) = links_by_time(&context, photos, range, true).await?;
     Ok(Builder::new().html(|o| {
         templates::person_html(o, &context, &links, &coords, &person)
     })?)
 }
 
-fn tag_all(context: Context) -> Result<Response> {
+async fn tag_all(context: Context) -> Result<Response> {
     use crate::schema::tags::dsl::{id, tag_name, tags};
     let query = tags.order(tag_name).into_boxed();
     let query = if context.is_authorized() {
@@ -102,18 +106,20 @@ fn tag_all(context: Context) -> Result<Response> {
             tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let taggs = query.load(&mut context.db()?)?;
+    let taggs = query.load(&mut context.db().await?).await?;
     Ok(Builder::new().html(|o| templates::tags_html(o, &context, &taggs))?)
 }
 
-fn tag_one(
+async fn tag_one(
     tslug: String,
     range: ImgRange,
     context: Context,
 ) -> Result<Response> {
     use crate::schema::tags::dsl::{slug, tags};
     let tag = or_404q!(
-        tags.filter(slug.eq(tslug)).first::<Tag>(&mut context.db()?),
+        tags.filter(slug.eq(tslug))
+            .first::<Tag>(&mut context.db().await?)
+            .await,
         context
     );
 
@@ -122,12 +128,12 @@ fn tag_one(
     let photos = Photo::query(context.is_authorized()).filter(
         id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
     );
-    let (links, coords) = links_by_time(&context, photos, range, true)?;
+    let (links, coords) = links_by_time(&context, photos, range, true).await?;
     Ok(Builder::new()
         .html(|o| templates::tag_html(o, &context, &links, &coords, &tag))?)
 }
 
-fn place_all(context: Context) -> Result<Response> {
+async fn place_all(context: Context) -> Result<Response> {
     use crate::schema::places::dsl::{id, place_name, places};
     let query = places.into_boxed();
     let query = if context.is_authorized() {
@@ -139,14 +145,17 @@ fn place_all(context: Context) -> Result<Response> {
             pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
-    let found = query.order(place_name).load(&mut context.db()?)?;
+    let found = query
+        .order(place_name)
+        .load(&mut context.db().await?)
+        .await?;
     Ok(
         Builder::new()
             .html(|o| templates::places_html(o, &context, &found))?,
     )
 }
 
-fn place_one(
+async fn place_one(
     tslug: String,
     range: ImgRange,
     context: Context,
@@ -155,7 +164,8 @@ fn place_one(
     let place = or_404q!(
         places
             .filter(slug.eq(tslug))
-            .first::<Place>(&mut context.db()?),
+            .first::<Place>(&mut context.db().await?)
+            .await,
         context
     );
 
@@ -164,7 +174,7 @@ fn place_one(
     let photos = Photo::query(context.is_authorized()).filter(
         id.eq_any(photo_places.select(photo_id).filter(place_id.eq(place.id))),
     );
-    let (links, coord) = links_by_time(&context, photos, range, true)?;
+    let (links, coord) = links_by_time(&context, photos, range, true).await?;
     Ok(Builder::new().html(|o| {
         templates::place_html(o, &context, &links, &coord, &place)
     })?)

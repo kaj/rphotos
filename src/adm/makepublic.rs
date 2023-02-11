@@ -1,10 +1,10 @@
 use super::result::Error;
 use crate::models::Photo;
 use crate::DbOpt;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
 use diesel::update;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
@@ -27,8 +27,8 @@ pub struct Makepublic {
 }
 
 impl Makepublic {
-    pub fn run(&self) -> Result<(), Error> {
-        let mut db = self.db.connect()?;
+    pub async fn run(&self) -> Result<(), Error> {
+        let mut db = self.db.connect().await?;
         match (
             self.list.as_ref().map(AsRef::as_ref),
             &self.tag,
@@ -36,12 +36,12 @@ impl Makepublic {
         ) {
             (Some("-"), None, None) => {
                 let list = io::stdin();
-                by_file_list(&mut db, list.lock())?;
+                by_file_list(&mut db, list.lock()).await?;
                 Ok(())
             }
             (Some(list), None, None) => {
                 let list = BufReader::new(File::open(list)?);
-                by_file_list(&mut db, list)
+                by_file_list(&mut db, list).await
             }
             (None, Some(tag), None) => {
                 use crate::schema::photo_tags::dsl as pt;
@@ -58,11 +58,12 @@ impl Makepublic {
                     ),
                 )
                 .set(p::is_public.eq(true))
-                .execute(&mut db)?;
+                .execute(&mut db)
+                .await?;
                 println!("Made {n} images public.");
                 Ok(())
             }
-            (None, None, Some(image)) => one(&mut db, image),
+            (None, None, Some(image)) => one(&mut db, image).await,
             (None, None, None) => Err(Error::Other(
                 "No images specified to make public".to_string(),
             )),
@@ -71,11 +72,12 @@ impl Makepublic {
     }
 }
 
-pub fn one(db: &mut PgConnection, tpath: &str) -> Result<(), Error> {
+async fn one(db: &mut AsyncPgConnection, tpath: &str) -> Result<(), Error> {
     use crate::schema::photos::dsl::*;
     match update(photos.filter(path.eq(&tpath)))
         .set(is_public.eq(true))
         .get_result::<Photo>(db)
+        .await
     {
         Ok(photo) => {
             println!("Made {tpath} public: {photo:?}");
@@ -88,12 +90,12 @@ pub fn one(db: &mut PgConnection, tpath: &str) -> Result<(), Error> {
     }
 }
 
-pub fn by_file_list<In: BufRead + Sized>(
-    db: &mut PgConnection,
+async fn by_file_list<In: BufRead + Sized>(
+    db: &mut AsyncPgConnection,
     list: In,
 ) -> Result<(), Error> {
     for line in list.lines() {
-        one(db, &line?)?;
+        one(db, &line?).await?;
     }
     Ok(())
 }
