@@ -10,6 +10,7 @@ The format is based on
   - Use `diesel-async` with deadpool feature for database access.
   - A bunch of previously synchronous handlers are now async.
   - Some `.map` and simliar replaced with `if` blocks or `for` loops.
+* Avoid an extra query for the positions in search.
 
 
 ## Release 0.11.10 (2023-02-11)

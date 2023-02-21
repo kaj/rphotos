@@ -1,8 +1,8 @@
 use super::error::ViewResult;
-use super::splitlist::{get_positions, split_to_group_links};
+use super::splitlist::split_to_group_links;
 use super::urlstring::UrlString;
 use super::{Context, RenderRucte, Result};
-use crate::models::{Facet, Person, Photo, Place, Tag};
+use crate::models::{Coord, Facet, Person, Photo, Place, Tag};
 use crate::schema::photo_people::dsl as pp;
 use crate::schema::photo_places::dsl as pl;
 use crate::schema::photo_tags::dsl as pt;
@@ -59,8 +59,8 @@ pub async fn search(
             photos.filter(p::id.ne_all(ids))
         }
     }
+    use crate::schema::positions::dsl as pos;
     if let Some(pos) = query.pos {
-        use crate::schema::positions::dsl as pos;
         let pos_ids = pos::positions.select(pos::photo_id);
         if pos {
             photos = photos.filter(p::id.eq_any(pos_ids));
@@ -71,16 +71,35 @@ pub async fn search(
 
     let photos = photos
         .order((p::date.desc().nulls_last(), p::id.desc()))
-        .load(&mut db)
+        .left_join(pos::positions)
+        .select((
+            Photo::as_select(),
+            ((pos::latitude, pos::longitude), pos::photo_id).nullable(),
+        ))
+        .load::<(Photo, Option<(Coord, i32)>)>(&mut db)
         .await?;
 
+    let (photos, coords): (Vec<_>, SomeVec<_>) = photos.into_iter().unzip();
     let n = photos.len();
-    let coords = get_positions(&photos, &mut db).await?;
     let links = split_to_group_links(&photos, &query.to_base_url(), true);
 
     Ok(Builder::new().html(|o| {
-        templates::search_html(o, &context, &query, n, &links, &coords)
+        templates::search_html(o, &context, &query, n, &links, &coords.0)
     })?)
+}
+
+/// A `Vec` that automatically flattens an iterator of options when extended.
+struct SomeVec<T>(Vec<T>);
+
+impl<T> Default for SomeVec<T> {
+    fn default() -> Self {
+        SomeVec(Vec::new())
+    }
+}
+impl<T> Extend<Option<T>> for SomeVec<T> {
+    fn extend<Iter: IntoIterator<Item = Option<T>>>(&mut self, iter: Iter) {
+        self.0.extend(iter.into_iter().flatten())
+    }
 }
 
 #[derive(Debug, Default)]

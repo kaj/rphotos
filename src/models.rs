@@ -99,7 +99,7 @@ impl std::ops::Deref for PhotoDetails {
     }
 }
 
-#[derive(AsChangeset, Clone, Debug, Identifiable, Queryable)]
+#[derive(AsChangeset, Clone, Debug, Identifiable, Queryable, Selectable)]
 pub struct Photo {
     pub id: i32,
     pub path: String,
