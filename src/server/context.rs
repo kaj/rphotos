@@ -3,9 +3,8 @@ use crate::adm::result::Error;
 use crate::dbopt::{PgPool, PooledPg};
 use crate::fetch_places::OverpassOpt;
 use crate::photosdir::PhotosDir;
-use diesel::r2d2::{Pool, PooledConnection};
 use medallion::{Header, Payload, Token};
-use r2d2_memcache::MemcacheConnectionManager;
+use r2d2_memcache::{r2d2, MemcacheConnectionManager};
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,8 +14,8 @@ use warp::path::{self, FullPath};
 use warp::{self, Filter};
 
 pub type ContextFilter = BoxedFilter<(Context,)>;
-type MemcachePool = Pool<MemcacheConnectionManager>;
-type PooledMemcache = PooledConnection<MemcacheConnectionManager>;
+type MemcachePool = r2d2::Pool<MemcacheConnectionManager>;
+type PooledMemcache = r2d2::PooledConnection<MemcacheConnectionManager>;
 
 pub fn create_session_filter(args: &Args) -> Result<ContextFilter, Error> {
     let global = Arc::new(GlobalContext::new(args)?);
@@ -61,7 +60,7 @@ impl GlobalContext {
                 Error::Other(format!("Failed to create db pool: {e}"))
             })?,
             photosdir: PhotosDir::new(&args.photos.photos_dir),
-            memcache_pool: Pool::builder()
+            memcache_pool: r2d2::Pool::builder()
                 .connection_timeout(Duration::from_secs(1))
                 .build(mc_manager)
                 .map_err(|e| {
@@ -121,8 +120,8 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn db(&self) -> Result<PooledPg> {
-        Ok(self.global.db_pool.get()?)
+    pub async fn db(&self) -> Result<PooledPg> {
+        Ok(self.global.db_pool.get().await?)
     }
     pub fn db_pool(&self) -> PgPool {
         self.global.db_pool.clone()

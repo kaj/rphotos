@@ -1,12 +1,14 @@
 use crate::Error;
-use diesel::pg::PgConnection;
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel::{Connection, ConnectionError};
-use std::time::{Duration, Instant};
+use diesel::ConnectionError;
+use diesel_async::pooled_connection::deadpool;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::{AsyncConnection, AsyncPgConnection};
+use std::time::Instant;
 use tracing::debug;
 
-pub type PgPool = Pool<ConnectionManager<PgConnection>>;
-pub type PooledPg = PooledConnection<ConnectionManager<PgConnection>>;
+/// An asynchronous postgres database connection pool.
+pub type PgPool = deadpool::Pool<AsyncPgConnection>;
+pub type PooledPg = deadpool::Object<AsyncPgConnection>;
 
 #[derive(clap::Parser)]
 pub struct DbOpt {
@@ -16,19 +18,18 @@ pub struct DbOpt {
 }
 
 impl DbOpt {
-    pub fn connect(&self) -> Result<PgConnection, ConnectionError> {
+    pub async fn connect(&self) -> Result<AsyncPgConnection, ConnectionError> {
         let time = Instant::now();
-        let db = PgConnection::establish(&self.db_url)?;
+        let db = AsyncPgConnection::establish(&self.db_url).await?;
         debug!("Got db connection in {:?}", time.elapsed());
         Ok(db)
     }
     pub fn create_pool(&self) -> Result<PgPool, Error> {
         let time = Instant::now();
-        let pool = Pool::builder()
-            .min_idle(Some(2))
-            .test_on_check_out(false)
-            .connection_timeout(Duration::from_millis(500))
-            .build(ConnectionManager::new(&self.db_url))?;
+        let config = AsyncDieselConnectionManager::new(&self.db_url);
+        let pool = PgPool::builder(config)
+            .build()
+            .map_err(|e| Error::Other(format!("Pool creating error: {e}")))?;
         debug!("Created pool in {:?}", time.elapsed());
         Ok(pool)
     }

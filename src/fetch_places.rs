@@ -1,7 +1,7 @@
-use crate::dbopt::PgPool;
 use crate::models::{Coord, Place};
 use crate::DbOpt;
 use diesel::prelude::*;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use reqwest::{self, Client, Response};
 use serde_json::Value;
 use slug::slugify;
@@ -26,7 +26,7 @@ pub struct Fetchplaces {
 
 impl Fetchplaces {
     pub async fn run(&self) -> Result<(), super::adm::result::Error> {
-        let db = self.db.create_pool()?;
+        let mut db = self.db.connect().await?;
         if self.auto {
             println!("Should find {} photos to fetch places for", self.limit);
             use crate::schema::photo_places::dsl as place;
@@ -38,14 +38,15 @@ impl Fetchplaces {
                 ))
                 .order(pos::photo_id.desc())
                 .limit(self.limit)
-                .load::<(i32, Coord)>(&mut db.get()?)?;
+                .load::<(i32, Coord)>(&mut db)
+                .await?;
             for (photo_id, coord) in result {
                 println!("Find places for #{photo_id}, {coord:?}");
-                self.overpass.update_image_places(&db, photo_id).await?;
+                self.overpass.update_image_places(&mut db, photo_id).await?;
             }
         } else {
             for photo in &self.photos {
-                self.overpass.update_image_places(&db, *photo).await?;
+                self.overpass.update_image_places(&mut db, *photo).await?;
             }
         }
         Ok(())
@@ -66,18 +67,15 @@ impl OverpassOpt {
     #[instrument(skip(self, db))]
     pub async fn update_image_places(
         &self,
-        db: &PgPool,
+        db: &mut AsyncPgConnection,
         image: i32,
     ) -> Result<(), Error> {
         use crate::schema::positions::dsl::*;
         let coord = positions
             .filter(photo_id.eq(image))
             .select((latitude, longitude))
-            .first::<Coord>(
-                &mut db
-                    .get()
-                    .map_err(|e| Error::Pool(image, e.to_string()))?,
-            )
+            .first::<Coord>(db)
+            .await
             .optional()
             .map_err(|e| Error::Db(image, e))?
             .ok_or(Error::NoPosition(image))?;
@@ -98,16 +96,14 @@ impl OverpassOpt {
             .and_then(|o| o.get("elements"))
             .and_then(Value::as_array)
         {
-            let mut c =
-                db.get().map_err(|e| Error::Pool(image, e.to_string()))?;
             for obj in elements {
                 if let (Some(t_osm_id), Some((name, level))) =
                     (osm_id(obj), name_and_level(obj))
                 {
                     debug!("{}: {} (level {})", t_osm_id, name, level);
-                    let place =
-                        get_or_create_place(&mut c, t_osm_id, name, level)
-                            .map_err(|e| Error::Db(image, e))?;
+                    let place = get_or_create_place(db, t_osm_id, name, level)
+                        .await
+                        .map_err(|e| Error::Db(image, e))?;
                     if place.osm_id.is_none() {
                         debug!("Matched {:?} by name, update osm info", place);
                         use crate::schema::places::dsl::*;
@@ -117,7 +113,8 @@ impl OverpassOpt {
                                 osm_id.eq(Some(t_osm_id)),
                                 osm_level.eq(level),
                             ))
-                            .execute(&mut c)
+                            .execute(db)
+                            .await
                             .map_err(|e| Error::Db(image, e))?;
                     }
                     use crate::models::PhotoPlace;
@@ -125,7 +122,7 @@ impl OverpassOpt {
                     let q = photo_places
                         .filter(photo_id.eq(image))
                         .filter(place_id.eq(place.id));
-                    if q.first::<PhotoPlace>(&mut c).is_ok() {
+                    if q.first::<PhotoPlace>(db).await.is_ok() {
                         debug!(
                             "Photo #{} already has {} ({})",
                             image, place.id, place.place_name
@@ -136,7 +133,8 @@ impl OverpassOpt {
                                 photo_id.eq(image),
                                 place_id.eq(place.id),
                             ))
-                            .execute(&mut c)
+                            .execute(db)
+                            .await
                             .map_err(|e| Error::Db(image, e))?;
                     }
                 } else {
@@ -294,45 +292,51 @@ fn tag_str<'a>(tags: &'a Value, name: &str) -> Option<&'a str> {
     tags.get(name).and_then(Value::as_str)
 }
 
-fn get_or_create_place(
-    c: &mut PgConnection,
+async fn get_or_create_place(
+    c: &mut AsyncPgConnection,
     t_osm_id: i64,
     name: &str,
     level: i16,
 ) -> Result<Place, diesel::result::Error> {
     use crate::schema::places::dsl::*;
-    places
+    let place = places
         .filter(
             osm_id
                 .eq(Some(t_osm_id))
                 .or(place_name.eq(name).and(osm_id.is_null())),
         )
         .first::<Place>(c)
-        .or_else(|_| {
-            let mut result = diesel::insert_into(places)
+        .await
+        .optional()?;
+    if let Some(place) = place {
+        Ok(place)
+    } else {
+        let mut result = diesel::insert_into(places)
+            .values((
+                place_name.eq(name),
+                slug.eq(slugify(name)),
+                osm_id.eq(Some(t_osm_id)),
+                osm_level.eq(Some(level)),
+            ))
+            .get_result::<Place>(c)
+            .await;
+        let mut attempt = 1;
+        while is_duplicate(&result) && attempt < 25 {
+            info!("Attempt #{} got {:?}, trying again", attempt, result);
+            attempt += 1;
+            let name = format!("{name} ({attempt})");
+            result = diesel::insert_into(places)
                 .values((
-                    place_name.eq(name),
-                    slug.eq(slugify(name)),
+                    place_name.eq(&name),
+                    slug.eq(&slugify(&name)),
                     osm_id.eq(Some(t_osm_id)),
                     osm_level.eq(Some(level)),
                 ))
-                .get_result::<Place>(c);
-            let mut attempt = 1;
-            while is_duplicate(&result) && attempt < 25 {
-                info!("Attempt #{} got {:?}, trying again", attempt, result);
-                attempt += 1;
-                let name = format!("{name} ({attempt})");
-                result = diesel::insert_into(places)
-                    .values((
-                        place_name.eq(&name),
-                        slug.eq(&slugify(&name)),
-                        osm_id.eq(Some(t_osm_id)),
-                        osm_level.eq(Some(level)),
-                    ))
-                    .get_result::<Place>(c);
-            }
-            result
-        })
+                .get_result::<Place>(c)
+                .await;
+        }
+        result
+    }
 }
 
 fn is_duplicate<T>(r: &Result<T, diesel::result::Error>) -> bool {

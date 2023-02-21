@@ -1,11 +1,11 @@
 use super::result::Error;
 use crate::models::{Camera, Modification, Photo};
 use crate::myexif::ExifData;
-use crate::photosdir::PhotosDir;
+use crate::photosdir::{load_meta, PhotosDir};
 use crate::{DbOpt, DirOpt};
 use diesel::insert_into;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use std::path::Path;
 use tracing::{debug, info, warn};
 
@@ -21,46 +21,60 @@ pub struct Findphotos {
 }
 
 impl Findphotos {
-    pub fn run(&self) -> Result<(), Error> {
+    pub async fn run(&self) -> Result<(), Error> {
         let pd = PhotosDir::new(&self.photos.photos_dir);
-        let mut db = self.db.connect()?;
+        let mut db = self.db.connect().await?;
         if !self.base.is_empty() {
             for base in &self.base {
-                crawl(&mut db, &pd, Path::new(base)).map_err(|e| {
+                crawl(&mut db, &pd, Path::new(base)).await.map_err(|e| {
                     Error::Other(format!("Failed to crawl {base}: {e}"))
                 })?;
             }
         } else {
             crawl(&mut db, &pd, Path::new(""))
+                .await
                 .map_err(|e| Error::Other(format!("Failed to crawl: {e}")))?;
         }
         Ok(())
     }
 }
 
-fn crawl(
-    db: &mut PgConnection,
+async fn crawl(
+    db: &mut AsyncPgConnection,
     photos: &PhotosDir,
     only_in: &Path,
 ) -> Result<(), Error> {
-    photos.find_files(only_in, &mut |path, exif| match save_photo(
-        db, path, exif,
-    ) {
-        Ok(()) => debug!("Saved photo {}", path),
-        Err(e) => warn!("Failed to save photo {}: {:?}", path, e),
-    })?;
+    use futures_lite::stream::StreamExt;
+    let mut entries = photos.walk_dir(only_in);
+    loop {
+        match entries.next().await {
+            None => break,
+            Some(Err(e)) => return Err(e.into()),
+            Some(Ok(entry)) => {
+                if entry.file_type().await?.is_file() {
+                    let path = entry.path();
+                    if let Some(exif) = load_meta(&path) {
+                        let sp = photos.subpath(&path)?;
+                        save_photo(db, sp, &exif).await?;
+                    } else {
+                        debug!("Not an image: {path:?}");
+                    }
+                }
+            }
+        }
+    }
     Ok(())
 }
 
-fn save_photo(
-    db: &mut PgConnection,
+async fn save_photo(
+    db: &mut AsyncPgConnection,
     file_path: &str,
     exif: &ExifData,
 ) -> Result<(), Error> {
     let width = exif.width.ok_or(Error::MissingWidth)?;
     let height = exif.height.ok_or(Error::MissingHeight)?;
     let rot = exif.rotation()?;
-    let cam = find_camera(db, exif)?;
+    let cam = find_camera(db, exif).await?;
     let photo = match Photo::create_or_set_basics(
         db,
         file_path,
@@ -69,7 +83,9 @@ fn save_photo(
         exif.date(),
         rot,
         cam,
-    )? {
+    )
+    .await?
+    {
         Modification::Created(photo) => {
             info!("Created #{}, {}", photo.id, photo.path);
             photo
@@ -90,6 +106,7 @@ fn save_photo(
             .filter(photo_id.eq(photo.id))
             .select((latitude, longitude))
             .first::<(i32, i32)>(db)
+            .await
         {
             let lat = (lat * 1e6) as i32;
             let long = (long * 1e6) as i32;
@@ -109,18 +126,19 @@ fn save_photo(
                     longitude.eq((long * 1e6) as i32),
                 ))
                 .execute(db)
+                .await
                 .expect("Insert image position");
         }
     }
     Ok(())
 }
 
-fn find_camera(
-    db: &mut PgConnection,
+async fn find_camera(
+    db: &mut AsyncPgConnection,
     exif: &ExifData,
 ) -> Result<Option<Camera>, Error> {
     if let Some((make, model)) = exif.camera() {
-        let cam = Camera::get_or_create(db, make, model)?;
+        let cam = Camera::get_or_create(db, make, model).await?;
         return Ok(Some(cam));
     }
     Ok(None)

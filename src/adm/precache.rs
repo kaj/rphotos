@@ -4,6 +4,7 @@ use crate::photosdir::{get_scaled_jpeg, PhotosDir};
 use crate::schema::photos::dsl::{date, is_public};
 use crate::{CacheOpt, DbOpt, DirOpt};
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use r2d2_memcache::memcache::Client;
 use std::time::{Duration, Instant};
 use tracing::{debug, info};
@@ -37,7 +38,8 @@ impl Args {
         let (mut n, mut n_stored) = (0, 0);
         let photos = Photo::query(true)
             .order((is_public.desc(), date.desc().nulls_last()))
-            .load::<Photo>(&mut self.db.connect()?)?;
+            .load::<Photo>(&mut self.db.connect().await?)
+            .await?;
         let no_expire = 0;
         let pd = PhotosDir::new(&self.photos.photos_dir);
         for photo in photos {

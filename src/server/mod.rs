@@ -30,6 +30,7 @@ use crate::pidfiles::handle_pid_file;
 use crate::templates::{self, Html, RenderRucte};
 use chrono::Datelike;
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -84,7 +85,7 @@ pub async fn run(args: &Args) -> Result<(), Error> {
         .and(static_routes)
         .or(login::routes(s()))
         .or(path("img").and(
-            param().and(end()).and(get()).and(s()).map(photo_details)
+            param().and(end()).and(get()).and(s()).then(photo_details)
                 .or(param().and(end()).and(get()).and(s()).then(image::show_image))
                 .unify()
                 .map(wrap)))
@@ -92,9 +93,9 @@ pub async fn run(args: &Args) -> Result<(), Error> {
         .or(path("person").and(person_routes(s())))
         .or(path("place").and(place_routes(s())))
         .or(path("tag").and(tag_routes(s())))
-        .or(path("random").and(end()).and(get()).and(s()).map(random_image).map(wrap))
+        .or(path("random").and(end()).and(get()).and(s()).then(random_image).map(wrap))
         .or(path("ac").and(autocomplete::routes(s())))
-        .or(path("search").and(end()).and(get()).and(s()).and(query()).map(search).map(wrap))
+        .or(path("search").and(end()).and(get()).and(s()).and(query()).then(search).map(wrap))
         .or(path("api").and(api::routes(s())))
         .or(path("adm").and(admin::routes(s())))
         .or(path("robots.txt")
@@ -139,23 +140,24 @@ async fn static_file(name: Tail) -> Result<Response> {
         .ise()
 }
 
-fn random_image(context: Context) -> Result<Response> {
+async fn random_image(context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::id;
-    use diesel::dsl::sql;
-    use diesel::sql_types::Integer;
+    sql_function! { fn random() -> Integer };
+
     let photo = Photo::query(context.is_authorized())
         .select(id)
         .limit(1)
-        .order(sql::<Integer>("random()"))
-        .first(&mut context.db()?)?;
+        .order(random())
+        .first(&mut context.db().await?)
+        .await?;
 
     info!("Random: {:?}", photo);
     Ok(redirect_to_img(photo))
 }
 
-fn photo_details(id: i32, context: Context) -> Result<Response> {
-    let mut c = context.db()?;
-    let photo = or_404q!(PhotoDetails::load(id, &mut c), context);
+async fn photo_details(id: i32, context: Context) -> Result<Response> {
+    let mut c = context.db().await?;
+    let photo = or_404q!(PhotoDetails::load(id, &mut c).await, context);
 
     if context.is_authorized() || photo.is_public() {
         Ok(Builder::new().html(|o| {

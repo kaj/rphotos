@@ -3,6 +3,7 @@ use super::{error::ViewResult, Context, Result, ViewError};
 use crate::models::{Photo, SizeTag};
 use crate::photosdir::{get_scaled_jpeg, ImageLoadFailed};
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use std::str::FromStr;
 use warp::http::response::Builder;
 use warp::http::{header, StatusCode};
@@ -10,7 +11,10 @@ use warp::reply::Response;
 
 pub async fn show_image(img: ImgName, context: Context) -> Result<Response> {
     use crate::schema::photos::dsl::photos;
-    let tphoto = photos.find(img.id).first::<Photo>(&mut context.db()?);
+    let tphoto = photos
+        .find(img.id)
+        .first::<Photo>(&mut context.db().await?)
+        .await;
     if let Ok(tphoto) = tphoto {
         if context.is_authorized() || tphoto.is_public() {
             if img.size == SizeTag::Large {

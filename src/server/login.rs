@@ -1,7 +1,7 @@
 use super::{wrap, BuilderExt, Context, ContextFilter, RenderRucte, Result};
 use crate::templates;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lazy_regex::regex_is_match;
 use serde::Deserialize;
 use tracing::info;
@@ -16,7 +16,7 @@ use warp::{body, get, path, post, Filter};
 pub fn routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
     let s = move || s.clone();
     let get_form = get().and(s()).and(query()).map(get_login);
-    let post_form = post().and(s()).and(body::form()).map(post_login);
+    let post_form = post().and(s()).and(body::form()).then(post_login);
     let login = path("login")
         .and(end())
         .and(get_form.or(post_form).unify().map(wrap));
@@ -36,10 +36,10 @@ struct NextQ {
     next: Option<String>,
 }
 
-fn post_login(context: Context, form: LoginForm) -> Result<Response> {
+async fn post_login(context: Context, form: LoginForm) -> Result<Response> {
     let next = sanitize_next(form.next.as_ref().map(AsRef::as_ref));
-    let mut db = context.db()?;
-    if let Some(user) = form.validate(&mut db) {
+    let mut db = context.db().await?;
+    if let Some(user) = form.validate(&mut db).await {
         let token = context.make_token(&user)?;
         return Ok(Builder::new()
             .header(
@@ -64,12 +64,16 @@ pub struct LoginForm {
 
 impl LoginForm {
     /// Retur user if and only if password is correct for user.
-    pub fn validate(&self, db: &mut PgConnection) -> Option<String> {
+    pub async fn validate(
+        &self,
+        db: &mut AsyncPgConnection,
+    ) -> Option<String> {
         use crate::schema::users::dsl::*;
         if let Ok(hash) = users
             .filter(username.eq(&self.user))
             .select(password)
             .first::<String>(db)
+            .await
         {
             if djangohashers::check_password_tolerant(&self.password, &hash) {
                 info!("User {} logged in", self.user);

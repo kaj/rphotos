@@ -3,38 +3,46 @@ use super::views_by_date::date_of_img;
 use super::{Context, ImgRange, PhotoLink, Result};
 use crate::models::{Coord, Photo};
 use crate::schema::photos;
-use diesel::pg::{Pg, PgConnection};
+use chrono::NaiveDateTime;
+use diesel::pg::Pg;
 use diesel::prelude::*;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use tracing::debug;
 
-pub fn links_by_time(
+pub async fn links_by_time(
     context: &Context,
     photos: photos::BoxedQuery<'_, Pg>,
     range: ImgRange,
     with_date: bool,
 ) -> Result<(Vec<PhotoLink>, Vec<(Coord, i32)>)> {
-    let mut c = context.db()?;
+    let mut c = context.db().await?;
     use crate::schema::photos::dsl::{date, id};
-    let photos =
-        if let Some(from_date) = range.from.map(|i| date_of_img(&mut c, i)) {
-            photos.filter(date.ge(from_date))
-        } else {
-            photos
-        };
-    let photos =
-        if let Some(to_date) = range.to.map(|i| date_of_img(&mut c, i)) {
-            photos.filter(date.le(to_date))
-        } else {
-            photos
-        };
+    let photos = if let Some(fr) = date_of_opt_img(&mut c, range.from).await {
+        photos.filter(date.ge(fr))
+    } else {
+        photos
+    };
+    let photos = if let Some(to) = date_of_opt_img(&mut c, range.to).await {
+        photos.filter(date.le(to))
+    } else {
+        photos
+    };
     let photos = photos
         .order((date.desc().nulls_last(), id.desc()))
-        .load(&mut c)?;
+        .load(&mut c)
+        .await?;
     let baseurl = UrlString::new(context.path_without_query());
     Ok((
         split_to_group_links(&photos, &baseurl, with_date),
-        get_positions(&photos, &mut c)?,
+        get_positions(&photos, &mut c).await?,
     ))
+}
+
+async fn date_of_opt_img(
+    db: &mut AsyncPgConnection,
+    img: Option<i32>,
+) -> Option<NaiveDateTime> {
+    date_of_img(db, img?).await
 }
 
 pub fn split_to_group_links(
@@ -57,15 +65,16 @@ pub fn split_to_group_links(
     }
 }
 
-pub fn get_positions(
+pub async fn get_positions(
     photos: &[Photo],
-    c: &mut PgConnection,
+    c: &mut AsyncPgConnection,
 ) -> Result<Vec<(Coord, i32)>> {
     use crate::schema::positions::dsl::*;
     Ok(positions
         .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))
         .select((photo_id, latitude, longitude))
-        .load(c)?
+        .load(c)
+        .await?
         .into_iter()
         .map(|(p_id, lat, long): (i32, i32, i32)| ((lat, long).into(), p_id))
         .collect())
@@ -92,7 +101,7 @@ fn find_largest(groups: &[&[Photo]]) -> usize {
     let mut found = 0;
     let mut largest = 0.0;
     for (i, g) in groups.iter().enumerate() {
-        let time = 1 + g.first().map(timestamp).unwrap_or(0)
+        let time = 1 + g.iter().next().map(timestamp).unwrap_or(0)
             - g.last().map(timestamp).unwrap_or(0);
         let score = (g.len() as f64).powi(3) * (time as f64);
         if score > largest {

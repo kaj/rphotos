@@ -9,18 +9,18 @@ use crate::schema::photo_tags::dsl as pt;
 use crate::schema::photos::dsl as p;
 use crate::templates;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use tracing::warn;
 use warp::http::response::Builder;
 use warp::reply::Response;
 
-pub fn search(
+pub async fn search(
     context: Context,
     query: Vec<(String, String)>,
 ) -> Result<Response> {
-    let mut db = context.db()?;
-    let query = SearchQuery::load(query, &mut db)?;
+    let mut db = context.db().await?;
+    let query = SearchQuery::load(query, &mut db).await?;
 
     let mut photos = Photo::query(context.is_authorized());
     if let Some(since) = query.since.as_ref() {
@@ -71,10 +71,11 @@ pub fn search(
 
     let photos = photos
         .order((p::date.desc().nulls_last(), p::id.desc()))
-        .load(&mut db)?;
+        .load(&mut db)
+        .await?;
 
     let n = photos.len();
-    let coords = get_positions(&photos, &mut db)?;
+    let coords = get_positions(&photos, &mut db).await?;
     let links = split_to_group_links(&photos, &query.to_base_url(), true);
 
     Ok(Builder::new().html(|o| {
@@ -104,12 +105,12 @@ pub struct Filter<T> {
 }
 
 impl<T: Facet> Filter<T> {
-    fn load(val: &str, db: &mut PgConnection) -> Option<Filter<T>> {
+    async fn load(val: &str, db: &mut AsyncPgConnection) -> Option<Filter<T>> {
         let (inc, slug) = match val.strip_prefix('!') {
             Some(val) => (false, val),
             None => (true, val),
         };
-        match T::by_slug(slug, db) {
+        match T::by_slug(slug, db).await {
             Ok(item) => Some(Filter { inc, item }),
             Err(err) => {
                 warn!("No filter {:?}: {:?}", slug, err);
@@ -120,9 +121,9 @@ impl<T: Facet> Filter<T> {
 }
 
 impl SearchQuery {
-    fn load(
+    async fn load(
         query: Vec<(String, String)>,
-        db: &mut PgConnection,
+        db: &mut AsyncPgConnection,
     ) -> Result<Self> {
         let mut result = SearchQuery::default();
         let (mut s_d, mut s_t, mut u_d, mut u_t) = (None, None, None, None);
@@ -148,17 +149,17 @@ impl SearchQuery {
                     result.q = val;
                 }
                 "t" => {
-                    if let Some(f) = Filter::load(&val, db) {
+                    if let Some(f) = Filter::load(&val, db).await {
                         result.t.push(f);
                     }
                 }
                 "p" => {
-                    if let Some(f) = Filter::load(&val, db) {
+                    if let Some(f) = Filter::load(&val, db).await {
                         result.p.push(f);
                     }
                 }
                 "l" => {
-                    if let Some(f) = Filter::load(&val, db) {
+                    if let Some(f) = Filter::load(&val, db).await {
                         result.l.push(f);
                     }
                 }
@@ -175,11 +176,13 @@ impl SearchQuery {
                 }
                 "from" => {
                     result.since =
-                        QueryDateTime::from_img(val.parse().req("from")?, db)?;
+                        QueryDateTime::from_img(val.parse().req("from")?, db)
+                            .await?;
                 }
                 "to" => {
                     result.until =
-                        QueryDateTime::from_img(val.parse().req("to")?, db)?;
+                        QueryDateTime::from_img(val.parse().req("to")?, db)
+                            .await?;
                 }
                 _ => (), // ignore unknown query parameters
             }
@@ -222,12 +225,16 @@ impl QueryDateTime {
             NaiveTime::from_hms_milli_opt(23, 59, 59, 999).unwrap();
         QueryDateTime::new(datetime_from_parts(date, time, until_midnight))
     }
-    fn from_img(photo_id: i32, db: &mut PgConnection) -> Result<Self> {
+    async fn from_img(
+        photo_id: i32,
+        db: &mut AsyncPgConnection,
+    ) -> Result<Self> {
         Ok(QueryDateTime::new(
             p::photos
                 .select(p::date)
                 .filter(p::id.eq(photo_id))
-                .first(db)?,
+                .first(db)
+                .await?,
         ))
     }
     fn as_ref(&self) -> Option<&NaiveDateTime> {

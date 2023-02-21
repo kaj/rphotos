@@ -10,11 +10,13 @@ use crate::schema::photos::dsl as p;
 use crate::schema::places::dsl as l;
 use crate::schema::positions::dsl as pos;
 use crate::schema::tags::dsl as t;
+use async_trait::async_trait;
 use chrono::naive::NaiveDateTime;
-use diesel::pg::{Pg, PgConnection};
+use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::sql_types::Integer;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use slug::slugify;
 use std::cmp::max;
 
@@ -28,17 +30,22 @@ pub struct PhotoDetails {
     pub camera: Option<Camera>,
 }
 impl PhotoDetails {
-    pub fn load(id: i32, db: &mut PgConnection) -> Result<Self, Error> {
+    pub async fn load(
+        id: i32,
+        db: &mut AsyncPgConnection,
+    ) -> Result<Self, Error> {
         use crate::schema::photos::dsl::photos;
-        let photo = photos.find(id).first::<Photo>(db)?;
-        let attribution = photo
-            .attribution_id
-            .map(|i| a::attributions.find(i).select(a::name).first(db))
-            .transpose()?;
-        let camera = photo
-            .camera_id
-            .map(|i| c::cameras.find(i).first(db))
-            .transpose()?;
+        let photo = photos.find(id).first::<Photo>(db).await?;
+        let attribution = if let Some(id) = photo.attribution_id {
+            Some(a::attributions.find(id).select(a::name).first(db).await?)
+        } else {
+            None
+        };
+        let camera = if let Some(id) = photo.camera_id {
+            Some(c::cameras.find(id).first(db).await?)
+        } else {
+            None
+        };
 
         Ok(PhotoDetails {
             photo,
@@ -50,7 +57,8 @@ impl PhotoDetails {
                             .filter(ph::photo_id.eq(id)),
                     ),
                 )
-                .load(db)?,
+                .load(db)
+                .await?,
             places: l::places
                 .filter(
                     l::id.eq_any(
@@ -60,7 +68,8 @@ impl PhotoDetails {
                     ),
                 )
                 .order(l::osm_level.desc().nulls_first())
-                .load(db)?,
+                .load(db)
+                .await?,
             tags: t::tags
                 .filter(
                     t::id.eq_any(
@@ -69,11 +78,13 @@ impl PhotoDetails {
                             .filter(pt::photo_id.eq(id)),
                     ),
                 )
-                .load(db)?,
+                .load(db)
+                .await?,
             pos: pos::positions
                 .filter(pos::photo_id.eq(id))
                 .select((pos::latitude, pos::longitude))
                 .first(db)
+                .await
                 .optional()?,
             attribution,
             camera,
@@ -132,8 +143,8 @@ impl Photo {
         }
     }
 
-    pub fn update_by_path(
-        db: &mut PgConnection,
+    pub async fn update_by_path(
+        db: &mut AsyncPgConnection,
         file_path: &str,
         newwidth: i32,
         newheight: i32,
@@ -143,6 +154,7 @@ impl Photo {
         if let Some(mut pic) = p::photos
             .filter(p::path.eq(&file_path.to_string()))
             .first::<Photo>(db)
+            .await
             .optional()?
         {
             let mut change = false;
@@ -151,20 +163,23 @@ impl Photo {
                 change = true;
                 pic = diesel::update(p::photos.find(pic.id))
                     .set((p::width.eq(newwidth), p::height.eq(newheight)))
-                    .get_result::<Photo>(db)?;
+                    .get_result::<Photo>(db)
+                    .await?;
             }
             if exifdate.is_some() && exifdate != pic.date {
                 change = true;
                 pic = diesel::update(p::photos.find(pic.id))
                     .set(p::date.eq(exifdate))
-                    .get_result::<Photo>(db)?;
+                    .get_result::<Photo>(db)
+                    .await?;
             }
             if let Some(ref camera) = *camera {
                 if pic.camera_id != Some(camera.id) {
                     change = true;
                     pic = diesel::update(p::photos.find(pic.id))
                         .set(p::camera_id.eq(camera.id))
-                        .get_result::<Photo>(db)?;
+                        .get_result::<Photo>(db)
+                        .await?;
                 }
             }
             Ok(Some(if change {
@@ -177,8 +192,8 @@ impl Photo {
         }
     }
 
-    pub fn create_or_set_basics(
-        db: &mut PgConnection,
+    pub async fn create_or_set_basics(
+        db: &mut AsyncPgConnection,
         file_path: &str,
         newwidth: i32,
         newheight: i32,
@@ -188,7 +203,9 @@ impl Photo {
     ) -> Result<Modification<Photo>, Error> {
         if let Some(result) = Self::update_by_path(
             db, file_path, newwidth, newheight, exifdate, &camera,
-        )? {
+        )
+        .await?
+        {
             Ok(result)
         } else {
             let pic = diesel::insert_into(p::photos)
@@ -200,7 +217,8 @@ impl Photo {
                     p::height.eq(newheight),
                     p::camera_id.eq(camera.map(|c| c.id)),
                 ))
-                .get_result::<Photo>(db)?;
+                .get_result::<Photo>(db)
+                .await?;
             Ok(Modification::Created(pic))
         }
     }
@@ -237,8 +255,12 @@ impl Photo {
     }
 }
 
+#[async_trait]
 pub trait Facet {
-    fn by_slug(slug: &str, db: &mut PgConnection) -> Result<Self, Error>
+    async fn by_slug(
+        slug: &str,
+        db: &mut AsyncPgConnection,
+    ) -> Result<Self, Error>
     where
         Self: Sized;
 }
@@ -250,9 +272,13 @@ pub struct Tag {
     pub tag_name: String,
 }
 
+#[async_trait]
 impl Facet for Tag {
-    fn by_slug(slug: &str, db: &mut PgConnection) -> Result<Tag, Error> {
-        t::tags.filter(t::slug.eq(slug)).first(db)
+    async fn by_slug(
+        slug: &str,
+        db: &mut AsyncPgConnection,
+    ) -> Result<Tag, Error> {
+        t::tags.filter(t::slug.eq(slug)).first(db).await
     }
 }
 
@@ -271,27 +297,33 @@ pub struct Person {
 }
 
 impl Person {
-    pub fn get_or_create_name(
-        db: &mut PgConnection,
+    pub async fn get_or_create_name(
+        db: &mut AsyncPgConnection,
         name: &str,
     ) -> Result<Person, Error> {
-        h::people
+        if let Some(name) = h::people
             .filter(h::person_name.ilike(name))
             .first(db)
-            .or_else(|_| {
-                diesel::insert_into(h::people)
-                    .values((
-                        h::person_name.eq(name),
-                        h::slug.eq(&slugify(name)),
-                    ))
-                    .get_result(db)
-            })
+            .await
+            .optional()?
+        {
+            Ok(name)
+        } else {
+            diesel::insert_into(h::people)
+                .values((h::person_name.eq(name), h::slug.eq(&slugify(name))))
+                .get_result(db)
+                .await
+        }
     }
 }
 
+#[async_trait]
 impl Facet for Person {
-    fn by_slug(slug: &str, db: &mut PgConnection) -> Result<Person, Error> {
-        h::people.filter(h::slug.eq(slug)).first(db)
+    async fn by_slug(
+        slug: &str,
+        db: &mut AsyncPgConnection,
+    ) -> Result<Person, Error> {
+        h::people.filter(h::slug.eq(slug)).first(db).await
     }
 }
 
@@ -311,9 +343,13 @@ pub struct Place {
     pub osm_level: Option<i16>,
 }
 
+#[async_trait]
 impl Facet for Place {
-    fn by_slug(slug: &str, db: &mut PgConnection) -> Result<Place, Error> {
-        l::places.filter(l::slug.eq(slug)).first(db)
+    async fn by_slug(
+        slug: &str,
+        db: &mut AsyncPgConnection,
+    ) -> Result<Place, Error> {
+        l::places.filter(l::slug.eq(slug)).first(db).await
     }
 }
 
@@ -332,8 +368,8 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn get_or_create(
-        db: &mut PgConnection,
+    pub async fn get_or_create(
+        db: &mut AsyncPgConnection,
         make: &str,
         modl: &str,
     ) -> Result<Camera, Error> {
@@ -341,6 +377,7 @@ impl Camera {
             .filter(c::manufacturer.eq(make))
             .filter(c::model.eq(modl))
             .first::<Camera>(db)
+            .await
             .optional()?
         {
             Ok(camera)
@@ -348,6 +385,7 @@ impl Camera {
             diesel::insert_into(c::cameras)
                 .values((c::manufacturer.eq(make), c::model.eq(modl)))
                 .get_result(db)
+                .await
         }
     }
 }
