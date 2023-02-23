@@ -257,10 +257,10 @@ impl Photo {
 
 #[async_trait]
 pub trait Facet {
-    async fn by_slug(
-        slug: &str,
+    async fn load_slugs(
+        slugs: &[String],
         db: &mut AsyncPgConnection,
-    ) -> Result<Self, Error>
+    ) -> Result<Vec<Self>, Error>
     where
         Self: Sized;
 }
@@ -274,11 +274,11 @@ pub struct Tag {
 
 #[async_trait]
 impl Facet for Tag {
-    async fn by_slug(
-        slug: &str,
+    async fn load_slugs(
+        slugs: &[String],
         db: &mut AsyncPgConnection,
-    ) -> Result<Tag, Error> {
-        t::tags.filter(t::slug.eq(slug)).first(db).await
+    ) -> Result<Vec<Tag>, Error> {
+        t::tags.filter(t::slug.eq_any(slugs)).load(db).await
     }
 }
 
@@ -319,11 +319,11 @@ impl Person {
 
 #[async_trait]
 impl Facet for Person {
-    async fn by_slug(
-        slug: &str,
+    async fn load_slugs(
+        slugs: &[String],
         db: &mut AsyncPgConnection,
-    ) -> Result<Person, Error> {
-        h::people.filter(h::slug.eq(slug)).first(db).await
+    ) -> Result<Vec<Person>, Error> {
+        h::people.filter(h::slug.eq_any(slugs)).load(db).await
     }
 }
 
@@ -345,11 +345,11 @@ pub struct Place {
 
 #[async_trait]
 impl Facet for Place {
-    async fn by_slug(
-        slug: &str,
+    async fn load_slugs(
+        slugs: &[String],
         db: &mut AsyncPgConnection,
-    ) -> Result<Place, Error> {
-        l::places.filter(l::slug.eq(slug)).first(db).await
+    ) -> Result<Vec<Place>, Error> {
+        l::places.filter(l::slug.eq_any(slugs)).load(db).await
     }
 }
 

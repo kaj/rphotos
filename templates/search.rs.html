@@ -10,14 +10,14 @@
   <form class="search" action="/search/" method="get">
     <label for="s_q" accesskey="s" title="Search">🔍</label>
     <div class="refs">
-      @for p in &query.p {
-        <label class="@if !p.inc {not }p">@p.item.person_name <input type="checkbox" name="p" value="@if !p.inc {!}@p.item.slug" checked/></label>
+      @for (p, inc) in &query.p {
+        <label class="@if !inc {not }p">@p.person_name <input type="checkbox" name="p" value="@if !inc {!}@p.slug" checked/></label>
       }
-      @for t in &query.t {
-        <label class="@if !t.inc {not }t">@t.item.tag_name <input type="checkbox" name="t" value="@if !t.inc {!}@t.item.slug" checked/></label>
+      @for (t, inc) in &query.t {
+        <label class="@if !inc {not }t">@t.tag_name <input type="checkbox" name="t" value="@if !inc {!}@t.slug" checked/></label>
       }
-      @for l in &query.l {
-        <label class="@if !l.inc {not }l">@l.item.place_name <input type="checkbox" name="l" value="@if !l.inc {!}@l.item.slug" checked/></label>
+      @for (l, inc) in &query.l {
+        <label class="@if !inc {not }l">@l.place_name <input type="checkbox" name="l" value="@if !inc {!}@l.slug" checked/></label>
       }
       @if let Some(pos) = &query.pos {
         <label@if !pos { class="not"}>pos <input type="checkbox" name="pos" value="@if !pos {!}t" checked/></label>
