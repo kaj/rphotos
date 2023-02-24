@@ -10,6 +10,8 @@ The format is based on
   - Use `diesel-async` with deadpool feature for database access.
   - A bunch of previously synchronous handlers are now async.
   - Some `.map` and simliar replaced with `if` blocks or `for` loops.
+* Refactored query parsing and facet handling in search (PR #11).
+  Should be more efficient now, especially for negative facets.
 * Avoid an extra query for the positions in search.
 
 
