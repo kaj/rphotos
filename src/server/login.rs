@@ -1,4 +1,5 @@
 use super::{wrap, BuilderExt, Context, ContextFilter, RenderRucte, Result};
+use crate::schema::users::dsl as u;
 use crate::templates;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
@@ -68,10 +69,9 @@ impl LoginForm {
         &self,
         db: &mut AsyncPgConnection,
     ) -> Option<String> {
-        use crate::schema::users::dsl::*;
-        if let Ok(hash) = users
-            .filter(username.eq(&self.user))
-            .select(password)
+        if let Ok(hash) = u::users
+            .filter(u::username.eq(&self.user))
+            .select(u::password)
             .first::<String>(db)
             .await
         {

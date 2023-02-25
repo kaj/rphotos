@@ -1,4 +1,8 @@
+use crate::models::PhotoPlace;
 use crate::models::{Coord, Place};
+use crate::schema::photo_places::dsl as pl;
+use crate::schema::places::dsl as l;
+use crate::schema::positions::dsl as ps;
 use crate::DbOpt;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
@@ -29,17 +33,16 @@ impl Fetchplaces {
         let mut db = self.db.connect().await?;
         if self.auto {
             println!("Should find {} photos to fetch places for", self.limit);
-            use crate::schema::photo_places::dsl as place;
-            use crate::schema::positions::dsl as pos;
-            let result = pos::positions
-                .select((pos::photo_id, (pos::latitude, pos::longitude)))
-                .filter(pos::photo_id.ne_all(
-                    place::photo_places.select(place::photo_id).distinct(),
-                ))
-                .order(pos::photo_id.desc())
-                .limit(self.limit)
-                .load::<(i32, Coord)>(&mut db)
-                .await?;
+            let result =
+                ps::positions
+                    .select((ps::photo_id, (ps::latitude, ps::longitude)))
+                    .filter(ps::photo_id.ne_all(
+                        pl::photo_places.select(pl::photo_id).distinct(),
+                    ))
+                    .order(ps::photo_id.desc())
+                    .limit(self.limit)
+                    .load::<(i32, Coord)>(&mut db)
+                    .await?;
             for (photo_id, coord) in result {
                 println!("Find places for #{photo_id}, {coord:?}");
                 self.overpass.update_image_places(&mut db, photo_id).await?;
@@ -70,10 +73,9 @@ impl OverpassOpt {
         db: &mut AsyncPgConnection,
         image: i32,
     ) -> Result<(), Error> {
-        use crate::schema::positions::dsl::*;
-        let coord = positions
-            .filter(photo_id.eq(image))
-            .select((latitude, longitude))
+        let coord = ps::positions
+            .filter(ps::photo_id.eq(image))
+            .select((ps::latitude, ps::longitude))
             .first::<Coord>(db)
             .await
             .optional()
@@ -106,32 +108,29 @@ impl OverpassOpt {
                         .map_err(|e| Error::Db(image, e))?;
                     if place.osm_id.is_none() {
                         debug!("Matched {:?} by name, update osm info", place);
-                        use crate::schema::places::dsl::*;
-                        diesel::update(places)
-                            .filter(id.eq(place.id))
+                        diesel::update(l::places)
+                            .filter(l::id.eq(place.id))
                             .set((
-                                osm_id.eq(Some(t_osm_id)),
-                                osm_level.eq(level),
+                                l::osm_id.eq(Some(t_osm_id)),
+                                l::osm_level.eq(level),
                             ))
                             .execute(db)
                             .await
                             .map_err(|e| Error::Db(image, e))?;
                     }
-                    use crate::models::PhotoPlace;
-                    use crate::schema::photo_places::dsl::*;
-                    let q = photo_places
-                        .filter(photo_id.eq(image))
-                        .filter(place_id.eq(place.id));
+                    let q = pl::photo_places
+                        .filter(pl::photo_id.eq(image))
+                        .filter(pl::place_id.eq(place.id));
                     if q.first::<PhotoPlace>(db).await.is_ok() {
                         debug!(
                             "Photo #{} already has {} ({})",
                             image, place.id, place.place_name
                         );
                     } else {
-                        diesel::insert_into(photo_places)
+                        diesel::insert_into(pl::photo_places)
                             .values((
-                                photo_id.eq(image),
-                                place_id.eq(place.id),
+                                pl::photo_id.eq(image),
+                                pl::place_id.eq(place.id),
                             ))
                             .execute(db)
                             .await
@@ -298,12 +297,11 @@ async fn get_or_create_place(
     name: &str,
     level: i16,
 ) -> Result<Place, diesel::result::Error> {
-    use crate::schema::places::dsl::*;
-    let place = places
+    let place = l::places
         .filter(
-            osm_id
+            l::osm_id
                 .eq(Some(t_osm_id))
-                .or(place_name.eq(name).and(osm_id.is_null())),
+                .or(l::place_name.eq(name).and(l::osm_id.is_null())),
         )
         .first::<Place>(c)
         .await
@@ -311,12 +309,12 @@ async fn get_or_create_place(
     if let Some(place) = place {
         Ok(place)
     } else {
-        let mut result = diesel::insert_into(places)
+        let mut result = diesel::insert_into(l::places)
             .values((
-                place_name.eq(name),
-                slug.eq(slugify(name)),
-                osm_id.eq(Some(t_osm_id)),
-                osm_level.eq(Some(level)),
+                l::place_name.eq(name),
+                l::slug.eq(slugify(name)),
+                l::osm_id.eq(Some(t_osm_id)),
+                l::osm_level.eq(Some(level)),
             ))
             .get_result::<Place>(c)
             .await;
@@ -325,12 +323,12 @@ async fn get_or_create_place(
             info!("Attempt #{} got {:?}, trying again", attempt, result);
             attempt += 1;
             let name = format!("{name} ({attempt})");
-            result = diesel::insert_into(places)
+            result = diesel::insert_into(l::places)
                 .values((
-                    place_name.eq(&name),
-                    slug.eq(&slugify(&name)),
-                    osm_id.eq(Some(t_osm_id)),
-                    osm_level.eq(Some(level)),
+                    l::place_name.eq(&name),
+                    l::slug.eq(&slugify(&name)),
+                    l::osm_id.eq(Some(t_osm_id)),
+                    l::osm_level.eq(Some(level)),
                 ))
                 .get_result::<Place>(c)
                 .await;

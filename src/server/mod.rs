@@ -19,7 +19,7 @@ pub use self::context::{Context, ContextFilter};
 use self::error::{for_rejection, ViewError, ViewResult};
 pub use self::photolink::PhotoLink;
 use self::render_ructe::BuilderExt;
-use self::search::*;
+use self::search::search;
 use self::views_by_category::*;
 use self::views_by_date::monthname;
 use super::{CacheOpt, DbOpt, DirOpt};
@@ -27,6 +27,7 @@ use crate::adm::result::Error;
 use crate::fetch_places::OverpassOpt;
 use crate::models::{Photo, PhotoDetails};
 use crate::pidfiles::handle_pid_file;
+use crate::schema::photos::dsl as p;
 use crate::templates::{self, Html, RenderRucte};
 use chrono::Datelike;
 use diesel::prelude::*;
@@ -67,14 +68,15 @@ pub struct Args {
 }
 
 pub async fn run(args: &Args) -> Result<(), Error> {
+    use warp::filters::query::query;
+    use warp::path::{end, param};
+    use warp::{get, path};
+
     if let Some(pidfile) = &args.pidfile {
         handle_pid_file(pidfile, args.replace)?;
     }
     let session_filter = create_session_filter(args)?;
     let s = move || session_filter.clone();
-    use warp::filters::query::query;
-    use warp::path::{end, param};
-    use warp::{get, path};
     let static_routes = path("static")
         .and(path::tail())
         .and(get())
@@ -141,11 +143,10 @@ async fn static_file(name: Tail) -> Result<Response> {
 }
 
 async fn random_image(context: Context) -> Result<Response> {
-    use crate::schema::photos::dsl::id;
     sql_function! { fn random() -> Integer };
 
     let photo = Photo::query(context.is_authorized())
-        .select(id)
+        .select(p::id)
         .limit(1)
         .order(random())
         .first(&mut context.db().await?)

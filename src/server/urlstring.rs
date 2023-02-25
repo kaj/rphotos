@@ -1,3 +1,5 @@
+use std::fmt::{Display, Write};
+
 #[derive(Clone, Debug)]
 pub struct UrlString {
     value: String,
@@ -12,9 +14,8 @@ impl UrlString {
         }
     }
 
-    pub fn query<T: std::fmt::Display>(&mut self, name: &str, val: T) {
+    pub fn query<T: Display>(&mut self, name: &str, val: T) {
         self.separate();
-        use std::fmt::Write;
         self.value
             .write_fmt(format_args!("{name}={val}"))
             .expect("a Display implementation returned an error unexpectedly");

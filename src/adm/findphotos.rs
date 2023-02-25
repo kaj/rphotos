@@ -2,6 +2,7 @@ use super::result::Error;
 use crate::models::{Camera, Modification, Photo};
 use crate::myexif::ExifData;
 use crate::photosdir::{load_meta, PhotosDir};
+use crate::schema::positions::dsl as ps;
 use crate::{DbOpt, DirOpt};
 use diesel::insert_into;
 use diesel::prelude::*;
@@ -102,10 +103,9 @@ async fn save_photo(
     };
     if let Some((lat, long)) = exif.position() {
         debug!("Position for {} is {} {}", file_path, lat, long);
-        use crate::schema::positions::dsl::*;
-        if let Ok((clat, clong)) = positions
-            .filter(photo_id.eq(photo.id))
-            .select((latitude, longitude))
+        if let Ok((clat, clong)) = ps::positions
+            .filter(ps::photo_id.eq(photo.id))
+            .select((ps::latitude, ps::longitude))
             .first::<(i32, i32)>(db)
             .await
         {
@@ -120,11 +120,11 @@ async fn save_photo(
             }
         } else {
             info!("Position for {} is {} {}", file_path, lat, long);
-            insert_into(positions)
+            insert_into(ps::positions)
                 .values((
-                    photo_id.eq(photo.id),
-                    latitude.eq((lat * 1e6) as i32),
-                    longitude.eq((long * 1e6) as i32),
+                    ps::photo_id.eq(photo.id),
+                    ps::latitude.eq((lat * 1e6) as i32),
+                    ps::longitude.eq((long * 1e6) as i32),
                 ))
                 .execute(db)
                 .await

@@ -4,7 +4,8 @@ use async_walkdir::WalkDir;
 use image::imageops::FilterType;
 use image::{self, DynamicImage, ImageError, ImageFormat};
 use std::ffi::OsStr;
-use std::io;
+use std::fs::File;
+use std::io::{self, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tokio::task::{spawn_blocking, JoinError};
@@ -125,8 +126,6 @@ fn do_get_scaled_jpeg(
 ) -> Result<Vec<u8>, ImageLoadFailed> {
     let start = Instant::now();
     let img = if is_jpeg(&path) {
-        use std::fs::File;
-        use std::io::BufReader;
         let file = BufReader::new(File::open(path)?);
         let mut decoder = image::codecs::jpeg::JpegDecoder::new(file)?;
         decoder.scale(size as u16, size as u16)?;
@@ -156,7 +155,6 @@ fn do_get_scaled_jpeg(
     };
     debug!(elapsed = ?start.elapsed(), "Ready to save.");
     let mut buf = Vec::new();
-    use std::io::Cursor;
     img.write_to(&mut Cursor::new(&mut buf), ImageFormat::Jpeg)?;
     info!(elapsed = ?start.elapsed(), "Done.");
     Ok(buf)

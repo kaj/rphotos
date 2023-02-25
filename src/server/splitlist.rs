@@ -3,6 +3,8 @@ use super::views_by_date::date_of_img;
 use super::{Context, ImgRange, PhotoLink, Result, ViewError};
 use crate::models::{Coord, Photo};
 use crate::schema::photos;
+use crate::schema::photos::dsl as p;
+use crate::schema::positions::dsl as ps;
 use chrono::NaiveDateTime;
 use diesel::pg::Pg;
 use diesel::prelude::*;
@@ -16,19 +18,18 @@ pub async fn links_by_time(
     with_date: bool,
 ) -> Result<(Vec<PhotoLink>, Vec<(Coord, i32)>)> {
     let mut c = context.db().await?;
-    use crate::schema::photos::dsl::{date, id};
     let photos = if let Some(fr) = date_of_opt_img(&mut c, range.from).await {
-        photos.filter(date.ge(fr))
+        photos.filter(p::date.ge(fr))
     } else {
         photos
     };
     let photos = if let Some(to) = date_of_opt_img(&mut c, range.to).await {
-        photos.filter(date.le(to))
+        photos.filter(p::date.le(to))
     } else {
         photos
     };
     let photos = photos
-        .order((date.desc().nulls_last(), id.desc()))
+        .order((p::date.desc().nulls_last(), p::id.desc()))
         .load(&mut c)
         .await?;
     if photos.is_empty() {
@@ -72,10 +73,9 @@ pub async fn get_positions(
     photos: &[Photo],
     c: &mut AsyncPgConnection,
 ) -> Result<Vec<(Coord, i32)>> {
-    use crate::schema::positions::dsl::*;
-    Ok(positions
-        .filter(photo_id.eq_any(photos.iter().map(|p| p.id)))
-        .select((photo_id, latitude, longitude))
+    Ok(ps::positions
+        .filter(ps::photo_id.eq_any(photos.iter().map(|p| p.id)))
+        .select((ps::photo_id, ps::latitude, ps::longitude))
         .load(c)
         .await?
         .into_iter()

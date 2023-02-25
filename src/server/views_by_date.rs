@@ -4,6 +4,8 @@ use super::{
     Result, ViewError,
 };
 use crate::models::{Photo, SizeTag};
+use crate::schema::photos::dsl as p;
+use crate::schema::positions::dsl as ps;
 use crate::templates::{self, RenderRucte};
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use chrono::{Datelike, Duration, Local};
@@ -102,7 +104,6 @@ mod filter {
     }
 }
 async fn all_years(context: Context) -> Result<Response> {
-    use crate::schema::photos::dsl as p;
     let mut db = context.db().await?;
     let y = year_of_timestamp(p::date);
     let groups_in = p::photos
@@ -145,8 +146,6 @@ async fn all_years(context: Context) -> Result<Response> {
 }
 
 async fn months_in_year(year: i32, context: Context) -> Result<Response> {
-    use crate::schema::photos::dsl as p;
-
     let title: String = format!("Photos from {year}");
     let mut db = context.db().await?;
     let m = month_of_timestamp(p::date);
@@ -184,14 +183,11 @@ async fn months_in_year(year: i32, context: Context) -> Result<Response> {
         })
     }
 
-    use crate::schema::positions::dsl::{
-        latitude, longitude, photo_id, positions,
-    };
     let pos = Photo::query(context.is_authorized())
-        .inner_join(positions)
+        .inner_join(ps::positions)
         .filter(p::date.ge(start_of_year(year)))
         .filter(p::date.lt(start_of_year(year + 1)))
-        .select((photo_id, latitude, longitude))
+        .select((ps::photo_id, ps::latitude, ps::longitude))
         .load(&mut db)
         .await?
         .into_iter()
@@ -226,7 +222,6 @@ async fn days_in_month(
     month: u32,
     context: Context,
 ) -> Result<Response> {
-    use crate::schema::photos::dsl as p;
     let d = day_of_timestamp(p::date);
 
     let lpath: Vec<Link> = vec![Link::year(year)];
@@ -267,7 +262,6 @@ async fn days_in_month(
         })
     }
 
-    use crate::schema::positions::dsl as ps;
     let pos = Photo::query(context.is_authorized())
         .inner_join(ps::positions)
         .filter(p::date.ge(start_of_month(year, month)))
@@ -284,7 +278,6 @@ async fn days_in_month(
 }
 
 async fn all_null_date(context: Context) -> Result<Response> {
-    use crate::schema::photos::dsl as p;
     let images = Photo::query(context.is_authorized())
         .filter(p::date.is_null())
         .order(p::path.asc())
@@ -314,7 +307,6 @@ async fn all_for_day(
     context: Context,
 ) -> Result<Response> {
     let thedate = start_of_day(year, month, day);
-    use crate::schema::photos::dsl as p;
 
     let photos = Photo::query(context.is_authorized())
         .filter(p::date.ge(thedate))
@@ -335,9 +327,6 @@ async fn all_for_day(
 }
 
 async fn on_this_day(context: Context) -> Result<Response> {
-    use crate::schema::photos::dsl as p;
-    use crate::schema::positions::dsl as ps;
-
     let (month, day) = {
         let today = Local::now();
         (today.month(), today.day())
@@ -383,7 +372,7 @@ async fn on_this_day(context: Context) -> Result<Response> {
             lable: Some(format!("{count} pictures")),
             id: photo.id,
             size: photo.get_size(SizeTag::Small),
-        })
+        });
     }
     Ok(Builder::new().html(|o| {
         templates::index_html(
@@ -398,7 +387,6 @@ async fn on_this_day(context: Context) -> Result<Response> {
 }
 
 async fn next_image(context: Context, param: FromParam) -> Result<Response> {
-    use crate::schema::photos::dsl as p;
     let mut db = context.db().await?;
     let from_date = or_404!(date_of_img(&mut db, param.from).await, context);
     let photo = or_404q!(
@@ -418,7 +406,6 @@ async fn next_image(context: Context, param: FromParam) -> Result<Response> {
 }
 
 async fn prev_image(context: Context, param: FromParam) -> Result<Response> {
-    use crate::schema::photos::dsl as p;
     let mut db = context.db().await?;
     let from_date = or_404!(date_of_img(&mut db, param.from).await, context);
     let photo = or_404q!(
@@ -446,7 +433,6 @@ pub async fn date_of_img(
     db: &mut AsyncPgConnection,
     photo_id: i32,
 ) -> Option<NaiveDateTime> {
-    use crate::schema::photos::dsl as p;
     p::photos
         .find(photo_id)
         .select(p::date)

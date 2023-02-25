@@ -2,6 +2,7 @@
 use super::login::LoginForm;
 use super::{Context, ViewError};
 use crate::models::{Photo, SizeTag};
+use crate::schema::photos::dsl as p;
 use diesel::{self, prelude::*, result::Error as DbError, update};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
@@ -104,7 +105,6 @@ impl ImgIdentifier {
         &self,
         db: &mut AsyncPgConnection,
     ) -> Result<Option<Photo>, DbError> {
-        use crate::schema::photos::dsl as p;
         match &self {
             ImgIdentifier::Id(ref id) => {
                 p::photos.filter(p::id.eq(*id as i32)).first(db).await
@@ -140,7 +140,6 @@ async fn make_public(
     let id = q.validate().map_err(ApiError::bad_request)?;
     let mut db = context.db().await?;
     let img = id.get(&mut db).await?.ok_or(NOT_FOUND)?;
-    use crate::schema::photos::dsl as p;
     let img = update(p::photos.find(img.id))
         .set(p::is_public.eq(true))
         .get_result(&mut db)

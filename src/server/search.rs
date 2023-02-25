@@ -7,6 +7,7 @@ use crate::schema::photo_people::dsl as pp;
 use crate::schema::photo_places::dsl as pl;
 use crate::schema::photo_tags::dsl as pt;
 use crate::schema::photos::dsl as p;
+use crate::schema::positions::dsl as pos;
 use crate::templates;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::prelude::*;
@@ -69,7 +70,6 @@ pub async fn search(
         photos = photos.filter(p::id.ne_all(ids));
     }
 
-    use crate::schema::positions::dsl as pos;
     if let Some(pos) = query.pos {
         let pos_ids = pos::positions.select(pos::photo_id);
         if pos {

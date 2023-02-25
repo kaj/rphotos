@@ -1,5 +1,8 @@
 use super::result::Error;
 use crate::models::Photo;
+use crate::schema::photo_tags::dsl as pt;
+use crate::schema::photos::dsl as p;
+use crate::schema::tags::dsl as t;
 use crate::DbOpt;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
@@ -44,9 +47,6 @@ impl Makepublic {
                 by_file_list(&mut db, list).await
             }
             (None, Some(tag), None) => {
-                use crate::schema::photo_tags::dsl as pt;
-                use crate::schema::photos::dsl as p;
-                use crate::schema::tags::dsl as t;
                 let n = update(
                     p::photos.filter(
                         p::id.eq_any(
@@ -73,9 +73,8 @@ impl Makepublic {
 }
 
 async fn one(db: &mut AsyncPgConnection, tpath: &str) -> Result<(), Error> {
-    use crate::schema::photos::dsl::*;
-    match update(photos.filter(path.eq(&tpath)))
-        .set(is_public.eq(true))
+    match update(p::photos.filter(p::path.eq(&tpath)))
+        .set(p::is_public.eq(true))
         .get_result::<Photo>(db)
         .await
     {

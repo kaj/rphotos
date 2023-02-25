@@ -4,6 +4,13 @@ use super::{
     wrap, Context, ContextFilter, ImgRange, RenderRucte, Result, ViewError,
 };
 use crate::models::{Person, Photo, Place, Tag};
+use crate::schema::people::dsl as h;
+use crate::schema::photo_people::dsl as pp;
+use crate::schema::photo_places::dsl as pl;
+use crate::schema::photo_tags::dsl as pt;
+use crate::schema::photos::dsl as p;
+use crate::schema::places::dsl as l;
+use crate::schema::tags::dsl as t;
 use crate::templates;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -47,19 +54,21 @@ pub fn tag_routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
 }
 
 async fn person_all(context: Context) -> Result<Response> {
-    use crate::schema::people::dsl::{id, people, person_name};
-    let query = people.into_boxed();
+    let query = h::people.into_boxed();
     let query = if context.is_authorized() {
         query
     } else {
-        use crate::schema::photo_people::dsl as pp;
-        use crate::schema::photos::dsl as p;
-        query.filter(id.eq_any(pp::photo_people.select(pp::person_id).filter(
-            pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
-        )))
+        query.filter(
+            h::id.eq_any(
+                pp::photo_people.select(pp::person_id).filter(
+                    pp::photo_id
+                        .eq_any(p::photos.select(p::id).filter(p::is_public)),
+                ),
+            ),
+        )
     };
     let images = query
-        .order(person_name)
+        .order(h::person_name)
         .load(&mut context.db().await?)
         .await?;
     Ok(Builder::new()
@@ -71,21 +80,19 @@ async fn person_one(
     range: ImgRange,
     context: Context,
 ) -> Result<Response> {
-    use crate::schema::people::dsl::{people, slug};
     let mut c = context.db().await?;
     let person = or_404q!(
-        people.filter(slug.eq(tslug)).first::<Person>(&mut c).await,
+        h::people
+            .filter(h::slug.eq(tslug))
+            .first::<Person>(&mut c)
+            .await,
         context
     );
-    use crate::schema::photo_people::dsl::{
-        person_id, photo_id, photo_people,
-    };
-    use crate::schema::photos::dsl::id;
     let photos = Photo::query(context.is_authorized()).filter(
-        id.eq_any(
-            photo_people
-                .select(photo_id)
-                .filter(person_id.eq(person.id)),
+        p::id.eq_any(
+            pp::photo_people
+                .select(pp::photo_id)
+                .filter(pp::person_id.eq(person.id)),
         ),
     );
     let (links, coords) = links_by_time(&context, photos, range, true).await?;
@@ -95,15 +102,12 @@ async fn person_one(
 }
 
 async fn tag_all(context: Context) -> Result<Response> {
-    use crate::schema::tags::dsl::{id, tag_name, tags};
-    let query = tags.order(tag_name).into_boxed();
+    let query = t::tags.order(t::tag_name).into_boxed();
     let query = if context.is_authorized() {
         query
     } else {
-        use crate::schema::photo_tags::dsl as tp;
-        use crate::schema::photos::dsl as p;
-        query.filter(id.eq_any(tp::photo_tags.select(tp::tag_id).filter(
-            tp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
+        query.filter(t::id.eq_any(pt::photo_tags.select(pt::tag_id).filter(
+            pt::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
         )))
     };
     let taggs = query.load(&mut context.db().await?).await?;
@@ -115,18 +119,20 @@ async fn tag_one(
     range: ImgRange,
     context: Context,
 ) -> Result<Response> {
-    use crate::schema::tags::dsl::{slug, tags};
     let tag = or_404q!(
-        tags.filter(slug.eq(tslug))
+        t::tags
+            .filter(t::slug.eq(tslug))
             .first::<Tag>(&mut context.db().await?)
             .await,
         context
     );
 
-    use crate::schema::photo_tags::dsl::{photo_id, photo_tags, tag_id};
-    use crate::schema::photos::dsl::id;
     let photos = Photo::query(context.is_authorized()).filter(
-        id.eq_any(photo_tags.select(photo_id).filter(tag_id.eq(tag.id))),
+        p::id.eq_any(
+            pt::photo_tags
+                .select(pt::photo_id)
+                .filter(pt::tag_id.eq(tag.id)),
+        ),
     );
     let (links, coords) = links_by_time(&context, photos, range, true).await?;
     Ok(Builder::new()
@@ -134,19 +140,21 @@ async fn tag_one(
 }
 
 async fn place_all(context: Context) -> Result<Response> {
-    use crate::schema::places::dsl::{id, place_name, places};
-    let query = places.into_boxed();
+    let query = l::places.into_boxed();
     let query = if context.is_authorized() {
         query
     } else {
-        use crate::schema::photo_places::dsl as pp;
-        use crate::schema::photos::dsl as p;
-        query.filter(id.eq_any(pp::photo_places.select(pp::place_id).filter(
-            pp::photo_id.eq_any(p::photos.select(p::id).filter(p::is_public)),
-        )))
+        query.filter(
+            l::id.eq_any(
+                pl::photo_places.select(pl::place_id).filter(
+                    pl::photo_id
+                        .eq_any(p::photos.select(p::id).filter(p::is_public)),
+                ),
+            ),
+        )
     };
     let found = query
-        .order(place_name)
+        .order(l::place_name)
         .load(&mut context.db().await?)
         .await?;
     Ok(
@@ -160,19 +168,20 @@ async fn place_one(
     range: ImgRange,
     context: Context,
 ) -> Result<Response> {
-    use crate::schema::places::dsl::{places, slug};
     let place = or_404q!(
-        places
-            .filter(slug.eq(tslug))
+        l::places
+            .filter(l::slug.eq(tslug))
             .first::<Place>(&mut context.db().await?)
             .await,
         context
     );
 
-    use crate::schema::photo_places::dsl::{photo_id, photo_places, place_id};
-    use crate::schema::photos::dsl::id;
     let photos = Photo::query(context.is_authorized()).filter(
-        id.eq_any(photo_places.select(photo_id).filter(place_id.eq(place.id))),
+        p::id.eq_any(
+            pl::photo_places
+                .select(pl::photo_id)
+                .filter(pl::place_id.eq(place.id)),
+        ),
     );
     let (links, coord) = links_by_time(&context, photos, range, true).await?;
     Ok(Builder::new().html(|o| {
