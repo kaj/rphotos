@@ -1,6 +1,6 @@
 use super::urlstring::UrlString;
 use super::views_by_date::date_of_img;
-use super::{Context, ImgRange, PhotoLink, Result};
+use super::{Context, ImgRange, PhotoLink, Result, ViewError};
 use crate::models::{Coord, Photo};
 use crate::schema::photos;
 use chrono::NaiveDateTime;
@@ -31,6 +31,9 @@ pub async fn links_by_time(
         .order((date.desc().nulls_last(), id.desc()))
         .load(&mut c)
         .await?;
+    if photos.is_empty() {
+        return Err(ViewError::NotFound(None));
+    }
     let baseurl = UrlString::new(context.path_without_query());
     Ok((
         split_to_group_links(&photos, &baseurl, with_date),

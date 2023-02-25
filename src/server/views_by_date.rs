@@ -322,20 +322,16 @@ async fn all_for_day(
     let (links, coords) =
         links_by_time(&context, photos, range, false).await?;
 
-    if links.is_empty() {
-        Err(ViewError::NotFound(Some(context)))
-    } else {
-        Ok(Builder::new().html(|o| {
-            templates::index_html(
-                o,
-                &context,
-                &format!("Photos from {} {} {}", day, monthname(month), year),
-                &[Link::year(year), Link::month(year, month)],
-                &links,
-                &coords,
-            )
-        })?)
-    }
+    Ok(Builder::new().html(|o| {
+        templates::index_html(
+            o,
+            &context,
+            &format!("Photos from {} {} {}", day, monthname(month), year),
+            &[Link::year(year), Link::month(year, month)],
+            &links,
+            &coords,
+        )
+    })?)
 }
 
 async fn on_this_day(context: Context) -> Result<Response> {

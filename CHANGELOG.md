@@ -14,6 +14,7 @@ The format is based on
   Should be more efficient now, especially for negative facets.
 * Improved diagnosics and date format flexibility in parsing exif data.
 * Avoid an extra query for the positions in search.
+* Links by time is 404 if no images found in query.
 
 
 ## Release 0.11.10 (2023-02-11)
