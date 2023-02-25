@@ -8,7 +8,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tokio::task::{spawn_blocking, JoinError};
-use tracing::{debug, info, warn};
+use tracing::{debug, info, instrument, warn};
 
 pub struct PhotosDir {
     basedir: PathBuf,
@@ -49,6 +49,7 @@ impl PhotosDir {
     }
 }
 
+#[instrument]
 pub fn load_meta(path: &Path) -> Option<ExifData> {
     if let Ok(mut exif) = ExifData::read_from(path) {
         if exif.width.is_none() || exif.height.is_none() {

@@ -7,7 +7,7 @@ use diesel::insert_into;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use std::path::Path;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, instrument, warn};
 
 #[derive(clap::Parser)]
 pub struct Findphotos {
@@ -66,6 +66,7 @@ async fn crawl(
     Ok(())
 }
 
+#[instrument(skip(db, exif))]
 async fn save_photo(
     db: &mut AsyncPgConnection,
     file_path: &str,
@@ -112,9 +113,9 @@ async fn save_photo(
             let long = (long * 1e6) as i32;
             if (clat - lat).abs() > 1000 || (clong - long).abs() > 1000 {
                 warn!(
-                    "Photo #{}: {}: \
+                    "Photo #{}: \
                      Exif position {}, {} differs from saved {}, {}",
-                    photo.id, photo.path, lat, long, clat, clong,
+                    photo.id, lat, long, clat, clong,
                 );
             }
         } else {

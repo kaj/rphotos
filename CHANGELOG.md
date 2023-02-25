@@ -12,6 +12,7 @@ The format is based on
   - Some `.map` and simliar replaced with `if` blocks or `for` loops.
 * Refactored query parsing and facet handling in search (PR #11).
   Should be more efficient now, especially for negative facets.
+* Improved diagnosics and date format flexibility in parsing exif data.
 * Avoid an extra query for the positions in search.
 
 
