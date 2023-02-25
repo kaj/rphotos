@@ -130,8 +130,7 @@ async fn all_years(context: Context) -> Result<Response> {
         let photo = photo.first::<Photo>(&mut db).await?;
         groups.push(PhotoLink {
             title: Some(
-                year.map(|y| format!("{y}"))
-                    .unwrap_or_else(|| "-".to_string()),
+                year.map_or_else(|| "-".to_string(), |y| y.to_string()),
             ),
             href: format!("/{}/", year.unwrap_or(0)),
             lable: Some(format!("{count} images")),
@@ -180,7 +179,7 @@ async fn months_in_year(year: i32, context: Context) -> Result<Response> {
             lable: Some(format!("{count} pictures")),
             id: photo.id,
             size: photo.get_size(SizeTag::Small),
-        })
+        });
     }
 
     let pos = Photo::query(context.is_authorized())
@@ -259,7 +258,7 @@ async fn days_in_month(
             lable: Some(format!("{count} pictures")),
             id: photo.id,
             size: photo.get_size(SizeTag::Small),
-        })
+        });
     }
 
     let pos = Photo::query(context.is_authorized())

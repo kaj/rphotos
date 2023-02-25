@@ -136,10 +136,10 @@ impl Photo {
             .filter(p::path.not_like("%.CR2"))
             .filter(p::path.not_like("%.dng"))
             .into_boxed();
-        if !auth {
-            result.filter(p::is_public)
-        } else {
+        if auth {
             result
+        } else {
+            result.filter(p::is_public)
         }
     }
 
@@ -229,7 +229,7 @@ impl Photo {
         let w = (scale * f64::from(width)) as u32;
         let h = (scale * f64::from(height)) as u32;
         match self.rotation {
-            _x @ 0..=44 | _x @ 315..=360 | _x @ 135..=224 => (w, h),
+            _x @ (0..=44 | 315..=360 | 135..=224) => (w, h),
             _ => (h, w),
         }
     }
@@ -421,7 +421,7 @@ pub enum SizeTag {
 }
 
 impl SizeTag {
-    pub fn px(self) -> u32 {
+    pub fn px(self) -> u16 {
         match self {
             SizeTag::Small => 288,
             SizeTag::Medium => 1080,

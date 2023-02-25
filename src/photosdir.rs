@@ -113,7 +113,7 @@ impl From<JoinError> for ImageLoadFailed {
 pub async fn get_scaled_jpeg(
     path: PathBuf,
     rotation: i16,
-    size: u32,
+    size: u16,
 ) -> Result<Vec<u8>, ImageLoadFailed> {
     spawn_blocking(move || do_get_scaled_jpeg(path, rotation, size)).await?
 }
@@ -122,18 +122,19 @@ pub async fn get_scaled_jpeg(
 fn do_get_scaled_jpeg(
     path: PathBuf,
     rotation: i16,
-    size: u32,
+    size: u16,
 ) -> Result<Vec<u8>, ImageLoadFailed> {
     let start = Instant::now();
     let img = if is_jpeg(&path) {
         let file = BufReader::new(File::open(path)?);
         let mut decoder = image::codecs::jpeg::JpegDecoder::new(file)?;
-        decoder.scale(size as u16, size as u16)?;
+        decoder.scale(size, size)?;
         DynamicImage::from_decoder(decoder)?
     } else {
         image::open(path)?
     };
 
+    let size = u32::from(size);
     debug!(size = %Size(&img), elapsed = ?start.elapsed(), "Loaded image.");
     let img = if 3 * size <= img.width() || 3 * size <= img.height() {
         img.thumbnail(size, size)
@@ -144,7 +145,7 @@ fn do_get_scaled_jpeg(
     };
     debug!(size = %Size(&img), elapsed = ?start.elapsed(), "Scaled image.");
     let img = match rotation {
-        _x @ 0..=44 | _x @ 315..=360 => img,
+        _x @ (0..=44 | 315..=360) => img,
         _x @ 45..=134 => img.rotate90(),
         _x @ 135..=224 => img.rotate180(),
         _x @ 225..=314 => img.rotate270(),

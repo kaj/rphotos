@@ -42,7 +42,7 @@ impl ExifData {
                 } else if let Some(d) = is_datetime(f, Tag::DateTimeDigitized)
                 {
                     if result.dateval.is_none() {
-                        result.dateval = Some(d)
+                        result.dateval = Some(d);
                     }
                 } else if let Some(s) = is_string(f, Tag::Make) {
                     result.make = Some(s.to_string());

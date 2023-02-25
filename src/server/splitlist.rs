@@ -104,8 +104,8 @@ fn find_largest(groups: &[&[Photo]]) -> usize {
     let mut found = 0;
     let mut largest = 0.0;
     for (i, g) in groups.iter().enumerate() {
-        let time = 1 + g.iter().next().map(timestamp).unwrap_or(0)
-            - g.last().map(timestamp).unwrap_or(0);
+        let time = 1 + g.iter().next().map_or(0, timestamp)
+            - g.last().map_or(0, timestamp);
         let score = (g.len() as f64).powi(3) * (time as f64);
         if score > largest {
             largest = score;
@@ -150,7 +150,7 @@ fn split(group: &[Photo]) -> (&[Photo], &[Photo]) {
 }
 
 fn timestamp(p: &Photo) -> i64 {
-    p.date.map(|d| d.timestamp()).unwrap_or(0)
+    p.date.map_or(0, |d| d.timestamp())
 }
 
 #[test]

@@ -86,10 +86,14 @@ impl PhotoLink {
                         None,
                         format!(
                             "{} - {} ({})",
-                            from.map(|d| format!("{}", d.format("%F %R")))
-                                .unwrap_or_else(|| "-".to_string()),
-                            to.map(|d| format!("{}", d.format("%F %R")))
-                                .unwrap_or_else(|| "-".to_string()),
+                            from.map_or_else(
+                                || "-".to_string(),
+                                |d| format!("{}", d.format("%F %R"))
+                            ),
+                            to.map_or_else(
+                                || "-".to_string(),
+                                |d| format!("{}", d.format("%F %R"))
+                            ),
                             g.len(),
                         ),
                     )
