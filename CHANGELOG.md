@@ -13,7 +13,7 @@ The format is based on
 * Refactored query parsing and facet handling in search (PR #11).
   Should be more efficient now, especially for negative facets.
 * Improved diagnosics and date format flexibility in parsing exif data.
-* Avoid an extra query for the positions in search.
+* Avoid an extra query for the positions in search and splitlist.
 * Links by time is 404 if no images found in query.
 * Some random cleanup and refactoring.
 

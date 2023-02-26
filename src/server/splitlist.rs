@@ -1,6 +1,6 @@
 use super::urlstring::UrlString;
 use super::views_by_date::date_of_img;
-use super::{Context, ImgRange, PhotoLink, Result, ViewError};
+use super::{Context, ImgRange, PhotoLink, Result, SomeVec, ViewError};
 use crate::models::{Coord, Photo};
 use crate::schema::photos;
 use crate::schema::photos::dsl as p;
@@ -30,15 +30,23 @@ pub async fn links_by_time(
     };
     let photos = photos
         .order((p::date.desc().nulls_last(), p::id.desc()))
-        .load(&mut c)
+        .left_join(ps::positions)
+        .select((
+            Photo::as_select(),
+            ((ps::latitude, ps::longitude), ps::photo_id).nullable(),
+        ))
+        .load::<(Photo, Option<(Coord, i32)>)>(&mut c)
         .await?;
+
     if photos.is_empty() {
         return Err(ViewError::NotFound(None));
     }
+
+    let (photos, positions): (Vec<_>, SomeVec<_>) = photos.into_iter().unzip();
     let baseurl = UrlString::new(context.path_without_query());
     Ok((
         split_to_group_links(&photos, &baseurl, with_date),
-        get_positions(&photos, &mut c).await?,
+        positions.0,
     ))
 }
 
@@ -67,20 +75,6 @@ pub fn split_to_group_links(
         };
         photos.iter().map(make_link).collect()
     }
-}
-
-pub async fn get_positions(
-    photos: &[Photo],
-    c: &mut AsyncPgConnection,
-) -> Result<Vec<(Coord, i32)>> {
-    Ok(ps::positions
-        .filter(ps::photo_id.eq_any(photos.iter().map(|p| p.id)))
-        .select((ps::photo_id, ps::latitude, ps::longitude))
-        .load(c)
-        .await?
-        .into_iter()
-        .map(|(p_id, lat, long): (i32, i32, i32)| ((lat, long).into(), p_id))
-        .collect())
 }
 
 fn split_to_groups(photos: &[Photo]) -> Option<Vec<&[Photo]>> {

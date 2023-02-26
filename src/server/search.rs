@@ -1,7 +1,7 @@
 use super::error::{ViewError, ViewResult};
 use super::splitlist::split_to_group_links;
 use super::urlstring::UrlString;
-use super::{Context, RenderRucte, Result};
+use super::{Context, RenderRucte, Result, SomeVec};
 use crate::models::{Coord, Facet, Person, Photo, Place, Tag};
 use crate::schema::photo_people::dsl as pp;
 use crate::schema::photo_places::dsl as pl;
@@ -166,20 +166,6 @@ struct DateTimeImg {
     date: Option<NaiveDate>,
     time: Option<NaiveTime>,
     img: Option<i32>,
-}
-
-/// A `Vec` that automatically flattens an iterator of options when extended.
-struct SomeVec<T>(Vec<T>);
-
-impl<T> Default for SomeVec<T> {
-    fn default() -> Self {
-        SomeVec(Vec::new())
-    }
-}
-impl<T> Extend<Option<T>> for SomeVec<T> {
-    fn extend<Iter: IntoIterator<Item = Option<T>>>(&mut self, iter: Iter) {
-        self.0.extend(iter.into_iter().flatten())
-    }
 }
 
 #[derive(Debug, Default)]

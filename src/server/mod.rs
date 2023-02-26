@@ -244,3 +244,17 @@ fn robots_txt() -> Result<Response> {
         )
         .ise()
 }
+
+/// A `Vec` that automatically flattens an iterator of options when extended.
+struct SomeVec<T>(Vec<T>);
+
+impl<T> Default for SomeVec<T> {
+    fn default() -> Self {
+        SomeVec(Vec::new())
+    }
+}
+impl<T> Extend<Option<T>> for SomeVec<T> {
+    fn extend<Iter: IntoIterator<Item = Option<T>>>(&mut self, iter: Iter) {
+        self.0.extend(iter.into_iter().flatten())
+    }
+}
