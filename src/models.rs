@@ -329,7 +329,6 @@ impl Facet for Person {
 
 #[derive(Debug, Clone, Queryable)]
 pub struct PhotoPerson {
-    pub id: i32,
     pub photo_id: i32,
     pub person_id: i32,
 }
@@ -355,7 +354,6 @@ impl Facet for Place {
 
 #[derive(Debug, Clone, Queryable)]
 pub struct PhotoPlace {
-    pub id: i32,
     pub photo_id: i32,
     pub place_id: i32,
 }

@@ -22,24 +22,21 @@ table! {
 }
 
 table! {
-    photo_people (id) {
-        id -> Int4,
+    photo_people (photo_id, person_id) {
         photo_id -> Int4,
         person_id -> Int4,
     }
 }
 
 table! {
-    photo_places (id) {
-        id -> Int4,
+    photo_places (photo_id, place_id) {
         photo_id -> Int4,
         place_id -> Int4,
     }
 }
 
 table! {
-    photo_tags (id) {
-        id -> Int4,
+    photo_tags (photo_id, tag_id) {
         photo_id -> Int4,
         tag_id -> Int4,
     }
