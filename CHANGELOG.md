@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## Release 0.12.0 (2023-02-26)
 
 * Database access is now async (PR #10).
   - Use `diesel-async` with deadpool feature for database access.
