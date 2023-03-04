@@ -7,6 +7,7 @@ The format is based on
 ## Unreleased
 
 * Removed unnessesary id columns from relation tables.
+* Put less semi-duplicate data in error log.
 
 
 ## Release 0.12.0 (2023-02-26)
