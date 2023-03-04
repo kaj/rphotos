@@ -106,18 +106,6 @@ impl OverpassOpt {
                     let place = get_or_create_place(db, t_osm_id, name, level)
                         .await
                         .map_err(|e| Error::Db(image, e))?;
-                    if place.osm_id.is_none() {
-                        debug!("Matched {:?} by name, update osm info", place);
-                        diesel::update(l::places)
-                            .filter(l::id.eq(place.id))
-                            .set((
-                                l::osm_id.eq(Some(t_osm_id)),
-                                l::osm_level.eq(level),
-                            ))
-                            .execute(db)
-                            .await
-                            .map_err(|e| Error::Db(image, e))?;
-                    }
                     let q = pl::photo_places
                         .filter(pl::photo_id.eq(image))
                         .filter(pl::place_id.eq(place.id));
@@ -307,6 +295,14 @@ async fn get_or_create_place(
         .await
         .optional()?;
     if let Some(place) = place {
+        if place.osm_id.is_none() {
+            debug!("Matched {place:?} by name, update osm info");
+            diesel::update(l::places)
+                .filter(l::id.eq(place.id))
+                .set((l::osm_id.eq(Some(t_osm_id)), l::osm_level.eq(level)))
+                .execute(c)
+                .await?;
+        }
         Ok(place)
     } else {
         let mut result = diesel::insert_into(l::places)
