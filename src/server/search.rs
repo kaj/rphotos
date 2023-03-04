@@ -10,9 +10,11 @@ use crate::schema::photos::dsl as p;
 use crate::schema::positions::dsl as pos;
 use crate::templates;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use diesel::prelude::*;
+use diesel::pg::Pg;
+use diesel::{debug_query, prelude::*};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use tracing::warn;
+use std::time::Instant;
+use tracing::{info, warn};
 use warp::http::response::Builder;
 use warp::reply::Response;
 
@@ -20,8 +22,10 @@ pub async fn search(
     context: Context,
     query: Vec<(String, String)>,
 ) -> Result<Response> {
+    let start = Instant::now();
     let mut db = context.db().await?;
     let query = SearchQuery::load(query.try_into()?, &mut db).await?;
+    info!("Loaded query after {:.3?}", start.elapsed());
 
     let mut photos = Photo::query(context.is_authorized());
     if let Some(since) = query.since.as_ref() {
@@ -33,41 +37,56 @@ pub async fn search(
     for tag in &query.t.include {
         let ids = pt::photo_tags
             .select(pt::photo_id)
+            .distinct()
             .filter(pt::tag_id.eq(tag.id));
         photos = photos.filter(p::id.eq_any(ids));
     }
     if !query.t.exclude.is_empty() {
         let ids = query.t.exclude.iter().map(|t| t.id).collect::<Vec<_>>();
-        let ids = pt::photo_tags
-            .select(pt::photo_id)
-            .filter(pt::tag_id.eq_any(ids));
-        photos = photos.filter(p::id.ne_all(ids));
+        photos = photos.filter(
+            pt::photo_tags
+                .select(pt::photo_id)
+                .filter(pt::photo_id.eq(p::id))
+                .filter(pt::tag_id.eq_any(ids))
+                .single_value()
+                .is_null(),
+        );
     }
     for location in &query.l.include {
         let ids = pl::photo_places
             .select(pl::photo_id)
+            .distinct()
             .filter(pl::place_id.eq(location.id));
         photos = photos.filter(p::id.eq_any(ids));
     }
     if !query.l.exclude.is_empty() {
         let ids = query.l.exclude.iter().map(|t| t.id).collect::<Vec<_>>();
-        let ids = pl::photo_places
-            .select(pl::photo_id)
-            .filter(pl::place_id.eq_any(ids));
-        photos = photos.filter(p::id.ne_all(ids));
+        photos = photos.filter(
+            pl::photo_places
+                .select(pl::photo_id)
+                .filter(pl::photo_id.eq(p::id))
+                .filter(pl::place_id.eq_any(ids))
+                .single_value()
+                .is_null(),
+        );
     }
     for person in &query.p.include {
         let ids = pp::photo_people
             .select(pp::photo_id)
+            .distinct()
             .filter(pp::person_id.eq(person.id));
         photos = photos.filter(p::id.eq_any(ids));
     }
     if !query.p.exclude.is_empty() {
         let ids = query.p.exclude.iter().map(|t| t.id).collect::<Vec<_>>();
-        let ids = pp::photo_people
-            .select(pp::photo_id)
-            .filter(pp::person_id.eq_any(ids));
-        photos = photos.filter(p::id.ne_all(ids));
+        photos = photos.filter(
+            pp::photo_people
+                .select(pp::photo_id)
+                .filter(pp::photo_id.eq(p::id))
+                .filter(pp::person_id.eq_any(ids))
+                .single_value()
+                .is_null(),
+        );
     }
 
     if let Some(pos) = query.pos {
@@ -85,13 +104,20 @@ pub async fn search(
         .select((
             Photo::as_select(),
             ((pos::latitude, pos::longitude), pos::photo_id).nullable(),
-        ))
+        ));
+    info!("Built search statement after {:.3?}", start.elapsed());
+    info!("{}", debug_query::<Pg, _>(&photos));
+
+    let photos = photos
         .load::<(Photo, Option<(Coord, i32)>)>(&mut db)
         .await?;
+    info!("Executed search statement after {:.3?}", start.elapsed());
 
     let (photos, coords): (Vec<_>, SomeVec<_>) = photos.into_iter().unzip();
+    info!("Unzipped pics and coords after {:.3?}", start.elapsed());
     let n = photos.len();
     let links = split_to_group_links(&photos, &query.to_base_url(), true);
+    info!("Grouped links after {:.3?}", start.elapsed());
 
     Ok(Builder::new().html(|o| {
         templates::search_html(o, &context, &query, n, &links, &coords.0)
