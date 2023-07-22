@@ -150,6 +150,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
         ("park", 14),
         ("pitch", 15),
         ("playground", 16),
+        ("sports_centre", 18),
         ("water_park", 14),
     ]),
     ("tourism", &[
