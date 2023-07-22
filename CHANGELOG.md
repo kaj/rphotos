@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+* Updated to `diesel` 2.1.0 and `diesel-async` 0.3.2.
+
+
 ## Release 0.12.2 (2023-03-04)
 
 * Removed unnessesary id columns from relation tables.
