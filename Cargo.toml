@@ -7,7 +7,7 @@ edition = "2021"
 build = "src/build.rs"
 
 [build-dependencies]
-ructe = { version = "0.17.0", features = ["sass", "warp03"] }
+ructe = { version = "0.17.2", features = ["sass", "warp03"] }
 
 [dependencies]
 async-trait = "0.1.64"

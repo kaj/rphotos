@@ -2,7 +2,7 @@
 @use crate::server::{Context, Link};
 
 @(context: &Context, title: &str, lpath: &[Link], meta: Content, content: Content)
-@:base_html(context, title, lpath, meta, {
+@:base_html(context, title, lpath, {@:meta()}, {
     <main>
       <h1>@title</h1>
       @:content()
