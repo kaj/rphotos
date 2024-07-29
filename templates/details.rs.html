@@ -19,7 +19,7 @@
     else {<p>This photo is not public.</p>}
     }
     @if let Some(g) = photo.grade {<p>Grade: @g</p>}
-    @if let Some(d) = photo.date {<p>Time: @d.format("%F %T")</p>}
+    @if let Some(d) = photo.date {<p>Time: @d.format("%A %F %T")</p>}
     @if !photo.people.is_empty() {
     <p>People: @for p in &photo.people {<a href="/person/@p.slug">@p.person_name</a>, }</p>}
     @if !photo.tags.is_empty() {
