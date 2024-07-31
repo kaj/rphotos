@@ -143,7 +143,7 @@ async fn static_file(name: Tail) -> Result<Response> {
 }
 
 async fn random_image(context: Context) -> Result<Response> {
-    sql_function! { fn random() -> Integer };
+    define_sql_function! { fn random() -> Integer };
 
     let photo = Photo::query(context.is_authorized())
         .select(p::id)

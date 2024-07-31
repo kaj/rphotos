@@ -8,7 +8,7 @@ use diesel::prelude::*;
 use diesel::sql_types::{Nullable, Timestamp};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 
-sql_function! {
+define_sql_function! {
     #[aggregate]
     fn year_of_timestamp(date: Nullable<Timestamp>) -> Nullable<SmallInt>
 }

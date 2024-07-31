@@ -77,30 +77,29 @@ pub fn routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
         .boxed()
 }
 
-sql_function! {
+define_sql_function! {
     #[aggregate]
     fn year_of_timestamp(date: Nullable<Timestamp>) -> Nullable<SmallInt>
 }
-sql_function! {
+define_sql_function! {
     #[aggregate]
     fn month_of_timestamp(date: Nullable<Timestamp>) -> Nullable<SmallInt>
 }
-sql_function! {
+define_sql_function! {
     #[aggregate]
     fn day_of_timestamp(date: Nullable<Timestamp>) -> Nullable<SmallInt>
 }
 
 mod filter {
-    use diesel::sql_function;
-    use diesel::sql_types::{Nullable, Timestamp};
+    use diesel::{define_sql_function, sql_types::{Nullable, Timestamp}};
 
-    sql_function! {
+    define_sql_function! {
         fn year_of_timestamp(date: Nullable<Timestamp>) -> Nullable<SmallInt>
     }
-    sql_function! {
+    define_sql_function! {
         fn month_of_timestamp(date: Nullable<Timestamp>) -> Nullable<SmallInt>
     }
-    sql_function! {
+    define_sql_function! {
         fn day_of_timestamp(date: Nullable<Timestamp>) -> Nullable<SmallInt>
     }
 }

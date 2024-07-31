@@ -146,8 +146,8 @@ mod tests {
     }
 }
 
-sql_function!(fn lower(string: Text) -> Text);
-sql_function!(fn strpos(string: Text, substring: Text) -> Integer);
+define_sql_function!(fn lower(string: Text) -> Text);
+define_sql_function!(fn strpos(string: Text, substring: Text) -> Integer);
 
 type NameSlugScore = (String, String, i32);
 
