@@ -245,7 +245,7 @@ impl SearchQuery {
         for (p, i) in &self.p {
             result.cond_query("p", i, &p.slug);
         }
-        for i in &self.pos {
+        if let Some(i) = &self.pos {
             result.cond_query("pos", *i, "t");
         }
         result
