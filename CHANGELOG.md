@@ -6,6 +6,7 @@ The format is based on
 
 ## Unreleased
 
+* Improved item (image) sizing css.  I hope it works in safari.
 * Updated to `diesel` 2.1.0, `diesel-async` 0.3.2, and `ructe` 0.17.0.
 * Some more known kinds of places.
 

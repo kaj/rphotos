@@ -179,31 +179,42 @@ header, footer, main {
 }
 
 div.group {
+  align-items: stretch;
   display: flex;
   flex-flow: row-reverse wrap;
   justify-content: space-between;
   margin: 0 -.1em;
 
   .item {
-    position: relative;
+    aspect-ratio: 1.3;
+    flex: auto .2 0;
+    height: auto;
     margin: .4em .1em;
-    flex-grow: .1;
+    max-height: calc(7em + 12vw);
+    min-height: calc(5em + 10vw);
+    position: relative;
+
     &.portrait {
-	flex-grow: .3;
+      aspect-ratio: 0.75;
+    }
+    @for $i from 1 through 5 {
+      $f: calc(1 + 0.08 * (6 - $i));
+
+      &:nth-child(#{$i}) {
+        min-height: calc($f * 5em + $f * 8vw);
+      }
     }
 
+    a {
+      display: contents;
+    }
     img {
       display: block;
-      height: calc(5em + 10vw);
+      height: 100%;
       object-fit: cover;
       object-position: 50% 33%;
-      width: -moz-available;
-      width: -webkit-fill-available;
-      width: available;
-    }
-    // TODO: Set first-line class by js.
-    &.first-line img {
-	height: calc(6em + 11vw);
+      position: absolute;
+      width: 100%;
     }
     h2, .lable {
       text-shadow: 0 0 .1em white, 0 0 .4em white;
@@ -213,6 +224,7 @@ div.group {
       position: absolute;
       margin: 0;
       line-height: 1.2;
+      z-index: 1;
     }
     .lable {
       position: absolute;
