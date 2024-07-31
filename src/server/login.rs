@@ -3,8 +3,9 @@ use crate::schema::users::dsl as u;
 use crate::templates;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use lazy_regex::regex_is_match;
+use regex::Regex;
 use serde::Deserialize;
+use std::sync::LazyLock;
 use tracing::info;
 use warp::filters::BoxedFilter;
 use warp::http::header;
@@ -91,8 +92,10 @@ impl LoginForm {
 }
 
 fn sanitize_next(next: Option<&str>) -> Option<&str> {
+    static RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^/([a-z0-9._-]+/?)*$").unwrap());
     if let Some(next) = next {
-        if regex_is_match!(r"^/([a-z0-9._-]+/?)*$", next) {
+        if RE.is_match(next) {
             return Some(next);
         }
     }
