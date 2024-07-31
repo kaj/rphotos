@@ -7,8 +7,8 @@ The format is based on
 ## Unreleased
 
 * Improved item (image) sizing css.  I hope it works in safari.
-* Updated to `diesel` 2.2.2, `diesel-async` 0.5.0, `brotli` to 6.0.0,
-  and `ructe` 0.17.0.
+* Updated to `diesel` 2.2.2, `diesel-async` 0.5.0, `brotli` 6.0.0,
+  `async-walkdir` 2.0.0, `futures-lite` 2.3.0, and `ructe` 0.17.0.
 * Uses std LazyLock (require rust 1.80) instead of `lazy_regex`.
 * Removed unneded db model structs.
 * Some more known kinds of places.

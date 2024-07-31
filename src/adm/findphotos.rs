@@ -45,22 +45,16 @@ async fn crawl(
     photos: &PhotosDir,
     only_in: &Path,
 ) -> Result<(), Error> {
-    use futures_lite::stream::StreamExt;
+    use futures_lite::stream::StreamExt as _;
     let mut entries = photos.walk_dir(only_in);
-    loop {
-        match entries.next().await {
-            None => break,
-            Some(Err(e)) => return Err(e.into()),
-            Some(Ok(entry)) => {
-                if entry.file_type().await?.is_file() {
-                    let path = entry.path();
-                    if let Some(exif) = load_meta(&path) {
-                        let sp = photos.subpath(&path)?;
-                        save_photo(db, sp, &exif).await?;
-                    } else {
-                        debug!("Not an image: {path:?}");
-                    }
-                }
+    while let Some(entry) = entries.next().await.transpose()? {
+        if entry.file_type().await?.is_file() {
+            let path = entry.path();
+            if let Some(exif) = load_meta(&path) {
+                let sp = photos.subpath(&path)?;
+                save_photo(db, sp, &exif).await?;
+            } else {
+                debug!("Not an image: {path:?}");
             }
         }
     }

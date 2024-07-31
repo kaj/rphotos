@@ -105,3 +105,9 @@ impl From<R2d2Error> for Error {
         Error::Other(e.to_string())
     }
 }
+
+impl From<async_walkdir::Error> for Error {
+    fn from(value: async_walkdir::Error) -> Self {
+        Error::Other(value.to_string())
+    }
+}

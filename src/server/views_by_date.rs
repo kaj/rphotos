@@ -91,7 +91,8 @@ define_sql_function! {
 }
 
 mod filter {
-    use diesel::{define_sql_function, sql_types::{Nullable, Timestamp}};
+    use diesel::define_sql_function;
+    use diesel::sql_types::{Nullable, Timestamp};
 
     define_sql_function! {
         fn year_of_timestamp(date: Nullable<Timestamp>) -> Nullable<SmallInt>
