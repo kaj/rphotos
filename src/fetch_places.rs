@@ -1,4 +1,3 @@
-use crate::models::PhotoPlace;
 use crate::models::{Coord, Place};
 use crate::schema::photo_places::dsl as pl;
 use crate::schema::places::dsl as l;
@@ -107,9 +106,10 @@ impl OverpassOpt {
                         .await
                         .map_err(|e| Error::Db(image, e))?;
                     let q = pl::photo_places
+                        .select(pl::place_id)
                         .filter(pl::photo_id.eq(image))
                         .filter(pl::place_id.eq(place.id));
-                    if q.first::<PhotoPlace>(db).await.is_ok() {
+                    if q.first::<i32>(db).await.is_ok() {
                         debug!(
                             "Photo #{} already has {} ({})",
                             image, place.id, place.place_name

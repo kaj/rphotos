@@ -283,13 +283,6 @@ impl Facet for Tag {
 }
 
 #[derive(Debug, Clone, Queryable)]
-pub struct PhotoTag {
-    pub id: i32,
-    pub photo_id: i32,
-    pub tag_id: i32,
-}
-
-#[derive(Debug, Clone, Queryable)]
 pub struct Person {
     pub id: i32,
     pub slug: String,
@@ -328,12 +321,6 @@ impl Facet for Person {
 }
 
 #[derive(Debug, Clone, Queryable)]
-pub struct PhotoPerson {
-    pub photo_id: i32,
-    pub person_id: i32,
-}
-
-#[derive(Debug, Clone, Queryable)]
 pub struct Place {
     pub id: i32,
     pub slug: String,
@@ -350,12 +337,6 @@ impl Facet for Place {
     ) -> Result<Vec<Place>, Error> {
         l::places.filter(l::slug.eq_any(slugs)).load(db).await
     }
-}
-
-#[derive(Debug, Clone, Queryable)]
-pub struct PhotoPlace {
-    pub photo_id: i32,
-    pub place_id: i32,
 }
 
 #[derive(Debug, Clone, Identifiable, Queryable)]

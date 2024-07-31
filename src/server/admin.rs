@@ -1,7 +1,7 @@
 //! Admin-only views, generally called by javascript.
 use super::error::ViewResult;
 use super::{redirect_to_img, wrap, Context, Result, ViewError};
-use crate::models::{Coord, Person, Photo, PhotoPerson, SizeTag, Tag};
+use crate::models::{Coord, Person, Photo, SizeTag, Tag};
 use crate::schema::photo_people::dsl as pp;
 use crate::schema::photo_tags::dsl as pt;
 use crate::schema::photos::dsl as p;
@@ -111,9 +111,10 @@ async fn set_person(context: Context, form: PersonForm) -> Result<Response> {
     let mut c = context.db().await?;
     let person = Person::get_or_create_name(&mut c, &form.person).await?;
     let q = pp::photo_people
+        .select(pp::person_id)
         .filter(pp::photo_id.eq(form.image))
         .filter(pp::person_id.eq(person.id));
-    if q.first::<PhotoPerson>(&mut c).await.optional()?.is_some() {
+    if q.first::<i32>(&mut c).await.optional()?.is_some() {
         info!("Photo #{} already has {:?}", form.image, person);
     } else {
         info!("Add {:?} on photo #{}!", person, form.image);
