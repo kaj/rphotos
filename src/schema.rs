@@ -1,11 +1,13 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
     attributions (id) {
         id -> Int4,
         name -> Varchar,
     }
 }
 
-table! {
+diesel::table! {
     cameras (id) {
         id -> Int4,
         manufacturer -> Varchar,
@@ -13,7 +15,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     people (id) {
         id -> Int4,
         slug -> Varchar,
@@ -21,28 +23,28 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     photo_people (photo_id, person_id) {
         photo_id -> Int4,
         person_id -> Int4,
     }
 }
 
-table! {
+diesel::table! {
     photo_places (photo_id, place_id) {
         photo_id -> Int4,
         place_id -> Int4,
     }
 }
 
-table! {
+diesel::table! {
     photo_tags (photo_id, tag_id) {
         photo_id -> Int4,
         tag_id -> Int4,
     }
 }
 
-table! {
+diesel::table! {
     photos (id) {
         id -> Int4,
         path -> Varchar,
@@ -57,7 +59,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     places (id) {
         id -> Int4,
         slug -> Varchar,
@@ -67,7 +69,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     positions (id) {
         id -> Int4,
         photo_id -> Int4,
@@ -76,7 +78,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     tags (id) {
         id -> Int4,
         slug -> Varchar,
@@ -84,7 +86,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     users (id) {
         id -> Int4,
         username -> Varchar,
@@ -92,17 +94,17 @@ table! {
     }
 }
 
-joinable!(photo_people -> people (person_id));
-joinable!(photo_people -> photos (photo_id));
-joinable!(photo_places -> photos (photo_id));
-joinable!(photo_places -> places (place_id));
-joinable!(photo_tags -> photos (photo_id));
-joinable!(photo_tags -> tags (tag_id));
-joinable!(photos -> attributions (attribution_id));
-joinable!(photos -> cameras (camera_id));
-joinable!(positions -> photos (photo_id));
+diesel::joinable!(photo_people -> people (person_id));
+diesel::joinable!(photo_people -> photos (photo_id));
+diesel::joinable!(photo_places -> photos (photo_id));
+diesel::joinable!(photo_places -> places (place_id));
+diesel::joinable!(photo_tags -> photos (photo_id));
+diesel::joinable!(photo_tags -> tags (tag_id));
+diesel::joinable!(photos -> attributions (attribution_id));
+diesel::joinable!(photos -> cameras (camera_id));
+diesel::joinable!(positions -> photos (photo_id));
 
-allow_tables_to_appear_in_same_query!(
+diesel::allow_tables_to_appear_in_same_query!(
     attributions,
     cameras,
     people,
