@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+* Updated `ructe` to 0.18.2.
+
+
 ## Release 0.12.4 (2024-07-31)
 
 * Improved item (image) sizing css.  I hope it works in safari.
