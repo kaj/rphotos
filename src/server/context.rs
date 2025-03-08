@@ -202,10 +202,10 @@ impl Context {
     }
 }
 
-/// Get the current value for jwt NumericDate.
+/// Get the current value for jwt [`NumericDate`].
 ///
 /// Defined in RFC 7519 section 2 to be equivalent to POSIX.1 "Seconds
-/// Since the Epoch".  The RFC allows a NumericDate to be non-integer
+/// Since the Epoch".  The RFC allows a `NumericDate` to be non-integer
 /// (for sub-second resolution), but the jwt crate uses u64.
 fn current_numeric_date() -> u64 {
     use std::time::{SystemTime, UNIX_EPOCH};

@@ -59,7 +59,7 @@ impl Fetchplaces {
 pub struct OverpassOpt {
     /// How to connect to the overpass API.
     ///
-    /// See https://wiki.openstreetmap.org/wiki/Overpass_API for
+    /// See <https://wiki.openstreetmap.org/wiki/Overpass_API> for
     /// available servers and policies.
     #[clap(long, env = "OVERPASS_URL")]
     overpass_url: String,
