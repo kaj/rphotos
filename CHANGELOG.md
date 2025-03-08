@@ -7,6 +7,7 @@ The format is based on
 ## Unreleased
 
 * Updated `ructe` to 0.18.2.
+* Some more known kinds of places.
 
 
 ## Release 0.12.4 (2024-07-31)

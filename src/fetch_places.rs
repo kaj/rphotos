@@ -154,6 +154,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
         ("water_park", 14),
     ]),
     ("tourism", &[
+        ("guest_house", 17),
         ("attraction", 16),
         ("camp_site", 15),
         ("theme_park", 14),
@@ -168,6 +169,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
         ("commercial", 12),
         ("grass", 13),
         ("farmland", 14),
+        ("farmyard", 16),
         ("industrial", 11),
         ("meadow", 16),
         ("railway", 13),
@@ -242,6 +244,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
     ]),
     // Not sure about this, check later if someone changes Bruddesta Sjöbodar
     ("historic", &[
+        ("manor", 16),
         ("heritage", 14),
     ]),
 ];
