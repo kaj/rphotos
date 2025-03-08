@@ -165,16 +165,16 @@ impl TryFrom<Vec<(String, String)>> for RawQuery {
                     }
                 }
                 "since_date" if !val.is_empty() => {
-                    to.since.date = Some(val.parse().req("since_date")?)
+                    to.since.date = Some(val.parse().req("since_date")?);
                 }
                 "since_time" if !val.is_empty() => {
-                    to.since.time = Some(val.parse().req("since_time")?)
+                    to.since.time = Some(val.parse().req("since_time")?);
                 }
                 "until_date" if !val.is_empty() => {
-                    to.until.date = Some(val.parse().req("until_date")?)
+                    to.until.date = Some(val.parse().req("until_date")?);
                 }
                 "until_time" if !val.is_empty() => {
-                    to.until.time = Some(val.parse().req("until_time")?)
+                    to.until.time = Some(val.parse().req("until_time")?);
                 }
                 "from" => to.since.img = Some(val.parse().req("from")?),
                 "to" => to.until.img = Some(val.parse().req("to")?),

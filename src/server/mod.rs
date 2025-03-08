@@ -255,6 +255,6 @@ impl<T> Default for SomeVec<T> {
 }
 impl<T> Extend<Option<T>> for SomeVec<T> {
     fn extend<Iter: IntoIterator<Item = Option<T>>>(&mut self, iter: Iter) {
-        self.0.extend(iter.into_iter().flatten())
+        self.0.extend(iter.into_iter().flatten());
     }
 }
