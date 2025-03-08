@@ -349,7 +349,7 @@ impl QueryDateTime {
 }
 
 pub struct QueryDateFmt<'a>(Option<&'a NaiveDateTime>);
-impl<'a> templates::ToHtml for QueryDateFmt<'a> {
+impl templates::ToHtml for QueryDateFmt<'_> {
     fn to_html(&self, out: &mut dyn std::io::Write) -> std::io::Result<()> {
         if let Some(date) = self.0 {
             // Note: Only digits and dashes, nothing that needs escaping
@@ -360,7 +360,7 @@ impl<'a> templates::ToHtml for QueryDateFmt<'a> {
     }
 }
 pub struct QueryTimeFmt<'a>(Option<&'a NaiveDateTime>);
-impl<'a> templates::ToHtml for QueryTimeFmt<'a> {
+impl templates::ToHtml for QueryTimeFmt<'_> {
     fn to_html(&self, out: &mut dyn std::io::Write) -> std::io::Result<()> {
         if let Some(time) = self.0 {
             // Note: Only digits and colons, nothing that needs escaping

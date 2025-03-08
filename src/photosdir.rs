@@ -162,7 +162,7 @@ fn do_get_scaled_jpeg(
 }
 
 struct Size<'a>(&'a DynamicImage);
-impl<'a> std::fmt::Display for Size<'a> {
+impl std::fmt::Display for Size<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}x{}", self.0.width(), self.0.height())
     }
