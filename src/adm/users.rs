@@ -4,8 +4,7 @@ use diesel::prelude::*;
 use diesel::{insert_into, update};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use djangohashers::make_password;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::{distr, rng, Rng};
 use std::iter::Iterator;
 
 pub async fn list(db: &mut AsyncPgConnection) -> Result<(), Error> {
@@ -47,9 +46,8 @@ pub async fn passwd(
 }
 
 fn random_password(len: usize) -> String {
-    let rng = thread_rng();
     // Note; I would like to have lowercase letters more probable
-    rng.sample_iter(&Alphanumeric)
+    rng().sample_iter(&distr::Alphanumeric)
         .map(char::from)
         .take(len)
         .collect()

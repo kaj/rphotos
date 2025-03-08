@@ -13,20 +13,20 @@ ructe = { version = "0.18.2", features = ["sass", "warp03"] }
 [dependencies]
 async-trait = "0.1.64"
 async-walkdir = "2.0.0"
-brotli = "6.0.0"
+brotli = "7.0"
 chrono = "0.4.19" # Must match version used by diesel
 clap = { version = "4.0.18", features = ["derive", "wrap_help", "env"] }
 diesel-async = { version = "0.5.0", features = ["deadpool", "postgres"] }
 dotenv = "0.15"
 flate2 = "1.0.14"
 futures-lite = "2.3.0"
-image = "0.24.0"
-kamadak-exif = "0.5.0"
+image = "0.24.9"
+kamadak-exif = "0.6.1"
 libc = "0.2.68"
 medallion = "2.3.1"
 mime = "0.3.0"
 r2d2-memcache = "0.6"
-rand = "0.8"
+rand = "0.9"
 regex = "1.10.5"
 reqwest = { version = "0.11.0", features = ["json"] }
 serde = { version = "1.0.0", features = ["derive"] }
