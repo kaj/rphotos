@@ -10,7 +10,6 @@ use crate::schema::photos::dsl as p;
 use crate::schema::places::dsl as l;
 use crate::schema::positions::dsl as pos;
 use crate::schema::tags::dsl as t;
-use async_trait::async_trait;
 use chrono::naive::NaiveDateTime;
 use diesel::pg::Pg;
 use diesel::prelude::*;
@@ -255,7 +254,7 @@ impl Photo {
     }
 }
 
-#[async_trait]
+#[allow(async_fn_in_trait)]
 pub trait Facet {
     async fn load_slugs(
         slugs: &[String],
@@ -272,7 +271,6 @@ pub struct Tag {
     pub tag_name: String,
 }
 
-#[async_trait]
 impl Facet for Tag {
     async fn load_slugs(
         slugs: &[String],
@@ -310,7 +308,6 @@ impl Person {
     }
 }
 
-#[async_trait]
 impl Facet for Person {
     async fn load_slugs(
         slugs: &[String],
@@ -329,7 +326,6 @@ pub struct Place {
     pub osm_level: Option<i16>,
 }
 
-#[async_trait]
 impl Facet for Place {
     async fn load_slugs(
         slugs: &[String],
