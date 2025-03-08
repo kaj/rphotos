@@ -1,8 +1,8 @@
+use crate::DbOpt;
 use crate::models::{Coord, Place};
 use crate::schema::photo_places::dsl as pl;
 use crate::schema::places::dsl as l;
 use crate::schema::positions::dsl as ps;
-use crate::DbOpt;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use reqwest::{self, Client, Response};

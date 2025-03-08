@@ -1,4 +1,4 @@
-use super::{wrap, Context, Result};
+use super::{Context, Result, wrap};
 use crate::schema::people::dsl as h; // h as in human
 use crate::schema::photo_people::dsl as pp;
 use crate::schema::photo_places::dsl as lp;
@@ -12,12 +12,12 @@ use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
-use warp::filters::method::get;
+use warp::Filter;
 use warp::filters::BoxedFilter;
+use warp::filters::method::get;
 use warp::path::{end, path};
 use warp::query::query;
-use warp::reply::{json, Json, Response};
-use warp::Filter;
+use warp::reply::{Json, Response, json};
 
 pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(Response,)> {
     let egs = end().and(get()).and(s);

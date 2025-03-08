@@ -1,12 +1,12 @@
 use super::BuilderExt;
-use super::{error::ViewResult, Context, Result, ViewError};
+use super::{Context, Result, ViewError, error::ViewResult};
 use crate::models::{Photo, SizeTag};
-use crate::photosdir::{get_scaled_jpeg, ImageLoadFailed};
+use crate::photosdir::{ImageLoadFailed, get_scaled_jpeg};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use std::str::FromStr;
 use warp::http::response::Builder;
-use warp::http::{header, StatusCode};
+use warp::http::{StatusCode, header};
 use warp::reply::Response;
 
 pub async fn show_image(img: ImgName, context: Context) -> Result<Response> {

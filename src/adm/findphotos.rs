@@ -1,7 +1,7 @@
 use super::result::Error;
 use crate::models::{Camera, Modification, Photo};
 use crate::myexif::ExifData;
-use crate::photosdir::{load_meta, PhotosDir};
+use crate::photosdir::{PhotosDir, load_meta};
 use crate::schema::positions::dsl as ps;
 use crate::{DbOpt, DirOpt};
 use diesel::insert_into;

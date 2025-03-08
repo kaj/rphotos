@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::{self, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use tokio::task::{spawn_blocking, JoinError};
+use tokio::task::{JoinError, spawn_blocking};
 use tracing::{debug, info, instrument, warn};
 
 pub struct PhotosDir {

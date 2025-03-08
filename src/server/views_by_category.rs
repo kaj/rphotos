@@ -1,7 +1,7 @@
 //! Handle photos by tag, person, or place.
 use super::splitlist::links_by_time;
 use super::{
-    wrap, Context, ContextFilter, ImgRange, RenderRucte, Result, ViewError,
+    Context, ContextFilter, ImgRange, RenderRucte, Result, ViewError, wrap,
 };
 use crate::models::{Person, Photo, Place, Tag};
 use crate::schema::people::dsl as h;
@@ -14,13 +14,13 @@ use crate::schema::tags::dsl as t;
 use crate::templates;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use warp::filters::method::get;
+use warp::Filter;
 use warp::filters::BoxedFilter;
+use warp::filters::method::get;
 use warp::http::response::Builder;
 use warp::path::{end, param};
 use warp::query::query;
 use warp::reply::Response;
-use warp::Filter;
 
 pub fn person_routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
     let all = end().and(get()).and(s.clone()).then(person_all);

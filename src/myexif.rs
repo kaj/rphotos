@@ -108,7 +108,7 @@ impl ExifData {
         }
     }
     pub fn camera(&self) -> Option<(&str, &str)> {
-        if let (Some(ref make), Some(ref model)) = (&self.make, &self.model) {
+        if let (Some(make), Some(model)) = (&self.make, &self.model) {
             Some((make, model))
         } else {
             None
@@ -123,10 +123,10 @@ impl ExifData {
     }
     fn lat(&self) -> Option<f64> {
         match (&self.latref, self.latval) {
-            (Some(ref r), Some(lat)) if r == "N" => Some(lat.abs()),
-            (Some(ref r), Some(lat)) if r == "S" => Some(-(lat.abs())),
-            (Some(ref r), lat) => {
-                error!("Bad latref: {}", r);
+            (Some(r), Some(lat)) if r == "N" => Some(lat.abs()),
+            (Some(r), Some(lat)) if r == "S" => Some(-(lat.abs())),
+            (Some(r), lat) => {
+                error!("Bad latref: {r}");
                 lat
             }
             (None, lat) => lat,
@@ -134,9 +134,9 @@ impl ExifData {
     }
     fn long(&self) -> Option<f64> {
         match (&self.longref, self.longval) {
-            (Some(ref r), Some(long)) if r == "E" => Some(long.abs()),
-            (Some(ref r), Some(long)) if r == "W" => Some(-(long.abs())),
-            (Some(ref r), long) => {
+            (Some(r), Some(long)) if r == "E" => Some(long.abs()),
+            (Some(r), Some(long)) if r == "W" => Some(-(long.abs())),
+            (Some(r), long) => {
                 error!("Bad longref: {}", r);
                 long
             }
@@ -163,12 +163,12 @@ impl ExifData {
 
 fn is_lat_long(f: &Field, tag: Tag) -> Option<f64> {
     if f.tag == tag {
-        match f.value {
-            Value::Rational(ref v) if v.len() == 3 => {
+        match &f.value {
+            Value::Rational(v) if v.len() == 3 => {
                 let d = 1. / 60.;
                 Some(v[0].to_f64() + d * (v[1].to_f64() + d * v[2].to_f64()))
             }
-            ref v => {
+            v => {
                 error!("Bad value for {tag}: {v:?}");
                 None
             }
@@ -213,7 +213,7 @@ fn is_time(f: &Field, tag: Tag) -> Option<NaiveTime> {
         match &f.value {
             // Some cameras (notably iPhone) uses fractional seconds.
             // Just round to whole seconds.
-            Value::Rational(ref v)
+            Value::Rational(v)
                 if v.len() == 3 && v[0].denom == 1 && v[1].denom == 1 =>
             {
                 NaiveTime::from_hms_opt(
@@ -249,8 +249,8 @@ fn is_string(f: &Field, tag: Tag) -> Option<&str> {
 fn is_u32(f: &Field, tag: Tag) -> Option<u32> {
     if f.tag == tag {
         match &f.value {
-            Value::Long(ref v) if v.len() == 1 => Some(v[0]),
-            Value::Short(ref v) if v.len() == 1 => Some(u32::from(v[0])),
+            Value::Long(v) if v.len() == 1 => Some(v[0]),
+            Value::Short(v) if v.len() == 1 => Some(u32::from(v[0])),
             v => {
                 error!("Unsuppored value for {tag}: {v:?}");
                 None
@@ -263,8 +263,8 @@ fn is_u32(f: &Field, tag: Tag) -> Option<u32> {
 
 fn single_ascii(value: &Value) -> Result<&str, Error> {
     match value {
-        Value::Ascii(ref v) if v.len() == 1 => Ok(from_utf8(&v[0])?),
-        Value::Ascii(ref v) if v.len() > 1 => {
+        Value::Ascii(v) if v.len() == 1 => Ok(from_utf8(&v[0])?),
+        Value::Ascii(v) if v.len() > 1 => {
             for t in &v[1..] {
                 if !t.is_empty() {
                     return Err(Error::Other(format!(

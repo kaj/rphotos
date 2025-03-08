@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use warp::http::response::Builder;
-use warp::http::{header, StatusCode};
+use warp::http::{StatusCode, header};
 use warp::reply::Response;
 
 pub trait BuilderExt {

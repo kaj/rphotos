@@ -1,15 +1,15 @@
-use super::{error::ViewResult, Args, Result};
+use super::{Args, Result, error::ViewResult};
 use crate::adm::result::Error;
 use crate::dbopt::{PgPool, PooledPg};
 use crate::fetch_places::OverpassOpt;
 use crate::photosdir::PhotosDir;
 use medallion::{Header, Payload, Token};
-use r2d2_memcache::{r2d2, MemcacheConnectionManager};
+use r2d2_memcache::{MemcacheConnectionManager, r2d2};
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, warn};
-use warp::filters::{cookie, header, BoxedFilter};
+use warp::filters::{BoxedFilter, cookie, header};
 use warp::path::{self, FullPath};
 use warp::{self, Filter};
 

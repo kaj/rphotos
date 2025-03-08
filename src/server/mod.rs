@@ -16,7 +16,7 @@ mod views_by_date;
 
 use self::context::create_session_filter;
 pub use self::context::{Context, ContextFilter};
-use self::error::{for_rejection, ViewError, ViewResult};
+use self::error::{ViewError, ViewResult, for_rejection};
 pub use self::photolink::PhotoLink;
 use self::render_ructe::BuilderExt;
 use self::search::search;
@@ -37,7 +37,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use tracing::info;
 use warp::filters::path::Tail;
-use warp::http::{header, response::Builder, StatusCode};
+use warp::http::{StatusCode, header, response::Builder};
 use warp::reply::Response;
 use warp::{self, Filter, Reply};
 

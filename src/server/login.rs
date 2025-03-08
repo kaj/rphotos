@@ -1,4 +1,4 @@
-use super::{wrap, BuilderExt, Context, ContextFilter, RenderRucte, Result};
+use super::{BuilderExt, Context, ContextFilter, RenderRucte, Result, wrap};
 use crate::schema::users::dsl as u;
 use crate::templates;
 use diesel::prelude::*;
@@ -13,7 +13,7 @@ use warp::http::response::Builder;
 use warp::path::end;
 use warp::query::query;
 use warp::reply::Response;
-use warp::{body, get, path, post, Filter};
+use warp::{Filter, body, get, path, post};
 
 pub fn routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
     let s = move || s.clone();

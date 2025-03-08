@@ -106,7 +106,7 @@ impl ImgIdentifier {
         db: &mut AsyncPgConnection,
     ) -> Result<Option<Photo>, DbError> {
         match &self {
-            ImgIdentifier::Id(ref id) => {
+            ImgIdentifier::Id(id) => {
                 p::photos.filter(p::id.eq(*id as i32)).first(db).await
             }
             ImgIdentifier::Path(path) => {

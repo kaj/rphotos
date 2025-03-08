@@ -1,7 +1,7 @@
 use crate::Error;
 use diesel::ConnectionError;
-use diesel_async::pooled_connection::deadpool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::pooled_connection::deadpool;
 use diesel_async::{AsyncConnection, AsyncPgConnection};
 use std::time::Instant;
 use tracing::debug;

@@ -1,9 +1,9 @@
 use super::result::Error;
 use crate::templates::statics::STATICS;
-use brotli::enc::backward_references::BrotliEncoderParams;
 use brotli::BrotliCompress;
+use brotli::enc::backward_references::BrotliEncoderParams;
 use flate2::{Compression, GzBuilder};
-use std::fs::{create_dir_all, File};
+use std::fs::{File, create_dir_all};
 use std::io::prelude::*;
 use std::path::Path;
 

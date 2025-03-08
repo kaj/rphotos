@@ -1,7 +1,7 @@
 use super::splitlist::links_by_time;
 use super::{
-    redirect_to_img, wrap, Context, ContextFilter, ImgRange, Link, PhotoLink,
-    Result, ViewError,
+    Context, ContextFilter, ImgRange, Link, PhotoLink, Result, ViewError,
+    redirect_to_img, wrap,
 };
 use crate::models::{Photo, SizeTag};
 use crate::schema::photos::dsl as p;
@@ -19,7 +19,7 @@ use warp::http::response::Builder;
 use warp::path::{end, param};
 use warp::query::query;
 use warp::reply::Response;
-use warp::{get, path, Filter};
+use warp::{Filter, get, path};
 
 pub fn routes(s: ContextFilter) -> BoxedFilter<(Response,)> {
     let s = move || s.clone();

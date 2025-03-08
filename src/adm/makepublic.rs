@@ -1,9 +1,9 @@
 use super::result::Error;
+use crate::DbOpt;
 use crate::models::Photo;
 use crate::schema::photo_tags::dsl as pt;
 use crate::schema::photos::dsl as p;
 use crate::schema::tags::dsl as t;
-use crate::DbOpt;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
 use diesel::update;

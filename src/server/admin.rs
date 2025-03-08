@@ -1,6 +1,6 @@
 //! Admin-only views, generally called by javascript.
 use super::error::ViewResult;
-use super::{redirect_to_img, wrap, Context, Result, ViewError};
+use super::{Context, Result, ViewError, redirect_to_img, wrap};
 use crate::models::{Coord, Person, Photo, SizeTag, Tag};
 use crate::schema::photo_people::dsl as pp;
 use crate::schema::photo_tags::dsl as pt;
@@ -12,10 +12,10 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
 use serde::Deserialize;
 use slug::slugify;
 use tracing::{info, warn};
+use warp::Filter;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::reply::Response;
-use warp::Filter;
 
 pub fn routes(s: BoxedFilter<(Context,)>) -> BoxedFilter<(Response,)> {
     use warp::{body::form, path, post};

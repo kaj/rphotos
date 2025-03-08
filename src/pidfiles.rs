@@ -1,5 +1,5 @@
 use crate::adm::result::Error;
-use libc::{kill, pid_t, SIGHUP};
+use libc::{SIGHUP, kill, pid_t};
 use std::fs::{read_to_string, write};
 use std::io::ErrorKind;
 use std::path::Path;
