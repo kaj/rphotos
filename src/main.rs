@@ -21,6 +21,7 @@ use std::process::exit;
 
 /// Command line interface for rphotos.
 #[derive(Parser)]
+#[clap(about, author, version)]
 enum RPhotos {
     /// Make specific image(s) public.
     ///
