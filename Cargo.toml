@@ -27,13 +27,14 @@ mime = "0.3.0"
 r2d2-memcache = "0.6"
 rand = "0.9"
 regex = "1.10.5"
-reqwest = { version = "0.11.0", features = ["json"] }
+reqwest = { version = "0.12.22", features = ["json"] }
 serde = { version = "1.0.0", features = ["derive"] }
 serde_json = "1.0"
 slug = "0.1"
 tokio = { version = "1.0.2", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.35"
 tracing-subscriber = { version = "0.3.14", features = ["env-filter"] }
+warp = { version = "0.4.1", features = ["server"] }
 
 [dependencies.djangohashers]
 default-features = false
@@ -44,10 +45,6 @@ version = "1.1.1"
 default-features = false
 features = ["chrono", "postgres"]
 version = "2.2.2"
-
-[dependencies.warp]
-default-features = false
-version = "0.3.0"
 
 [dev-dependencies]
 serde_urlencoded = "0.7.1" # Same as warp depends on

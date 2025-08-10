@@ -138,7 +138,8 @@ async fn static_file(name: Tail) -> Result<Response> {
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, data.mime.as_ref())
         .far_expires()
-        .body(data.content.into())
+        // TODO: Warp should support taking a `&'static [u8]` directly!
+        .body(data.content.to_vec().into())
         .ise()
 }
 
