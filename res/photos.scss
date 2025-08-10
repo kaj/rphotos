@@ -1,4 +1,18 @@
-$border: 1px solid #333;
+$border: 1px solid var(--col-brd);
+
+:root {
+    color-scheme: light dark;
+    --col-brd: light-dark(#333, #eee);
+    --col-brd2: light-dark(#444, #ddd);
+    --col-bg: light-dark(#eee, #333);
+    --col-bg2: light-dark(#fafafa, #111);
+    --col-bgf: light-dark(#aaf, #419);
+    --col-bgn: light-dark(#fbb, #722);
+    --col-bgt: light-dark(#{rgba(white, 0.8)}, #{rgba(black, 0.8)});
+    --col-bgt2: light-dark(#{rgba(white, 0.2)}, #{rgba(black, 0.2)});
+    // A shadow that is dark regardless of light/dark mode.
+    --col-dark-shadow: #{rgba(black,.7)};
+}
 
 html, body {
     height: 100%;
@@ -7,7 +21,7 @@ html, body {
 }
 
 body {
-    background: #eee;
+    background: var(--col-bg);
     display: flex;
     flex-direction: column;
     font-family: serif;
@@ -32,8 +46,8 @@ p + p {
 }
 
 header {
-    background-color: #eee;
-    box-shadow: 0 0 1ex #444;
+    background-color: var(--col-bg);
+    box-shadow: 0 0 1ex var(--col-brd2);
     position: sticky;
     top: 0;
     z-index: 9999;
@@ -98,15 +112,15 @@ form.search {
         top: 1.9em;
         z-index: 10;
         a.hit {
-            background: white;
+            background: Canvas;
             border: solid 1px #666;
-            color: black;
+            color: CanvasText;
             display: block;
             padding: 0 1ex;
             text-align: left;
             text-decoration: none;
             &:focus {
-                background: #bbf;
+                background: var(--col-bgf);
             }
             &:nth-child(n + 2) {
                 border-top: 0;
@@ -116,20 +130,21 @@ form.search {
     .refs {
         display: inline-flex;
         flex-flow: row wrap;
-        background: white;
+        background: Canvas;
+        color: CanvasText;
         border: solid 1px #baa;
         border-radius: .2em;
         margin: 2px 0;
         padding: 0;
         flex-grow: 1;
         label {
-            background: #bbf;
+            background: var(--col-bgf);
             border-radius: 1ex;
             line-height: 1.4;
             margin: .1em;
             padding: 0 1ex;
 	    &.not {
-		background: #fbb;
+		background: var(--col-bgn);
 		text-decoration: line-through;
 	    }
         }
@@ -217,7 +232,7 @@ div.group {
       width: 100%;
     }
     h2, .lable {
-      text-shadow: 0 0 .1em white, 0 0 .4em white;
+      text-shadow: 0 0 .1em Canvas, 0 0 .4em Canvas;
       padding: 0 .2em;
     }
     h2 {
@@ -231,19 +246,19 @@ div.group {
       bottom: 0;
       right: 0;
       font-size: 80%;
-      background: rgba(white,0.2);
+      background: var(--col-bgt2);
       padding-left: 1em;
       border-top-left-radius: 1.5em 100%;
     }
     &:hover {
       h2 {
-        background: rgba(white,0.5);
+        background: var(--col-bgt);
         width: -moz-available;
         width: -webkit-fill-available;
         width: available;
       }
       .lable {
-        background: rgba(white,0.8);
+        background: var(--col-bgt);
       }
     }
   }
@@ -362,8 +377,9 @@ form {
 }
 
 #help {
-    background: #fafafa;
-    border: solid 1px black;
+    background: var(--col-bg2);
+    color: CanvasText;
+    border: solid 1px CanvasText;
     bottom: 2em;
     box-shadow: .3em .2em 1em;
     display: none;
@@ -409,8 +425,8 @@ form.admin {
         top: -1ex;
     }
     &.locate {
-        background: #eee;
-        box-shadow: .2em .4em 1em rgba(0,0,0,.7);
+        background: var(--col-bg2);
+        box-shadow: .2em .4em 1em var(--col-dark-shadow);
         display: flex;
         flex-flow: column;
         height: calc(95vh - 6em);
@@ -439,24 +455,24 @@ form.admin {
 
 div.completions {
     border-bottom: solid 1px #888;
-    box-shadow: .2em .1em .5em rgba(0, 0, 0, .7);
+    box-shadow: .2em .1em .5em var(--col-dark-shadow);
     display: block;
     margin-left: .5em;
     position: absolute;
     z-index: 800;
 
     a {
-        background: rgba(255,255,255,0.95);
-        border-color: #888;
+        background: Canvas;
+        border-color: var(--col-brd);
         border-style: solid;
         border-width: 1px 1px 0;
         display: block;
         padding: .2em .5em; // .2em 2.2em;
-        color: black;
+        color: CanvasText;
         text-decoration: none;
     }
     a:focus {
-        background-color: #aaaaff;
+        background-color: var(--col-bgf);
     }
 }
 .leaflet-popup-content img {

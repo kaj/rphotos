@@ -6,6 +6,7 @@ The format is based on
 
 ## Unreleased
 
+* Add a dark theme (automatic light-dark, no manual selection).
 * Use rust 1.89 and edition 2024.
 * Updated dependeices to `brotli` 8.0.1, `diesel-async` 0.6.1,
   `image` 0.24.9, `kamadak-exif` 0.6.1, `rand` 0.9, `reqwest` 0.12.22,
