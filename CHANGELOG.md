@@ -7,8 +7,9 @@ The format is based on
 ## Unreleased
 
 * Use rust 1.89 and edition 2024.
-* Updated dependeices to `brotli` 8.0.1, `image` 0.24.9,
-  `kamadak-exif` 0.6.1, `rand` 0.9, and `ructe` 0.18.2.
+* Updated dependeices to `brotli` 8.0.1, `diesel-async` 0.6.1,
+  `image` 0.24.9, `kamadak-exif` 0.6.1, `rand` 0.9, and
+  `ructe` 0.18.2.
 * Removed `async_trait` dependecy.
 * Some more known kinds of places.
 
