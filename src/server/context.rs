@@ -83,15 +83,15 @@ impl GlobalContext {
         let claims = token.payload;
         debug!("Verified token for: {:?}", claims);
         let now = current_numeric_date();
-        if let Some(nbf) = claims.nbf {
-            if now < nbf {
-                return Err(format!("Not-yet valid token, {now} < {nbf}"));
-            }
+        if let Some(nbf) = claims.nbf
+            && now < nbf
+        {
+            return Err(format!("Not-yet valid token, {now} < {nbf}"));
         }
-        if let Some(exp) = claims.exp {
-            if now > exp {
-                return Err(format!("Got an expired token: {now} > {exp}"));
-            }
+        if let Some(exp) = claims.exp
+            && now > exp
+        {
+            return Err(format!("Got an expired token: {now} > {exp}"));
         }
         // the claimed sub is the username
         claims

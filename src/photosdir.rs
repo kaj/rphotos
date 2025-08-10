@@ -53,11 +53,11 @@ impl PhotosDir {
 #[instrument]
 pub fn load_meta(path: &Path) -> Option<ExifData> {
     if let Ok(mut exif) = ExifData::read_from(path) {
-        if exif.width.is_none() || exif.height.is_none() {
-            if let Ok((width, height)) = actual_image_size(path) {
-                exif.width = Some(width);
-                exif.height = Some(height);
-            }
+        if (exif.width.is_none() || exif.height.is_none())
+            && let Ok((width, height)) = actual_image_size(path)
+        {
+            exif.width = Some(width);
+            exif.height = Some(height);
         }
         Some(exif)
     } else if let Ok((width, height)) = actual_image_size(path) {

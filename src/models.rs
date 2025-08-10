@@ -172,14 +172,14 @@ impl Photo {
                     .get_result::<Photo>(db)
                     .await?;
             }
-            if let Some(ref camera) = *camera {
-                if pic.camera_id != Some(camera.id) {
-                    change = true;
-                    pic = diesel::update(p::photos.find(pic.id))
-                        .set(p::camera_id.eq(camera.id))
-                        .get_result::<Photo>(db)
-                        .await?;
-                }
+            if let Some(ref camera) = *camera
+                && pic.camera_id != Some(camera.id)
+            {
+                change = true;
+                pic = diesel::update(p::photos.find(pic.id))
+                    .set(p::camera_id.eq(camera.id))
+                    .get_result::<Photo>(db)
+                    .await?;
             }
             Ok(Some(if change {
                 Modification::Updated(pic)

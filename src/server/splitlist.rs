@@ -144,7 +144,7 @@ fn split(group: &[Photo]) -> (&[Photo], &[Photo]) {
 }
 
 fn timestamp(p: &Photo) -> i64 {
-    p.date.map_or(0, |d| d.timestamp())
+    p.date.map_or(0, |d| d.and_utc().timestamp())
 }
 
 #[test]

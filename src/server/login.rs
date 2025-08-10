@@ -94,10 +94,10 @@ impl LoginForm {
 fn sanitize_next(next: Option<&str>) -> Option<&str> {
     static RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"^/([a-z0-9._-]+/?)*$").unwrap());
-    if let Some(next) = next {
-        if RE.is_match(next) {
-            return Some(next);
-        }
+    if let Some(next) = next
+        && RE.is_match(next)
+    {
+        return Some(next);
     }
     None
 }

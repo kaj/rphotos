@@ -15,31 +15,28 @@ pub async fn show_image(img: ImgName, context: Context) -> Result<Response> {
         .find(img.id)
         .first::<Photo>(&mut context.db().await?)
         .await;
-    if let Ok(tphoto) = tphoto {
-        if context.is_authorized() || tphoto.is_public() {
-            if img.size == SizeTag::Large {
-                if context.is_authorized() {
-                    let path = context.photos().get_raw_path(&tphoto);
-                    let buf = tokio::fs::read(path).await.ise()?;
-                    return Builder::new()
-                        .status(StatusCode::OK)
-                        .header(
-                            header::CONTENT_TYPE,
-                            mime::IMAGE_JPEG.as_ref(),
-                        )
-                        .far_expires()
-                        .body(buf.into())
-                        .ise();
-                }
-            } else {
-                let data = get_image_data(&context, &tphoto, img.size).await?;
+    if let Ok(tphoto) = tphoto
+        && (context.is_authorized() || tphoto.is_public())
+    {
+        if img.size == SizeTag::Large {
+            if context.is_authorized() {
+                let path = context.photos().get_raw_path(&tphoto);
+                let buf = tokio::fs::read(path).await.ise()?;
                 return Builder::new()
                     .status(StatusCode::OK)
                     .header(header::CONTENT_TYPE, mime::IMAGE_JPEG.as_ref())
                     .far_expires()
-                    .body(data.into())
+                    .body(buf.into())
                     .ise();
             }
+        } else {
+            let data = get_image_data(&context, &tphoto, img.size).await?;
+            return Builder::new()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, mime::IMAGE_JPEG.as_ref())
+                .far_expires()
+                .body(data.into())
+                .ise();
         }
     }
     Err(ViewError::NotFound(Some(context)))

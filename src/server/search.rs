@@ -340,10 +340,10 @@ impl QueryDateTime {
     fn as_ref(&self) -> Option<&NaiveDateTime> {
         self.val.as_ref()
     }
-    pub fn date_val(&self) -> QueryDateFmt {
+    pub fn date_val(&self) -> QueryDateFmt<'_> {
         QueryDateFmt(self.as_ref())
     }
-    pub fn time_val(&self) -> QueryTimeFmt {
+    pub fn time_val(&self) -> QueryTimeFmt<'_> {
         QueryTimeFmt(self.as_ref())
     }
 }
