@@ -162,7 +162,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
     ]),
     ("boundary", &[
         ("national_park", 14),
-        ("historic", 7), // Seems to be mainly "Landskap"
+        ("historic", 5), // Seems to be mainly "Landskap"
     ]),
     ("landuse", &[
         ("allotments", 14),
@@ -177,6 +177,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
         ("retail", 13),
         ("cemetery", 14),
         ("military", 13),
+        ("quarry", 14),
     ]),
     ("highway", &[
         ("pedestrian", 15),  // torg
@@ -246,6 +247,7 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
     ("historic", &[
         ("manor", 16),
         ("heritage", 14),
+        ("mine", 14),
     ]),
 ];
 
@@ -392,10 +394,10 @@ mod test {
                 Some(("Älvsjö postort", 10)),
                 Some(("Älvsjö postort", 10)),
                 Some(("Sverige", 2)),
-                Some(("Svealand", 7)),
+                Some(("Svealand", 5)),
                 Some(("Stockholms län", 4)),
                 Some(("Stockholms kommun", 7)),
-                Some(("Landskapet Södermanland", 7)),
+                Some(("Landskapet Södermanland", 5)),
                 Some(("Sveriges Landskap", 5)),
                 Some(("Enskede-Årsta-Vantörs stadsdelsområde", 9)),
                 Some(("Södertörn", 13)),
