@@ -153,9 +153,15 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
         ("sports_centre", 18),
         ("water_park", 14),
     ]),
+    ("building", &[
+        ("exhibition_center", 19),
+        ("sports_hall", 19),
+        ("", 20), // MAGIC: Empty value means default
+    ]),
     ("tourism", &[
         ("guest_house", 17),
         ("attraction", 16),
+        ("museum", 16),
         ("camp_site", 15),
         ("theme_park", 14),
         ("zoo", 14),
@@ -228,11 +234,6 @@ static KNOWN: [(&str, &[(&str, i16)]); 19] = [
         ("peninsula", 11),
         ("wetland", 15),
         ("strait", 12),
-    ]),
-    ("building", &[
-        ("exhibition_center", 19),
-        ("sports_hall", 19),
-        ("", 20), // MAGIC: Empty value means default
     ]),
     ("designation", &[
         ("historic_county", 9),
