@@ -1,6 +1,6 @@
 [package]
 name = "rphotos"
-version = "0.13.0"
+version = "0.13.2"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 edition = "2024"
 rust-version = "1.89"
