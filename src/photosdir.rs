@@ -4,8 +4,7 @@ use async_walkdir::WalkDir;
 use image::imageops::FilterType;
 use image::{self, DynamicImage, ImageError, ImageFormat};
 use std::ffi::OsStr;
-use std::fs::File;
-use std::io::{self, BufReader, Cursor};
+use std::io::{self, Cursor};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tokio::task::{JoinError, spawn_blocking};
@@ -125,17 +124,10 @@ fn do_get_scaled_jpeg(
     size: u16,
 ) -> Result<Vec<u8>, ImageLoadFailed> {
     let start = Instant::now();
-    let img = if is_jpeg(&path) {
-        let file = BufReader::new(File::open(path)?);
-        let mut decoder = image::codecs::jpeg::JpegDecoder::new(file)?;
-        decoder.scale(size, size)?;
-        DynamicImage::from_decoder(decoder)?
-    } else {
-        image::open(path)?
-    };
+    let img = image::open(path)?;
+    debug!(size = %Size(&img), elapsed = ?start.elapsed(), "Loaded image.");
 
     let size = u32::from(size);
-    debug!(size = %Size(&img), elapsed = ?start.elapsed(), "Loaded image.");
     let img = if 3 * size <= img.width() || 3 * size <= img.height() {
         img.thumbnail(size, size)
     } else if size < img.width() || size < img.height() {
@@ -165,14 +157,5 @@ struct Size<'a>(&'a DynamicImage);
 impl std::fmt::Display for Size<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}x{}", self.0.width(), self.0.height())
-    }
-}
-
-fn is_jpeg(path: &Path) -> bool {
-    if let Some(suffix) = path.extension().and_then(|s| s.to_str()) {
-        suffix.eq_ignore_ascii_case("jpg")
-            || suffix.eq_ignore_ascii_case("jpeg")
-    } else {
-        false
     }
 }

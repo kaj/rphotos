@@ -7,6 +7,8 @@ The format is based on
 ## Unreleased
 
 * Handle bad dates properly (so e.g. /2025/11/53 is a 404 and not a 500).
+* Update to `image` 0.25.9.  It has switched its jpeg implementation and
+  does not handle pre-scaling jpeg loading, but seems to be faster anyway.
 * Use rust 1.92.
 
 

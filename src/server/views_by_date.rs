@@ -1,4 +1,3 @@
-use std::fmt;
 use super::splitlist::links_by_time;
 use super::{
     Context, ContextFilter, ImgRange, Link, PhotoLink, Result, ViewError,
@@ -16,6 +15,7 @@ use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable, Timestamp};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Deserialize;
+use std::fmt;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::path::{end, param};
