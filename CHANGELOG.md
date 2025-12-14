@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+* Handle bad dates properly (so e.g. /2025/11/53 is a 404 and not a 500).
+
 ## Release 0.13.2 (2025-11-25)
 
 * Update dependencies to `disel-async` 0.7.4 and `diesel` 2.3.3.

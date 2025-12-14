@@ -1,11 +1,13 @@
+use std::fmt;
 use super::splitlist::links_by_time;
 use super::{
     Context, ContextFilter, ImgRange, Link, PhotoLink, Result, ViewError,
-    redirect_to_img, wrap,
+    redirect, redirect_to_img, wrap,
 };
 use crate::models::{Photo, SizeTag};
 use crate::schema::photos::dsl as p;
 use crate::schema::positions::dsl as ps;
+use crate::server::error::ViewResult as _;
 use crate::templates::{self, RenderRucte};
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use chrono::{Datelike, Duration, Local};
@@ -123,8 +125,8 @@ async fn all_years(context: Context) -> Result<Response> {
             .order((p::grade.desc().nulls_last(), p::date.asc()))
             .limit(1);
         let photo = if let Some(year) = year {
-            q.filter(p::date.ge(start_of_year(year)))
-                .filter(p::date.lt(start_of_year(year + 1)))
+            q.filter(p::date.ge(start_of_year(year).ise()?))
+                .filter(p::date.lt(start_of_year(year + 1).ise()?))
         } else {
             q.filter(p::date.is_null())
         };
@@ -149,12 +151,14 @@ async fn months_in_year(year: i32, context: Context) -> Result<Response> {
     let title: String = format!("Photos from {year}");
     let mut db = context.db().await?;
     let m = month_of_timestamp(p::date);
+    let start = or_404!(start_of_year(year).ok(), context);
+    let end = or_404!(start_of_year(year + 1).ok(), context);
     let groups_in = p::photos
         .filter(p::path.not_like("%.CR2"))
         .filter(p::path.not_like("%.dng"))
         .filter(p::is_public.or::<_, Bool>(context.is_authorized()))
-        .filter(p::date.ge(start_of_year(year)))
-        .filter(p::date.lt(start_of_year(year + 1)))
+        .filter(p::date.ge(start))
+        .filter(p::date.lt(end))
         .select((m, count_star()))
         .group_by(m)
         .order(m.desc().nulls_last())
@@ -167,8 +171,8 @@ async fn months_in_year(year: i32, context: Context) -> Result<Response> {
     for (month, count) in groups_in {
         let month = month.unwrap() as u32; // cant be null when in range!
         let photo = Photo::query(context.is_authorized())
-            .filter(p::date.ge(start_of_month(year, month)))
-            .filter(p::date.lt(start_of_month(year, month + 1)))
+            .filter(p::date.ge(start_of_month(year, month).ise()?))
+            .filter(p::date.lt(start_of_month(year, month + 1).ise()?))
             .order((p::grade.desc().nulls_last(), p::date.asc()))
             .limit(1)
             .first::<Photo>(&mut db)
@@ -185,8 +189,8 @@ async fn months_in_year(year: i32, context: Context) -> Result<Response> {
 
     let pos = Photo::query(context.is_authorized())
         .inner_join(ps::positions)
-        .filter(p::date.ge(start_of_year(year)))
-        .filter(p::date.lt(start_of_year(year + 1)))
+        .filter(p::date.ge(start))
+        .filter(p::date.lt(end))
         .select((ps::photo_id, ps::latitude, ps::longitude))
         .load(&mut db)
         .await?
@@ -198,11 +202,11 @@ async fn months_in_year(year: i32, context: Context) -> Result<Response> {
     })?)
 }
 
-fn start_of_year(year: i32) -> NaiveDateTime {
+fn start_of_year(year: i32) -> Result<NaiveDateTime, BadDate> {
     start_of_day(year, 1, 1)
 }
 
-fn start_of_month(year: i32, month: u32) -> NaiveDateTime {
+fn start_of_month(year: i32, month: u32) -> Result<NaiveDateTime, BadDate> {
     if month > 12 {
         start_of_day(year + 1, month - 12, 1)
     } else {
@@ -210,11 +214,28 @@ fn start_of_month(year: i32, month: u32) -> NaiveDateTime {
     }
 }
 
-fn start_of_day(year: i32, month: u32, day: u32) -> NaiveDateTime {
+fn start_of_day(
+    year: i32,
+    month: u32,
+    day: u32,
+) -> Result<NaiveDateTime, BadDate> {
     NaiveDate::from_ymd_opt(year, month, day)
-        .unwrap()
-        .and_hms_opt(0, 0, 0)
-        .unwrap()
+        .and_then(|date| date.and_hms_opt(0, 0, 0))
+        .ok_or(BadDate { year, month, day })
+}
+
+#[derive(Debug)]
+struct BadDate {
+    year: i32,
+    month: u32,
+    day: u32,
+}
+impl std::error::Error for BadDate {}
+impl fmt::Display for BadDate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let BadDate { year, month, day } = self;
+        write!(f, "Bad date {year}-{month}-{day}")
+    }
 }
 
 async fn days_in_month(
@@ -222,6 +243,11 @@ async fn days_in_month(
     month: u32,
     context: Context,
 ) -> Result<Response> {
+    let start = or_404!(start_of_month(year, month).ok(), context);
+    let end = or_404!(start_of_month(year, month + 1).ok(), context);
+    if start.year() != year || start.month() != month {
+        return Ok(redirect(&format!("/{}/{}/", start.year(), start.month())));
+    }
     let d = day_of_timestamp(p::date);
 
     let lpath: Vec<Link> = vec![Link::year(year)];
@@ -231,8 +257,8 @@ async fn days_in_month(
         .filter(p::path.not_like("%.CR2"))
         .filter(p::path.not_like("%.dng"))
         .filter(p::is_public.or::<_, Bool>(context.is_authorized()))
-        .filter(p::date.ge(start_of_month(year, month)))
-        .filter(p::date.lt(start_of_month(year, month + 1)))
+        .filter(p::date.ge(start))
+        .filter(p::date.lt(end))
         .select((d, count_star()))
         .group_by(d)
         .order(d.desc().nulls_last())
@@ -244,7 +270,7 @@ async fn days_in_month(
     let mut groups = Vec::with_capacity(groups_in.len());
     for (day, count) in groups_in {
         let day = day.unwrap() as u32;
-        let fromdate = start_of_day(year, month, day);
+        let fromdate = start_of_day(year, month, day).ise()?;
         let photo = Photo::query(context.is_authorized())
             .filter(p::date.ge(fromdate))
             .filter(p::date.lt(fromdate + Duration::days(1)))
@@ -264,8 +290,8 @@ async fn days_in_month(
 
     let pos = Photo::query(context.is_authorized())
         .inner_join(ps::positions)
-        .filter(p::date.ge(start_of_month(year, month)))
-        .filter(p::date.lt(start_of_month(year, month + 1)))
+        .filter(p::date.ge(start))
+        .filter(p::date.lt(end))
         .select((ps::photo_id, ps::latitude, ps::longitude))
         .load(&mut db)
         .await?
@@ -306,7 +332,7 @@ async fn all_for_day(
     range: ImgRange,
     context: Context,
 ) -> Result<Response> {
-    let thedate = start_of_day(year, month, day);
+    let thedate = or_404!(start_of_day(year, month, day).ok());
 
     let photos = Photo::query(context.is_authorized())
         .filter(p::date.ge(thedate))
@@ -358,7 +384,7 @@ async fn on_this_day(context: Context) -> Result<Response> {
     let mut photos = Vec::with_capacity(photos_in.len());
     for (year, count) in photos_in {
         let year = year.unwrap(); // matching date can't be null
-        let fromdate = start_of_day(year.into(), month, day);
+        let fromdate = start_of_day(year.into(), month, day).ise()?;
         let photo = Photo::query(context.is_authorized())
             .filter(p::date.ge(fromdate))
             .filter(p::date.lt(fromdate + Duration::days(1)))
