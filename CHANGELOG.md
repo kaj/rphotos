@@ -8,6 +8,7 @@ The format is based on
 
 * Limit database pool to 16 connections.
 * Update `diesel-async` to 0.8.0, `rand` to 0.10.0, and `reqwest` to 0.13.2.
+* Use rust 1.94.
 
 
 ## Release 0.13.4 (2025-12-14)

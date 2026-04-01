@@ -3,7 +3,7 @@ name = "rphotos"
 version = "0.13.5-PRE"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 edition = "2024"
-rust-version = "1.92"
+rust-version = "1.94"
 
 build = "src/build.rs"
 
