@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+* Limit database pool to 16 connections.
+
 ## Release 0.13.4 (2025-12-14)
 
 * Handle bad dates properly (so e.g. /2025/11/53 is a 404 and not a 500).

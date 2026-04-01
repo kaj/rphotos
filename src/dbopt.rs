@@ -28,6 +28,7 @@ impl DbOpt {
         let time = Instant::now();
         let config = AsyncDieselConnectionManager::new(&self.db_url);
         let pool = PgPool::builder(config)
+            .max_size(16)
             .build()
             .map_err(|e| Error::Other(format!("Pool creating error: {e}")))?;
         debug!("Created pool in {:?}", time.elapsed());
