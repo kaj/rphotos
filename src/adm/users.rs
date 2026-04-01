@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use diesel::{insert_into, update};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use djangohashers::make_password;
-use rand::{Rng, distr, rng};
+use rand::{RngExt, distr, rng};
 use std::iter::Iterator;
 
 pub async fn list(db: &mut AsyncPgConnection) -> Result<(), Error> {
