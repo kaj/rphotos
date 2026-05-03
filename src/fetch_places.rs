@@ -142,8 +142,6 @@ impl OverpassOpt {
                             .await
                             .map_err(|e| Error::Db(image, e))?;
                     }
-                } else {
-                    info!(%obj, "Unused area");
                 }
             }
         }
@@ -277,16 +275,21 @@ fn name_and_level(obj: &Value) -> Option<(&str, i16)> {
         // .or_else(|| tags.get("name:en"))
         .or_else(|| tags.get("name"))
         .and_then(Value::as_str)?;
-    let level = tags
-        .get("admin_level")
-        .and_then(Value::as_str)
+    let Some(level) = tag_str(tags, "admin_level")
         .and_then(|l| l.parse().ok())
         .or_else(|| {
             KNOWN
                 .iter()
                 .find_map(|(name, values)| tag_level(tags, name, values))
-        })?;
-
+        })
+    else {
+        if tag_str(tags, "boundary") == Some("timezone") {
+            debug!(%tags, "Ignoring timezone");
+        } else {
+            info!(%tags, "Unused area");
+        }
+        return None;
+    };
     Some((name, level))
 }
 
