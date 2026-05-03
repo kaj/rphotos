@@ -16,7 +16,7 @@ brotli = "8.0.1"
 bytes = "1.11.1"
 chrono = "0.4.19" # Must match version used by diesel
 clap = { version = "4.0.18", features = ["derive", "wrap_help", "env"] }
-diesel-async = { version = "0.8.0", features = ["deadpool", "postgres"] }
+diesel-async = { version = "0.9.0", features = ["deadpool", "postgres"] }
 dotenv = "0.15"
 flate2 = "1.0.14"
 futures-lite = "2.3.0"

@@ -11,7 +11,7 @@ The format is based on
   - Set a user-agent header to make the api server happy.
   - Allow brotli compression in the client.
 * Limit database pool to 16 connections.
-* Update `diesel-async` to 0.8.0, `rand` to 0.10.0, and `reqwest` to 0.13.2.
+* Update `diesel-async` to 0.9.0, `rand` to 0.10.0, and `reqwest` to 0.13.2.
 * Use rust 1.95.
 
 
