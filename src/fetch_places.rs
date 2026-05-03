@@ -3,9 +3,10 @@ use crate::models::{Coord, Place};
 use crate::schema::photo_places::dsl as pl;
 use crate::schema::places::dsl as l;
 use crate::schema::positions::dsl as ps;
+use bytes::Bytes;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use reqwest::{self, Client, Response};
+use reqwest::{self, Client, StatusCode, header};
 use serde_json::Value;
 use slug::slugify;
 use tracing::{debug, info, instrument};
@@ -83,14 +84,31 @@ impl OverpassOpt {
         debug!(?coord, "Should get places.");
         let data = Client::new()
             .post(&self.overpass_url)
+            .header(
+                header::USER_AGENT,
+                concat!(
+                    env!("CARGO_PKG_NAME"),
+                    " ",
+                    env!("CARGO_PKG_VERSION"),
+                    ", personal image collection.",
+                ),
+            )
             .body(format!("[out:json];is_in({},{});out;", coord.x, coord.y))
             .send()
             .await
-            .and_then(Response::error_for_status)
-            .map_err(|e| Error::Server(image, e))?
+            .map_err(|e| Error::Request(image, e))?;
+        let status = data.status();
+        if status.is_client_error() || status.is_server_error() {
+            return Err(Error::Server(
+                image,
+                status,
+                data.bytes().await.unwrap_or_default(),
+            ));
+        }
+        let data = data
             .json::<Value>()
             .await
-            .map_err(|e| Error::Server(image, e))?;
+            .map_err(|e| Error::Request(image, e))?;
 
         if let Some(elements) = data
             .as_object()
@@ -125,7 +143,7 @@ impl OverpassOpt {
                             .map_err(|e| Error::Db(image, e))?;
                     }
                 } else {
-                    info!("Unused area: {}", obj);
+                    info!(%obj, "Unused area");
                 }
             }
         }
@@ -351,7 +369,8 @@ pub enum Error {
     NoPosition(i32),
     Db(i32, diesel::result::Error),
     Pool(i32, String),
-    Server(i32, reqwest::Error),
+    Request(i32, reqwest::Error),
+    Server(i32, StatusCode, Bytes),
 }
 
 #[cfg(test)]

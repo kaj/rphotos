@@ -13,6 +13,7 @@ ructe = { version = "0.18.2", features = ["sass", "warp03"] }
 [dependencies]
 async-walkdir = "2.0.0"
 brotli = "8.0.1"
+bytes = "1.11.1"
 chrono = "0.4.19" # Must match version used by diesel
 clap = { version = "4.0.18", features = ["derive", "wrap_help", "env"] }
 diesel-async = { version = "0.8.0", features = ["deadpool", "postgres"] }
@@ -27,7 +28,7 @@ mime = "0.3.0"
 r2d2-memcache = "0.6"
 rand = "0.10.0"
 regex = "1.10.5"
-reqwest = { version = "0.13.2", features = ["json"] }
+reqwest = { version = "0.13.2", features = ["json", "brotli"] }
 serde = { version = "1.0.0", features = ["derive"] }
 serde_json = "1.0"
 slug = "0.1"
